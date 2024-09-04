@@ -1,0 +1,51 @@
+name: Run Scripts from External Repository
+
+on: 
+  push:
+    branches:
+      - 'feature/*'
+
+defaults:
+    run:
+      shell: bash
+
+permissions:
+  contents: read
+
+jobs:
+  run-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the current repository
+      - name: Checkout current repository
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+
+      - name: Checkout scripts repository
+        uses: actions/checkout@ac593985615ec2ede58e132d2e21d2b1cbd6127c
+        with:
+          # Using GITHUB_TOKEN for Authentication:
+          # In GitHub Actions, each workflow run is automatically provided with a GITHUB_TOKEN secret. 
+          # This token is scoped to the repository the workflow runs in and allows you to interact 
+          # with other repositories in the same organization, assuming those repositories permit access.
+          #
+          # Repository Access Settings:
+          # make sure that  Actions permissions in the target repository allow access to private repositories within the organization 
+          # and the scripts repository has its Repository access settings configured to allow access from the workflow’s repository 
+          # (or to all repositories in the organization).
+          # By default, the actions/checkout action will use the GITHUB_TOKEN to authenticate and clone the repository. 
+          # Since both repositories are in the same organization and are private, this should work out of the box, as long as the permissions are set correctly.
+          #
+          # Fine-Tuning Access
+          # If you want to restrict the access even further you can set up a Read-only deploy key specific to the scripts repository and use it in the actions/checkout step.
+          # with:
+          #   repository: org-name/scripts-repo
+          #   token: ${{ secrets.SCRIPTS_REPO_TOKEN }}  # Use a custom token or deploy key
+          #   path: scripts-repo
+          repository: pagopa/interop-infra-commons
+          # Relative path under $GITHUB_WORKSPACE to place the repository
+          path: interop-infra-commons 
+
+      # Run a specific script from the scripts repository
+      - name: Run Bash script
+        run: |
+          bash interop-infra-commons/scripts/helloWorld.sh
