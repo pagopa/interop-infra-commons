@@ -1,0 +1,125 @@
+{
+  "widgets": [
+    {
+      "height": 6,
+      "width": 12,
+      "y": 8,
+      "x": 0,
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "AWS/ApiGateway",
+            "4XXError",
+            "ApiName",
+            "${ApiGwName}",
+            {
+              "color": "#ff7f0e"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${Region}",
+        "stat": "Sum",
+        "period": 60,
+        "title": "4XX count"
+      }
+    },
+    {
+      "height": 7,
+      "width": 24,
+      "y": 14,
+      "x": 0,
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "AWS/ApiGateway",
+            "Latency",
+            "ApiName",
+            "${ApiGwName}",
+            {
+              "color": "#1f77b4",
+              "label": "TotalLatency"
+            }
+          ],
+          [
+            ".",
+            "IntegrationLatency",
+            ".",
+            ".",
+            {
+              "color": "#ff7f0e"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${Region}",
+        "stat": "p99",
+        "period": 60,
+        "title": "Latency p99"
+      }
+    },
+    {
+      "height": 6,
+      "width": 24,
+      "y": 2,
+      "x": 0,
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "AWS/ApiGateway",
+            "Count",
+            "ApiName",
+            "${ApiGwName}"
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${Region}",
+        "title": "Requests count",
+        "period": 60,
+        "stat": "Sum"
+      }
+    },
+    {
+      "height": 6,
+      "width": 12,
+      "y": 8,
+      "x": 12,
+      "type": "metric",
+      "properties": {
+        "metrics": [
+          [
+            "AWS/ApiGateway",
+            "5XXError",
+            "ApiName",
+            "${ApiGwName}",
+            {
+              "color": "#d62728"
+            }
+          ]
+        ],
+        "view": "timeSeries",
+        "stacked": false,
+        "region": "${Region}",
+        "stat": "Sum",
+        "period": 60,
+        "title": "5XX count"
+      }
+    },
+    {
+      "type": "text",
+      "x": 0,
+      "y": 0,
+      "width": 24,
+      "height": 2,
+      "properties": {
+        "markdown": "# ${ApiGwName}"
+      }
+    }
+  ]
+}

@@ -1,0 +1,18 @@
+paths:
+  /swagger/docs/{proxy+}:
+    get:
+      tags:
+        - swagger
+      summary: Get the swagger
+      description: Returns the swagger documentation of the current API.
+      x-amazon-apigateway-integration:
+        type: http_proxy
+        httpMethod: GET
+        passthroughBehavior: when_no_match
+        connectionId: ${stageVariables.VpcLinkId}
+        connectionType: VPC_LINK
+        uri: http://${stageVariables.CustomDomainName}/${stageVariables.ServicePrefix}/${stageVariables.ApiVersion}/swagger/docs/{proxy}
+        requestParameters:
+          integration.request.path.proxy: "method.request.path.proxy"
+        cacheKeyParameters:
+          - "method.request.path.proxy"
