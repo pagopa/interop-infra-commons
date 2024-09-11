@@ -1,0 +1,161 @@
+{
+    "Comment": "${project_name} - AWS Step Function state machine to control VPN automation workflow in ${env} environment",
+    "StartAt": "LambdaInvoke",
+    "States": {
+      "clients-diff-lambda": {
+        "Type": "Task",
+        "Resource": "arn:aws:states:::lambda:invoke",
+        "OutputPath": "$.Payload",
+        "Parameters": {
+          "FunctionName": "${vpn_clients_diff_lambda_arn}:${vpn_clients_diff_lambda_version}"
+        },
+        "Next": "Check diff result"
+      },
+      "Check diff result": {
+        "Type": "Choice",
+        "Choices": [
+          {
+            "Variable": "$.statusCode",
+            "NumericEquals": 200,
+            "Next": "ForEach Client CREATE"
+          }
+        ],
+        "Default": "Diff Fail"
+      },
+      "ForEach Client CREATE": {
+        "Type": "Map",
+        "ItemProcessor": {
+          "ProcessorConfig": {
+            "Mode": "INLINE"
+          },
+          "StartAt": "Add CREATE action",
+          "States": {
+            "Add CREATE action": {
+              "Type": "Pass",
+              "Next": "clients-create-action",
+              "Parameters": {
+                "action": "CREATE",
+                "clientName.$": "$.client_name",
+                "clientEmail.$": "$.client_email"
+              }
+            },
+            "clients-create-action": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${vpn_clients_create_action_lambda_arn}:${vpn_clients_create_action_lambda_version}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Check success"
+            },
+            "Check success": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.statusCode",
+                  "NumericEquals": 200,
+                  "Next": "Create Success"
+                }
+              ],
+              "Default": "Create Failure"
+            },
+            "Create Success": {
+              "Type": "Pass",
+              "End": true
+            },
+            "Create Failure": {
+              "Type": "Fail",
+              "ErrorPath": "$.body"
+            }
+          }
+        },
+        "MaxConcurrency": 1,
+        "ItemsPath": "$.body.clients.create",
+        "Next": "ForEach Client REVOKE",
+        "ResultPath": null
+      },
+      "ForEach Client REVOKE": {
+        "Type": "Map",
+        "ItemProcessor": {
+          "ProcessorConfig": {
+            "Mode": "INLINE"
+          },
+          "StartAt": "Add REVOKE action",
+          "States": {
+            "Add REVOKE action": {
+              "Type": "Pass",
+              "Next": "clients-revoke-action",
+              "Parameters": {
+                "action": "REVOKE",
+                "clientName.$": "$.client_name"
+              }
+            },
+            "clients-revoke-action": {
+              "Type": "Task",
+              "Resource": "arn:aws:states:::lambda:invoke",
+              "OutputPath": "$.Payload",
+              "Parameters": {
+                "Payload.$": "$",
+                "FunctionName": "${vpn_clients_revoke_action_lambda_arn}:${vpn_clients_revoke_action_lambda_version}"
+              },
+              "Retry": [
+                {
+                  "ErrorEquals": [
+                    "Lambda.ServiceException",
+                    "Lambda.AWSLambdaException",
+                    "Lambda.SdkClientException",
+                    "Lambda.TooManyRequestsException"
+                  ],
+                  "IntervalSeconds": 1,
+                  "MaxAttempts": 3,
+                  "BackoffRate": 2
+                }
+              ],
+              "Next": "Choice"
+            },
+            "Choice": {
+              "Type": "Choice",
+              "Choices": [
+                {
+                  "Variable": "$.statusCode",
+                  "NumericEquals": 200,
+                  "Next": "Revoke Success"
+                }
+              ],
+              "Default": "Revoke Failure"
+            },
+            "Revoke Success": {
+              "Type": "Pass",
+              "End": true
+            },
+            "Revoke Failure": {
+              "Type": "Fail",
+              "ErrorPath": "$.body"
+            }
+          }
+        },
+        "MaxConcurrency": 1,
+        "ItemsPath": "$.body.clients.revoke",
+        "End": true
+      },
+      "Diff Fail": {
+        "Type": "Fail",
+        "ErrorPath": "$.body"
+      }
+    }
+  }
+  
