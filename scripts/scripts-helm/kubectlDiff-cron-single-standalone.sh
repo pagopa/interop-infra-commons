@@ -80,7 +80,6 @@ do
 done
 
 
-
 if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help

@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -80,7 +81,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
-OUT_DIR="$SCRIPTS_FOLDER/../../out/templates/$ENV/cron_$job"
+OUT_DIR="$ROOT_DIR/out/templates/$ENV/cron_$job"
 OUT_DIR=$( echo $OUT_DIR | sed  's/-/_/g' )
 #rm -rf $OUT_DIR
 #mkdir  -p $OUT_DIR

@@ -3,6 +3,7 @@ set -euo pipefail
 
 echo "Running helm lint process"
 
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -93,8 +94,8 @@ echo "Environment: $environment"
 
 ENV=$environment
 DELIMITER=";"
-MICROSERVICES_DIR="$SCRIPTS_FOLDER/../../microservices"
-CRONJOBS_DIR="$SCRIPTS_FOLDER/../../jobs"
+MICROSERVICE_DIR=$(getMicroservicesDir)
+CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then
@@ -143,7 +144,6 @@ if [[ $lint_jobs == true ]]; then
   done
 fi
 
-
 if [[ $post_clean == true ]]; then
-  rm -rf "$SCRIPTS_FOLDER"/../out/lint
+  rm -rf "$ROOT_DIR/out/lint
 fi

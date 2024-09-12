@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -105,7 +106,7 @@ fi
 
 ENV=$environment
 JOB_DIR=$( echo $job | sed  's/-/_/g' )
-OUT_DIR="$SCRIPTS_FOLDER/../../out/lint/$ENV/job_$JOB_DIR"
+OUT_DIR="$ROOT_DIR/out/lint/$ENV/job_$JOB_DIR"
 if [[ $output_redirect != "console" ]]; then
   rm -rf "$OUT_DIR"
   mkdir  -p "$OUT_DIR"
@@ -126,7 +127,7 @@ if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
 fi
 
-LINT_CMD=$LINT_CMD" \"$SCRIPTS_FOLDER/../../charts/interop-eks-cronjob-chart\" -f \"$SCRIPTS_FOLDER/../../charts/interop-eks-cronjob-chart/values.yaml\" -f \"$SCRIPTS_FOLDER/../../commons/$ENV/values-cronjob.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../../jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
+LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
 
 echo "$(eval $LINT_CMD)"$'\n\n'
 

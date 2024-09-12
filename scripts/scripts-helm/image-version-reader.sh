@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -102,8 +103,7 @@ else
   prefix="JOB_"
 fi
 
-cd "$SCRIPTS_FOLDER/../.." && PARENT_DIR=$(pwd)
-CONTAINER_IMAGES_FOLDER="$PARENT_DIR/commons/$environment"
+CONTAINER_IMAGES_FOLDER="$ROOT_DIR/commons/$environment"
 
 target=$(echo $target | sed  's/-/_/g' | tr '[a-z]' '[A-Z]')
 targetRegex=$prefix$target$suffix

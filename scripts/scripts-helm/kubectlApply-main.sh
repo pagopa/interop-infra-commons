@@ -86,8 +86,8 @@ echo "Environment: $environment"
 
 ENV=$environment
 DELIMITER=";"
-MICROSERVICES_DIR="$SCRIPTS_FOLDER/../../microservices"
-CRONJOBS_DIR="$SCRIPTS_FOLDER/../../jobs"
+MICROSERVICES_DIR=$(getMicroservicesDir)
+CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then

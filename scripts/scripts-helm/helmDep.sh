@@ -12,6 +12,7 @@ help()
 
 
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ROOT_DIR=$PROJECT_DIR
 
 args=$#
 untar=false
@@ -46,8 +47,8 @@ function setupHelmDeps()
 {
     untar=$1
     
-    cd "$SCRIPTS_FOLDER/../.."
-    echo "CURRENT DIR " $PWD
+    cd $ROOT_DIR
+    
     rm -rf charts
     echo "# Helm dependencies setup #"
     echo "-- Add PagoPA eks repos --"

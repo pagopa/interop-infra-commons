@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -113,8 +114,7 @@ fi
 ENV=$environment
 MICROSERVICE_DIR=$( echo $microservice | sed  's/-/_/g' )
 
-
-OUT_DIR="$SCRIPTS_FOLDER/../../out/templates/$ENV/microservice_$MICROSERVICE_DIR"
+OUT_DIR="$ROOT_DIR/out/templates/$ENV/microservice_$MICROSERVICE_DIR"
 if [[ $output_redirect != "console" ]]; then
   rm -rf "$OUT_DIR"
   mkdir  -p "$OUT_DIR"
@@ -137,8 +137,8 @@ if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
 fi
 
-#TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$SCRIPTS_FOLDER/../../commons/$ENV/values-microservice.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../../microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
-TEMPLATE_CMD=$TEMPLATE_CMD" $microservice "$SCRIPTS_FOLDER/../../charts/interop-eks-microservice-chart" -f \"$SCRIPTS_FOLDER/../../commons/$ENV/values-microservice.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../../microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
+#TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
+TEMPLATE_CMD=$TEMPLATE_CMD" $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
 
 eval $TEMPLATE_CMD
 if [[ $verbose == true ]]; then

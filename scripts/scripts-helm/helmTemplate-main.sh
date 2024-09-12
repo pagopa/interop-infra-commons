@@ -3,6 +3,7 @@ set -euo pipefail
 
 echo "Running helm template process"
 
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -92,8 +93,8 @@ echo "Environment: $environment"
 
 ENV=$environment
 DELIMITER=";"
-MICROSERVICES_DIR="$SCRIPTS_FOLDER/../../microservices"
-CRONJOBS_DIR="$SCRIPTS_FOLDER/../../jobs"
+MICROSERVICES_DIR=$(getMicroservicesDir)
+CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then
@@ -142,5 +143,5 @@ if [[ $template_jobs == true ]]; then
 fi
 
 if [[ $post_clean == true ]]; then
-  rm -rf "$SCRIPTS_FOLDER"/../out/templates
+  rm -rf "$ROOT_DIR/out/templates
 fi

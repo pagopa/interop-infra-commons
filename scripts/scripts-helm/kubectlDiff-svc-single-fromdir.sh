@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -69,7 +70,8 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash $(dirname "$0")/helmDep.sh
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  skip_dep=true
 fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
@@ -79,7 +81,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
-OUT_DIR="$SCRIPTS_FOLDER/../../out/templates/$ENV/service_$microservice"
+OUT_DIR="$ROOT_DIR/out/templates/$ENV/service_$microservice"
 OUT_DIR=$( echo $OUT_DIR | sed  's/-/_/g' )
 #rm -rf $OUT_DIR
 #mkdir  -p $OUT_DIR
