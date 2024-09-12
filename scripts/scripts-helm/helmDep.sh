@@ -46,7 +46,7 @@ function setupHelmDeps()
 {
     untar=$1
     
-    cd "$SCRIPTS_FOLDER/.."
+    cd "$SCRIPTS_FOLDER/../.."
     echo "CURRENT DIR " $PWD
     rm -rf charts
     echo "# Helm dependencies setup #"

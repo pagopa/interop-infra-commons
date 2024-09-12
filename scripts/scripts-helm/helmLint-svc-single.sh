@@ -105,7 +105,7 @@ fi
 
 ENV=$environment
 MICROSERVICE_DIR=$( echo $microservice | sed  's/-/_/g' )
-OUT_DIR="$SCRIPTS_FOLDER/../out/lint/$ENV/microservice_$MICROSERVICE_DIR"
+OUT_DIR="$SCRIPTS_FOLDER/../../out/lint/$ENV/microservice_$MICROSERVICE_DIR"
 if [[ $output_redirect != "console" ]]; then
   rm -rf "$OUT_DIR"
   mkdir  -p "$OUT_DIR"
@@ -127,7 +127,7 @@ if [[ $output_redirect == "console" ]]; then
 fi
 
 
-LINT_CMD=$LINT_CMD" \"$SCRIPTS_FOLDER/../charts/interop-eks-microservice-chart\" -f \"$SCRIPTS_FOLDER/../commons/$ENV/values-microservice.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
+LINT_CMD=$LINT_CMD" \"$SCRIPTS_FOLDER/../../charts/interop-eks-microservice-chart\" -f \"$SCRIPTS_FOLDER/../../commons/$ENV/values-microservice.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../../microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
 
 echo "$(eval $LINT_CMD)"$'\n\n'
 

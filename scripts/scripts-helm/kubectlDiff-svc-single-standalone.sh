@@ -88,7 +88,7 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
   skip_dep=true
 fi
 

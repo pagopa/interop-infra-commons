@@ -80,7 +80,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
-OUT_DIR="$SCRIPTS_FOLDER/../out/templates/$ENV/cron_$job"
+OUT_DIR="$SCRIPTS_FOLDER/../../out/templates/$ENV/cron_$job"
 OUT_DIR=$( echo $OUT_DIR | sed  's/-/_/g' )
 #rm -rf $OUT_DIR
 #mkdir  -p $OUT_DIR

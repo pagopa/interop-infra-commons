@@ -101,7 +101,7 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
 fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
@@ -114,7 +114,7 @@ ENV=$environment
 MICROSERVICE_DIR=$( echo $microservice | sed  's/-/_/g' )
 
 
-OUT_DIR="$SCRIPTS_FOLDER/../out/templates/$ENV/microservice_$MICROSERVICE_DIR"
+OUT_DIR="$SCRIPTS_FOLDER/../../out/templates/$ENV/microservice_$MICROSERVICE_DIR"
 if [[ $output_redirect != "console" ]]; then
   rm -rf "$OUT_DIR"
   mkdir  -p "$OUT_DIR"
@@ -137,8 +137,8 @@ if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
 fi
 
-TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$SCRIPTS_FOLDER/../commons/$ENV/values-microservice.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
-#TEMPLATE_CMD=$TEMPLATE_CMD" $microservice \"$(pwd)/charts/interop-eks-microservice-chart\" -f \"$SCRIPTS_FOLDER/../charts/interop-eks-microservice-chart/values.yaml\" -f \"$SCRIPTS_FOLDER/../commons/$ENV/values-microservice.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
+#TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$SCRIPTS_FOLDER/../../commons/$ENV/values-microservice.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../../microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
+TEMPLATE_CMD=$TEMPLATE_CMD" $microservice "$SCRIPTS_FOLDER/../../charts/interop-eks-microservice-chart" -f \"$SCRIPTS_FOLDER/../../commons/$ENV/values-microservice.compiled.yaml\" -f \"$SCRIPTS_FOLDER/../../microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
 
 eval $TEMPLATE_CMD
 if [[ $verbose == true ]]; then

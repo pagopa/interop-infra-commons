@@ -102,7 +102,7 @@ else
   prefix="JOB_"
 fi
 
-cd "$SCRIPTS_FOLDER/.." && PARENT_DIR=$(pwd)
+cd "$SCRIPTS_FOLDER/../.." && PARENT_DIR=$(pwd)
 CONTAINER_IMAGES_FOLDER="$PARENT_DIR/commons/$environment"
 
 target=$(echo $target | sed  's/-/_/g' | tr '[a-z]' '[A-Z]')

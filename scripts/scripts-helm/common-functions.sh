@@ -2,6 +2,7 @@
 set -euo pipefail
 
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+echo $SCRIPTS_FOLDER
 
 function isCronjobEnvConfigValid()
 {
@@ -31,12 +32,12 @@ function isMicroserviceEnvConfigValid()
 
 function getCronjobsDir()
 {
-    echo "$SCRIPTS_FOLDER/../jobs"
+    echo "$SCRIPTS_FOLDER/../../jobs"
 }
 
 function getMicroservicesDir()
 {
-    echo "$SCRIPTS_FOLDER/../microservices"
+    echo "$SCRIPTS_FOLDER/../../microservices"
 }
 
 function getAllowedMicroservices()

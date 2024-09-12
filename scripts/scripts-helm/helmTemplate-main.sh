@@ -92,8 +92,8 @@ echo "Environment: $environment"
 
 ENV=$environment
 DELIMITER=";"
-MICROSERVICES_DIR="$SCRIPTS_FOLDER/../microservices"
-CRONJOBS_DIR="$SCRIPTS_FOLDER/../jobs"
+MICROSERVICES_DIR="$SCRIPTS_FOLDER/../../microservices"
+CRONJOBS_DIR="$SCRIPTS_FOLDER/../../jobs"
 
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then
@@ -106,7 +106,7 @@ if [[ -n $output_redirect ]]; then
   OPTIONS=$OPTIONS" -o $output_redirect"
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
 fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
 OPTIONS=$OPTIONS" -sd"
