@@ -143,5 +143,5 @@ if [[ $template_jobs == true ]]; then
 fi
 
 if [[ $post_clean == true ]]; then
-  rm -rf "$ROOT_DIR/out/templates
+  rm -rf "$ROOT_DIR/out/templates"
 fi

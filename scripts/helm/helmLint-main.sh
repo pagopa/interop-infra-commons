@@ -145,5 +145,5 @@ if [[ $lint_jobs == true ]]; then
 fi
 
 if [[ $post_clean == true ]]; then
-  rm -rf "$ROOT_DIR/out/lint
+  rm -rf "$ROOT_DIR/out/lint"
 fi
