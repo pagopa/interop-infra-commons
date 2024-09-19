@@ -94,7 +94,7 @@ echo "Environment: $environment"
 
 ENV=$environment
 DELIMITER=";"
-MICROSERVICE_DIR=$(getMicroservicesDir)
+MICROSERVICES_DIR=$(getMicroservicesDir)
 CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
