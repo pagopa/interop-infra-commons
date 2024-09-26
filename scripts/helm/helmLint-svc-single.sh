@@ -130,7 +130,7 @@ fi
 
 LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
 
-echo "$(eval $LINT_CMD)"$'\n\n'
+eval $LINT_CMD
 
 if [[ $output_redirect != "console" && $post_clean == true ]]; then
   rm -rf $OUT_DIR

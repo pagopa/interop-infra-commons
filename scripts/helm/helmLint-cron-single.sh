@@ -129,7 +129,7 @@ fi
 
 LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
 
-echo "$(eval $LINT_CMD)"$'\n\n'
+eval $LINT_CMD
 
 if [[ $output_redirect != "console" && $post_clean == true ]]; then
   rm -rf $OUT_DIR
