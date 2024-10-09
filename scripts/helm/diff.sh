@@ -5,6 +5,8 @@ DIFF_ARGS=(
 )
 if [[ ! $ANSIBLE_MODE = YES ]]; then
   DIFF_ARGS+=("--color=always")
+else
+  DIFF_ARGS+=("--color=auto")
 fi
 
 SKIP_LINE=0
