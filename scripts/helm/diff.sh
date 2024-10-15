@@ -2,6 +2,7 @@
 DIFF_ARGS=(
   "-u"
   "-N"
+  "--color=always"
 )
 if [[ ! $ANSIBLE_MODE = YES ]]; then
   DIFF_ARGS+=("--color=always")
@@ -10,7 +11,7 @@ else
 fi
 
 SKIP_LINE=0
-diff "${DIFF_ARGS[@]}" "$@" | awk -v skip=$SKIP_LINE '
+  "${DIFF_ARGS[@]}" "$@" | awk -v skip=$SKIP_LINE '
   BEGIN {
     exit_code = 0
   }
