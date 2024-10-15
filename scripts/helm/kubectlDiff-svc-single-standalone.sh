@@ -119,6 +119,5 @@ fi
 HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-svc-single.sh"
 DIFF_SCRIPT="$SCRIPTS_FOLDER/diff.sh"
 
-KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" \
-  "$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" $OPTIONS | \
-  kubectl diff --show-managed-fields=false -f -
+"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" $OPTIONS | \
+ KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -

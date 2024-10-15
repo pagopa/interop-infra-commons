@@ -120,6 +120,5 @@ fi
 HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-cron-single.sh"
 DIFF_SCRIPT="$SCRIPTS_FOLDER/diff.sh"
 
-KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" \
-  "$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS | \
-  kubectl diff --show-managed-fields=false -f -
+"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS | \
+ KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -
