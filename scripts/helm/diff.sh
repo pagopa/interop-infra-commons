@@ -10,7 +10,7 @@ else
 fi
 
 SKIP_LINE=0
-  "${DIFF_ARGS[@]}" "$@" | awk -v skip=$SKIP_LINE '
+diff "${DIFF_ARGS[@]}" "$@" | awk -v skip=$SKIP_LINE '
   BEGIN {
     exit_code = 0
   }
