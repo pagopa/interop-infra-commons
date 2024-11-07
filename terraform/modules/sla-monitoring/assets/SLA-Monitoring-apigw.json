@@ -1,0 +1,308 @@
+{
+    "widgets": [
+        {
+            "height": 9,
+            "width": 13,
+            "y": 3,
+            "x": 0,
+            "type": "metric",
+            "properties": {
+                "metrics": [
+                    [ { "expression": "m1/1000", "label": "P90 Response Time (s)", "id": "e1", "region": "${Region}", "color": "#ff7f0e" } ],
+                    [ "AWS/ApiGateway", "Latency", "ApiName", "${ApiGwName}", { "label": "Latency", "region": "${Region}", "id": "m1", "color": "#9467bd", "visible": false } ]
+                ],
+                "width": 12,
+                "height": 6,
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${Region}",
+                "title": "API Performance Analysis: P90 Response Time",
+                "period": 60,
+                "setPeriodToTimeRange": true,
+                "yAxis": {
+                    "left": {
+                        "max": 12,
+                        "min": 0,
+                        "label": "Seconds",
+                        "showUnits": false
+                    }
+                },
+                "annotations": {
+                    "horizontal": [
+                        {
+                            "value": 10,
+                            "label": "10s threshold",
+                            "color": "#ff0000"
+                        }
+                    ]
+                },
+                "numberFormat": {
+                    "formatString": "#,##0.00"
+                },
+                "stat": "p90",
+                "legend": {
+                    "position": "right"
+                },
+                "start": "-PT2H",
+                "end": "P0D"
+            }
+        },
+        {
+            "height": 9,
+            "width": 13,
+            "y": 15,
+            "x": 0,
+            "type": "metric",
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApiGateway", "Count", "ApiName", "${ApiGwName}", { "label": "Request Count", "color": "#aec7e8", "region": "${Region}", "id": "m1", "stat": "SampleCount" } ],
+                    [ ".", "Latency", ".", ".", { "stat": "p90", "label": "Response Time (ms)", "color": "#ffbb78", "region": "${Region}", "id": "m2" } ],
+                    [ ".", "5XXError", ".", ".", { "label": "5XX Error Count", "color": "#c5b0d5", "region": "${Region}", "id": "m3", "visible": false } ],
+                    [ { "expression": "IF(m1 > 0, (m3/ m1) * 100, 0)", "label": "Error Rate %", "id": "errorRate", "region": "${Region}", "color": "#ff9896" } ]
+                ],
+                "width": 12,
+                "height": 6,
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${Region}",
+                "title": "API Performance Metrics (Dev): Requests, Latency, and Error Rates",
+                "description": "Monitoring the performance and error rates of the API over the last 120 minutes.",
+                "period": 60,
+                "yAxis": {
+                    "left": {
+                        "max": 2000000,
+                        "min": 0,
+                        "label": "Requests",
+                        "showUnits": false
+                    },
+                    "right": {
+                        "label": "% Error Rate",
+                        "showUnits": true
+                    }
+                },
+                "annotations": {
+                    "horizontal": [
+                        {
+                            "value": 720000,
+                            "label": "Min requests/120min (100 req/s)",
+                            "color": "#ff0000"
+                        }
+                    ]
+                },
+                "statisticType": {
+                    "type": [
+                        "p90"
+                    ]
+                },
+                "legend": {
+                    "position": "right",
+                    "alignment": "center",
+                    "markerSize": 10,
+                    "fontSize": 12,
+                    "show": true
+                },
+                "background": {
+                    "color": "#f4f4f4"
+                },
+                "tooltip": {
+                    "enabled": true,
+                    "format": "{metricName}: {value} at {timestamp}"
+                },
+                "stat": "Sum",
+                "start": "-PT2H",
+                "end": "P0D"
+            }
+        },
+        {
+            "height": 9,
+            "width": 8,
+            "y": 3,
+            "x": 13,
+            "type": "metric",
+            "properties": {
+                "metrics": [
+                    [ { "expression": "m1/1000", "label": "P90 Response Time (s)", "id": "e1", "region": "${Region}", "color": "#ff7f0e", "period": 60 } ],
+                    [ "AWS/ApiGateway", "Latency", "ApiName", "${ApiGwName}", { "label": "Latency", "region": "${Region}", "id": "m1", "visible": false, "color": "#9467bd" } ]
+                ],
+                "width": 12,
+                "height": 6,
+                "view": "singleValue",
+                "stacked": false,
+                "region": "${Region}",
+                "title": "API Performance Analysis: P90 Response Time",
+                "period": 60,
+                "setPeriodToTimeRange": false,
+                "statisticType": {
+                    "type": [
+                        "p90"
+                    ]
+                },
+                "numberFormat": {
+                    "formatString": "#,##0.00"
+                },
+                "stat": "p90",
+                "legend": {
+                    "position": "right"
+                },
+                "start": "-PT2H",
+                "end": "P0D"
+            }
+        },
+        {
+            "height": 9,
+            "width": 8,
+            "y": 15,
+            "x": 13,
+            "type": "metric",
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApiGateway", "Count", "ApiName", "${ApiGwName}", { "label": "Request Count", "color": "#aec7e8", "region": "${Region}", "id": "m1", "stat": "SampleCount" } ],
+                    [ ".", "Latency", ".", ".", { "stat": "p90", "label": "Response Time (ms)", "color": "#ffbb78", "region": "${Region}", "id": "m2" } ],
+                    [ ".", "5XXError", ".", ".", { "label": "5XX Error Count", "color": "#c5b0d5", "region": "${Region}", "id": "m3" } ],
+                    [ { "expression": "IF(m1 > 0, (m3/ m1) * 100, 0)", "label": "Error Rate %", "id": "errorRate", "region": "${Region}", "color": "#ff9896" } ]
+                ],
+                "width": 12,
+                "height": 6,
+                "view": "singleValue",
+                "stacked": false,
+                "region": "${Region}",
+                "title": "API Performance Metrics (Dev): Requests, Latency, and Error Rates",
+                "description": "Monitoring the performance and error rates of the API over the last 120 minutes.",
+                "period": 60,
+                "statisticType": {
+                    "type": [
+                        "p90"
+                    ]
+                },
+                "legend": {
+                    "position": "right",
+                    "alignment": "center",
+                    "markerSize": 10,
+                    "fontSize": 12,
+                    "show": true
+                },
+                "background": {
+                    "color": "#f4f4f4"
+                },
+                "tooltip": {
+                    "enabled": true,
+                    "format": "{metricName}: {value} at {timestamp}"
+                },
+                "stat": "Sum",
+                "start": "-PT2H",
+                "end": "P0D"
+            }
+        },
+        {
+            "height": 8,
+            "width": 13,
+            "y": 27,
+            "x": 0,
+            "type": "metric",
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApiGateway", "5XXError", "ApiName", "${ApiGwName}", { "id": "errors5xx", "region": "${Region}", "color": "#c5b0d5", "label": "5XX Error Count" } ],
+                    [ ".", "Count", ".", ".", { "label": "Request Count", "color": "#aec7e8", "region": "${Region}", "id": "m1", "visible": false, "stat": "SampleCount" } ],
+                    [ { "expression": "IF(m1 > 0, (errors5xx / m1) * 100, 0)", "label": "Error Rate %", "id": "errorRate", "region": "${Region}", "color": "#ff9896" } ]
+                ],
+                "width": 12,
+                "height": 6,
+                "view": "timeSeries",
+                "stacked": false,
+                "region": "${Region}",
+                "title": "API Error Rate Breakdown: 5XX Errors in the Last 120 Minutes",
+                "period": 60,
+                "yAxis": {
+                    "left": {
+                        "min": 0,
+                        "max": 10,
+                        "label": "Error Rate (%)",
+                        "showUnits": false
+                    }
+                },
+                "annotations": {
+                    "horizontal": [
+                        {
+                            "value": 3,
+                            "label": "Threshold: 3% Error Rate",
+                            "color": "#ff0000"
+                        }
+                    ]
+                },
+                "statisticType": {
+                    "type": [
+                        "p90"
+                    ]
+                },
+                "legend": {
+                    "position": "right"
+                },
+                "stat": "Sum",
+                "start": "-PT2H",
+                "end": "P0D"
+            }
+        },
+        {
+            "height": 8,
+            "width": 8,
+            "y": 27,
+            "x": 13,
+            "type": "metric",
+            "properties": {
+                "metrics": [
+                    [ "AWS/ApiGateway", "5XXError", "ApiName", "${ApiGwName}", { "id": "errors5xx", "region": "${Region}", "color": "#c5b0d5", "label": "5XX Error Count" } ],
+                    [ ".", "Count", ".", ".", { "label": "Request Count", "color": "#aec7e8", "region": "${Region}", "id": "m1", "stat": "SampleCount", "visible": false } ],
+                    [ { "expression": "IF(m1 > 0, (errors5xx / m1) * 100, 0)", "label": "Error Rate %", "id": "errorRate", "region": "${Region}", "color": "#ff9896" } ]
+                ],
+                "width": 12,
+                "height": 6,
+                "view": "singleValue",
+                "stacked": false,
+                "region": "${Region}",
+                "title": "API Error Rate Breakdown: 5XX Errors in the Last 120 Minutes",
+                "period": 60,
+                "statisticType": {
+                    "type": [
+                        "p90"
+                    ]
+                },
+                "legend": {
+                    "position": "right"
+                },
+                "stat": "Sum",
+                "start": "-PT2H",
+                "end": "P0D"
+            }
+        },
+        {
+            "height": 3,
+            "width": 21,
+            "y": 0,
+            "x": 0,
+            "type": "text",
+            "properties": {
+                "markdown": "# 15.1.1 - API Performance Analysis: P90 Response Time\n## The widget monitors the 90th percentile (P90) response time of a specific API (_**interop-api-0.0-dev**_) and calculates a moving average over a 120-minute period. It uses a 10-second threshold as a visual indicator to help quickly determine if the API's performance is within the desired limits. The widget updates the values every minute and maintains a rolling window of 2 hours, ensuring that it always reflects the most recent available data.\n"
+            }
+        },
+        {
+            "height": 3,
+            "width": 21,
+            "y": 12,
+            "x": 0,
+            "type": "text",
+            "properties": {
+                "markdown": "# 15.1.2 - API Performance Metrics (Dev): Requests, Latency, and Error Rates\n## The widget monitors Requests, Latency, and Error Rates for a specific API (_**interop-api-0.0-dev**_) and calculates a moving average over a 120-minute period. The line \"Min requests/120min (100 req/s)\" is displayed in red to indicate the minimum required threshold for requests within that time frame. \n## The widget updates its values every minute and maintains a rolling window of 2 hours, ensuring it always reflects the most recent available data.\n"
+            }
+        },
+        {
+            "height": 3,
+            "width": 21,
+            "y": 24,
+            "x": 0,
+            "type": "text",
+            "properties": {
+                "markdown": "# 15.1.3 - API Error Rate Breakdown: 5XX Errors in the Last 120 Minutes\n## The widget offers a clear overview of the 5XX error rate in relation to the total number of requests made to the API (_**interop-api-0.0-dev**_). It provides real-time analysis of the API's reliability with updates every minute, along with a visual indicator for the critical error rate threshold of 3%. \n## The widget maintains a rolling window of 2 hours, ensuring that it always displays the most recent available data."
+            }
+        }
+    ]
+}
