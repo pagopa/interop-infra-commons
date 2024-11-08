@@ -40,13 +40,13 @@ variable "error_rate_threshold" {
 variable "alarm_actions" {
   description = "List of ARNs to notify when alarm enters ALARM state"
   type        = list(string)
-  default     = []
+  default     = null
 }
 
 variable "ok_actions" {
   description = "List of ARNs to notify when alarm enters OK state"
   type        = list(string)
-  default     = []
+  default     = null
 }
 
 variable "enable_single_endpoint_monitoring" {
@@ -58,7 +58,7 @@ variable "enable_single_endpoint_monitoring" {
 variable "api_stage" {
   description = "The stage of the API Gateway"
   type        = string
-  default     = "dev"
+  #default     = "dev"
 }
 
 
