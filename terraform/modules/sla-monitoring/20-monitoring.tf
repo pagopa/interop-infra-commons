@@ -20,9 +20,9 @@ resource "aws_cloudwatch_metric_alarm" "p90_latency" {
     metric {
       metric_name = "Latency"
       namespace   = "AWS/ApiGateway"
-      period     = "60"
-      stat       = "p90"
-      
+      period      = "60"
+      stat        = "p90"
+
       dimensions = {
         ApiName = var.apigw_name
       }
@@ -39,7 +39,7 @@ resource "aws_cloudwatch_metric_alarm" "request_count" {
   evaluation_periods  = var.alarm_evaluation_periods
   metric_name         = "Count"
   namespace           = "AWS/ApiGateway"
-  period              = "7200"  # 120 minutes
+  period              = "7200" # 120 minutes
   statistic           = "Sum"
   threshold           = var.minimum_requests_threshold
   alarm_description   = "API Gateway request count is too low"
@@ -74,9 +74,9 @@ resource "aws_cloudwatch_metric_alarm" "error_rate" {
     metric {
       metric_name = "Count"
       namespace   = "AWS/ApiGateway"
-      period     = "60"
-      stat       = "Sum"
-      
+      period      = "60"
+      stat        = "Sum"
+
       dimensions = {
         ApiName = var.apigw_name
       }
@@ -89,8 +89,8 @@ resource "aws_cloudwatch_metric_alarm" "error_rate" {
     metric {
       metric_name = "5XXError"
       namespace   = "AWS/ApiGateway"
-      period     = "60"
-      stat       = "Sum"
+      period      = "60"
+      stat        = "Sum"
 
       dimensions = {
         ApiName = var.apigw_name
@@ -125,9 +125,9 @@ resource "aws_cloudwatch_metric_alarm" "endpoint_p90_latency" {
     metric {
       metric_name = "Latency"
       namespace   = "AWS/ApiGateway"
-      period     = "60"
-      stat       = "p90"
-      
+      period      = "60"
+      stat        = "p90"
+
       dimensions = {
         ApiName  = var.apigw_single_endpoint_name
         Resource = "/token.oauth2"
@@ -148,7 +148,7 @@ resource "aws_cloudwatch_metric_alarm" "endpoint_request_count" {
   evaluation_periods  = var.alarm_evaluation_periods
   metric_name         = "Count"
   namespace           = "AWS/ApiGateway"
-  period              = "7200"  # 120 minutes
+  period              = "7200" # 120 minutes
   statistic           = "Sum"
   threshold           = var.minimum_requests_threshold
   alarm_description   = "API Gateway endpoint request count is too low"
@@ -187,9 +187,9 @@ resource "aws_cloudwatch_metric_alarm" "endpoint_error_rate" {
     metric {
       metric_name = "Count"
       namespace   = "AWS/ApiGateway"
-      period     = "60"
-      stat       = "Sum"
-      
+      period      = "60"
+      stat        = "Sum"
+
       dimensions = {
         ApiName  = var.apigw_single_endpoint_name
         Resource = "/token.oauth2"
@@ -205,8 +205,8 @@ resource "aws_cloudwatch_metric_alarm" "endpoint_error_rate" {
     metric {
       metric_name = "5XXError"
       namespace   = "AWS/ApiGateway"
-      period     = "60"
-      stat       = "Sum"
+      period      = "60"
+      stat        = "Sum"
 
       dimensions = {
         ApiName  = var.apigw_single_endpoint_name
