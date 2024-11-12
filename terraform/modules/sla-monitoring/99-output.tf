@@ -52,3 +52,13 @@ output "alarm_actions" {
   description = "The list of ARNs to notify when an alarm enters the ALARM state"
   value       = var.alarm_actions
 }
+
+output "ok_actions" {
+  description = "The list of ARNs to notify when an alarm enters the OK state"
+  value       = var.ok_actions
+}
+
+output "enable_single_endpoint_monitoring" {
+  description = "Whether monitoring is enabled for the single API Gateway endpoint (/token.oauth2)"
+  value       = var.enable_single_endpoint_monitoring
+}
