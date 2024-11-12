@@ -6,7 +6,6 @@ variable "env" {
 variable "dashboard_prefix" {
   description = "Prefix for the CloudWatch dashboard names"
   type        = string
-  default     = ""
 }
 
 variable "apigw_name" {
