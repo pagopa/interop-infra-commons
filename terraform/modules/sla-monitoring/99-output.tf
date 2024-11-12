@@ -53,12 +53,19 @@ output "alarm_actions" {
   value       = var.alarm_actions
 }
 
-output "ok_actions" {
-  description = "The list of ARNs to notify when an alarm enters the OK state"
-  value       = var.ok_actions
+output "dashboard_names" {
+  description = "The names of the CloudWatch dashboards"
+  value       = [aws_cloudwatch_dashboard.apigw.dashboard_name, aws_cloudwatch_dashboard.single_endpoint[*].dashboard_name]
 }
 
-output "enable_single_endpoint_monitoring" {
-  description = "Whether monitoring is enabled for the single API Gateway endpoint (/token.oauth2)"
-  value       = var.enable_single_endpoint_monitoring
+output "alarm_names" {
+  description = "The names of the CloudWatch alarms"
+  value = [
+    aws_cloudwatch_metric_alarm.sla-p90-latency.alarm_name,
+    aws_cloudwatch_metric_alarm.sla-request-count.alarm_name,
+    aws_cloudwatch_metric_alarm.sla-error-rate.alarm_name,
+    aws_cloudwatch_metric_alarm.sla-endpoint-p90-latency[*].alarm_name,
+    aws_cloudwatch_metric_alarm.sla-endpoint-request-count[*].alarm_name,
+    aws_cloudwatch_metric_alarm.sla-endpoint-error-rate[*].alarm_name
+  ]
 }

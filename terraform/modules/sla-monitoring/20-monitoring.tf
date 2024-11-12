@@ -1,6 +1,6 @@
 # General API Gateway Alarms
-resource "aws_cloudwatch_metric_alarm" "p90_latency" {
-  alarm_name          = "${var.env}-${var.apigw_name}-high-latency"
+resource "aws_cloudwatch_metric_alarm" "sla-p90-latency" {
+  alarm_name          = "sla-${var.env}-${var.apigw_name}-high-latency"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
   threshold           = var.latency_threshold * 1000 # Convert seconds to milliseconds
@@ -30,11 +30,10 @@ resource "aws_cloudwatch_metric_alarm" "p90_latency" {
   }
 
   alarm_actions = var.alarm_actions
-  ok_actions    = var.ok_actions
 }
 
-resource "aws_cloudwatch_metric_alarm" "request_count" {
-  alarm_name          = "${var.env}-${var.apigw_name}-low-requests"
+resource "aws_cloudwatch_metric_alarm" "sla-request-count" {
+  alarm_name          = "sla-${var.env}-${var.apigw_name}-low-requests"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
   metric_name         = "Count"
@@ -50,11 +49,10 @@ resource "aws_cloudwatch_metric_alarm" "request_count" {
   }
 
   alarm_actions = var.alarm_actions
-  ok_actions    = var.ok_actions
 }
 
-resource "aws_cloudwatch_metric_alarm" "error_rate" {
-  alarm_name          = "${var.env}-${var.apigw_name}-high-error-rate"
+resource "aws_cloudwatch_metric_alarm" "sla-error-rate" {
+  alarm_name          = "sla-${var.env}-${var.apigw_name}-high-error-rate"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
   threshold           = var.error_rate_threshold
@@ -99,13 +97,12 @@ resource "aws_cloudwatch_metric_alarm" "error_rate" {
   }
 
   alarm_actions = var.alarm_actions
-  ok_actions    = var.ok_actions
 }
 
 # Single Endpoint Alarms
-resource "aws_cloudwatch_metric_alarm" "endpoint_p90_latency" {
-  count               = var.enable_single_endpoint_monitoring ? 1 : 0
-  alarm_name          = "${var.env}-${var.apigw_single_endpoint_name}-token-high-latency"
+resource "aws_cloudwatch_metric_alarm" "sla-endpoint-p90-latency" {
+  count               = var.apigw_single_endpoint_name != "" ? 1 : 0
+  alarm_name          = "sla-${var.env}-${var.apigw_single_endpoint_name}-token-high-latency"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
   threshold           = var.latency_threshold * 1000 # Convert seconds to milliseconds
@@ -138,12 +135,11 @@ resource "aws_cloudwatch_metric_alarm" "endpoint_p90_latency" {
   }
 
   alarm_actions = var.alarm_actions
-  ok_actions    = var.ok_actions
 }
 
-resource "aws_cloudwatch_metric_alarm" "endpoint_request_count" {
-  count               = var.enable_single_endpoint_monitoring ? 1 : 0
-  alarm_name          = "${var.env}-${var.apigw_single_endpoint_name}-token-low-requests"
+resource "aws_cloudwatch_metric_alarm" "sla-endpoint-request-count" {
+  count               = var.apigw_single_endpoint_name != "" ? 1 : 0
+  alarm_name          = "sla-${var.env}-${var.apigw_single_endpoint_name}-token-low-requests"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
   metric_name         = "Count"
@@ -162,12 +158,11 @@ resource "aws_cloudwatch_metric_alarm" "endpoint_request_count" {
   }
 
   alarm_actions = var.alarm_actions
-  ok_actions    = var.ok_actions
 }
 
-resource "aws_cloudwatch_metric_alarm" "endpoint_error_rate" {
-  count               = var.enable_single_endpoint_monitoring ? 1 : 0
-  alarm_name          = "${var.env}-${var.apigw_single_endpoint_name}-token-high-error-rate"
+resource "aws_cloudwatch_metric_alarm" "sla-endpoint-error-rate" {
+  count               = var.apigw_single_endpoint_name != "" ? 1 : 0
+  alarm_name          = "sla-${var.env}-${var.apigw_single_endpoint_name}-token-high-error-rate"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
   threshold           = var.error_rate_threshold
@@ -218,5 +213,4 @@ resource "aws_cloudwatch_metric_alarm" "endpoint_error_rate" {
   }
 
   alarm_actions = var.alarm_actions
-  ok_actions    = var.ok_actions
 }

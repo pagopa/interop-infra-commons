@@ -3,6 +3,12 @@ variable "env" {
   description = "Environment name"
 }
 
+variable "dashboard_prefix" {
+  description = "Prefix for the CloudWatch dashboard names"
+  type        = string
+  default     = ""
+}
+
 variable "apigw_name" {
   description = "Name of the API Gateway"
   type        = string
@@ -43,27 +49,14 @@ variable "alarm_actions" {
   default     = null
 }
 
-variable "ok_actions" {
-  description = "List of ARNs to notify when alarm enters OK state"
-  type        = list(string)
-  default     = null
-}
-
-variable "enable_single_endpoint_monitoring" {
-  description = "Whether to enable monitoring for the single endpoint (/token.oauth2)"
-  type        = bool
-  default     = true
-}
-
 variable "api_stage" {
   description = "The stage of the API Gateway"
   type        = string
   default     = "dev"
 }
 
-
-
-
-
-
-
+variable "enable_single_endpoint_monitoring" {
+  description = "Whether to enable monitoring for the single endpoint (/token.oauth2)"
+  type        = string
+  default     = ""
+}
