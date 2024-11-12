@@ -8,6 +8,11 @@ output "aws_account_id" {
   value       = data.aws_caller_identity.current.account_id
 }
 
+output "environment" {
+  description = "The environment where the resources are deployed"
+  value       = var.env
+}
+
 output "api_gateway_name" {
   description = "The name of the API Gateway"
   value       = var.apigw_name
@@ -46,14 +51,4 @@ output "error_rate_threshold" {
 output "alarm_actions" {
   description = "The list of ARNs to notify when an alarm enters the ALARM state"
   value       = var.alarm_actions
-}
-
-output "ok_actions" {
-  description = "The list of ARNs to notify when an alarm enters the OK state"
-  value       = var.ok_actions
-}
-
-output "enable_single_endpoint_monitoring" {
-  description = "Whether monitoring is enabled for the single API Gateway endpoint (/token.oauth2)"
-  value       = var.enable_single_endpoint_monitoring
 }
