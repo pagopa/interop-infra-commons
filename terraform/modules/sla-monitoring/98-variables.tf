@@ -58,7 +58,7 @@ variable "enable_single_endpoint_monitoring" {
 variable "api_stage" {
   description = "The stage of the API Gateway"
   type        = string
-  #default     = "dev"
+  default     = "dev"
 }
 
 
