@@ -51,6 +51,8 @@ variable "alarm_actions" {
 variable "api_stage" {
   description = "The stage of the API Gateway"
   type        = string
-  #default     = "dev"
+  validation {
+    condition     = var.apigw_single_endpoint_name == "" || var.api_stage != ""
+    error_message = "Please provide a value for api_stage if apigw_single_endpoint_name is not empty."
+  }
 }
-
