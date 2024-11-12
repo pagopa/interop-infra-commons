@@ -54,8 +54,3 @@ variable "api_stage" {
   #default     = "dev"
 }
 
-variable "enable_single_endpoint_monitoring" {
-  description = "Whether to enable monitoring for the single endpoint (/token.oauth2)"
-  type        = string
-  default     = ""
-}
