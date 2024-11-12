@@ -1,5 +1,5 @@
 # General API Gateway Alarms
-resource "aws_cloudwatch_metric_alarm" "sla-p90-latency" {
+resource "aws_cloudwatch_metric_alarm" "sla-p90-response-time" {
   alarm_name          = "sla-${var.env}-${var.apigw_name}-high-latency"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = var.alarm_evaluation_periods
@@ -100,7 +100,7 @@ resource "aws_cloudwatch_metric_alarm" "sla-error-rate" {
 }
 
 # Single Endpoint Alarms
-resource "aws_cloudwatch_metric_alarm" "sla-endpoint-p90-latency" {
+resource "aws_cloudwatch_metric_alarm" "sla-endpoint-p90-response-time" {
   count               = var.apigw_single_endpoint_name != "" ? 1 : 0
   alarm_name          = "sla-${var.env}-${var.apigw_single_endpoint_name}-token-high-latency"
   comparison_operator = "GreaterThanThreshold"
