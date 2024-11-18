@@ -157,7 +157,6 @@ fi
 export $tag_placeholder=$found_version
 export $digest_placeholder=$found_digest
 
-echo $(env)
 envsubst < "$CONTAINER_IMAGES_FOLDER/$tagetValues.yaml" > "$CONTAINER_IMAGES_FOLDER/$tagetValues.compiled.yaml"
 
 cd "$SCRIPTS_FOLDER"
