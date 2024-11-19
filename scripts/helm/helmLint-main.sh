@@ -13,6 +13,7 @@ help()
         [ -d | --debug ] Enable Helm template debug
         [ -m | --microservices ] Lint all microservices
         [ -j | --jobs ] Lint all cronjobs
+        [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print linting output on terminal
         [ -c | --clean ] Clean files and directories after scripts successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
@@ -28,6 +29,7 @@ lint_jobs=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+images_file=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -49,6 +51,12 @@ do
           lint_jobs=true
           step=1
           shift 1
+          ;;
+        -i | --image )
+          images_file=$2
+          
+          step=2
+          shift 2
           ;;
         -d | --debug)
           enable_debug=true
@@ -106,6 +114,9 @@ if [[ $post_clean == true ]]; then
 fi
 if [[ -n $output_redirect ]]; then
   OPTIONS=$OPTIONS" -o $output_redirect"
+fi
+if [[ -n $images_file ]]; then
+  OPTIONS=$OPTIONS" -i $images_file"
 fi
 if [[ $skip_dep == false ]]; then
   bash "$SCRIPTS_FOLDER"/helmDep.sh --untar

@@ -9,6 +9,7 @@ help()
     echo "Usage:  [ -e | --environment ] Cluster environment used to execute kubectl diff
         [ -d | --debug ] Enable debug
         [ -m | --microservice ] Microservice defined in microservices folder
+        [ -i | --image ] File with microservice image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -h | --help ] This help"
@@ -22,6 +23,7 @@ enable_debug=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+images_file=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -50,6 +52,12 @@ do
             help
           fi
 
+          step=2
+          shift 2
+          ;;
+        -i | --image )
+          images_file=$2
+          
           step=2
           shift 2
           ;;
@@ -107,6 +115,9 @@ if [[ -n $output_redirect ]]; then
   OPTIONS=$OPTIONS" -o $output_redirect"
 else
   OPTIONS=$OPTIONS" -o console "
+fi
+if [[ -n $images_file ]]; then
+  OPTIONS=$OPTIONS" -i $images_file"
 fi
 if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
