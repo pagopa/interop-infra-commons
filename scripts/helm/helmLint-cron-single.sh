@@ -115,7 +115,7 @@ else
 fi
 
 # Find image version and digest
-bash "$SCRIPTS_FOLDER"/image-version-reader.sh -e $environment -j $job
+bash "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job
 
 LINT_CMD="helm lint "
 if [[ $enable_debug == true ]]; then

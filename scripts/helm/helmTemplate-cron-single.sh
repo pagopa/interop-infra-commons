@@ -122,7 +122,7 @@ else
 fi
 
 # Find image version and digest
-. "$SCRIPTS_FOLDER"/image-version-reader.sh -e $environment -j $job
+. "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job
 
 TEMPLATE_CMD="helm template "
 if [[ $enable_debug == true ]]; then

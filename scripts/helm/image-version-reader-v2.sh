@@ -83,12 +83,6 @@ if [[ -z $environment || $environment == "" ]]; then
   help
 fi
 
-if [[ -z $configFile || $configFile == "" ]]; then
-  #echo "Config file cannot be null"
-  configFile="$ROOT_DIR/commons/$environment/images.yaml"
-  help
-fi
-
 if [[ -z $microservice || $microservice == "" ]] && [[ -z $job || $job == "" ]]; then
   echo "At least one from microservice and job option should be set"
   help
@@ -117,7 +111,13 @@ else
   tagetValues="values-cronjob"
 fi
 
+
 if [[ -n $configFile ]]; then
+  if [[ ! -e "$configFile" ]]; then
+    echo "Specified $configFile config file does not exist."
+    help
+  fi
+
   label=""
 
   if [[ -n $microservice ]]; then
@@ -130,6 +130,11 @@ if [[ -n $configFile ]]; then
   found_digest=$(cat $configFile | yq ".images.$label.$target.digest")
 
 else
+  if [[ ! -e "$CONTAINER_IMAGES_FOLDER/values-images.sh" ]]; then
+    echo "$CONTAINER_IMAGES_FOLDER/values-images.sh file does not exist."
+    help
+  fi
+  
   suffix="_IMAGE_VERSION"
   digestSuffix="_IMAGE_DIGEST"
 
