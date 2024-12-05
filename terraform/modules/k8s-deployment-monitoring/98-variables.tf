@@ -24,8 +24,23 @@ variable "sns_topics_arns" {
   default     = []
 }
 
-variable "create_alarms" {
-  description = "If set to true, creates the alarms"
+variable "create_pod_availability_alarm" {
+  description = "If set to true, creates the unavailable_pods alarm"
+  type        = bool
+}
+
+variable "create_pod_readiness_alarm" {
+  description = "If set to true, creates the unready_pods alarm"
+  type        = bool
+}
+
+variable "create_performance_alarm" {
+  description = "If set to true, creates the avg_cpu and avg_memory alarms"
+  type        = bool
+}
+
+variable "create_app_logs_errors_alarm" {
+  description = "If set to true, creates the app_errors alarms"
   type        = bool
 }
 
