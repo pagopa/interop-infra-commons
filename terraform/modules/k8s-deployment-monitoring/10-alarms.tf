@@ -113,11 +113,11 @@ resource "aws_cloudwatch_metric_alarm" "unavailable_pods" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "unready_pods" {
+resource "aws_cloudwatch_metric_alarm" "readiness_pods" {
   count = var.create_pod_readiness_alarm ? 1 : 0
 
-  alarm_name        = format("k8s-%s-unready-pods-%s", var.k8s_deployment_name, var.k8s_namespace)
-  alarm_description = format("Unready pods alarm for %s", var.k8s_deployment_name)
+  alarm_name        = format("k8s-%s-readiness-pods-%s", var.k8s_deployment_name, var.k8s_namespace)
+  alarm_description = format("Readiness pods alarm for %s", var.k8s_deployment_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -130,7 +130,7 @@ resource "aws_cloudwatch_metric_alarm" "unready_pods" {
 
   metric_query {
     id          = "e1"
-    label       = "Unready pods"
+    label       = "Not ready pods"
     expression  = "m1-m2"
     return_data = true
   }
