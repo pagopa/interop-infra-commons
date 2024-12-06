@@ -30,7 +30,7 @@ variable "create_pod_availability_alarm" {
 }
 
 variable "create_pod_readiness_alarm" {
-  description = "If set to true, creates the unready_pods alarm"
+  description = "If set to true, creates the readiness_pods alarm"
   type        = bool
 }
 
