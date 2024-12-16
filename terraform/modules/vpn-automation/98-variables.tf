@@ -68,7 +68,22 @@ variable "ses_mail_subject" {
   type        = string
 }
 
-variable "efs_pki_directory" {
-  description = "EASYRSA EFS pki directory"
+variable "easyrsa_bucket_name" {
+  description = "EASYRSA S3 Bucket with pki dir and other useful files"
+  type        = string
+}
+
+variable "easyrsa_bin_path" {
+  description = "EASYRSA bin path in easyrsa_bucket_name S3 bucket"
+  type        = string
+}
+
+variable "easyrsa_pki_dir" {
+  description = "EASYRSA PKI directory in easyrsa_bucket_name S3 bucket with configuration files, eg. client certificates issued, revoked,.."
+  type        = string
+}
+
+variable "lambda_log_level" {
+  description = "Log level for lambda executions"
   type        = string
 }
