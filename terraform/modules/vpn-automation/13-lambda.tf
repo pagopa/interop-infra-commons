@@ -21,9 +21,7 @@ resource "aws_iam_policy" "vpn_clients_s3_readonly_bucket_access" {
         Action = [
           "s3:Get*",
           "s3:List*",
-          "s3:Describe*",
-          "s3-object-lambda:Get*",
-          "s3-object-lambda:List*"
+          "s3:Describe*"
         ]
         Resource = [
           "${module.vpn_automation_bucket.s3_bucket_arn}/*",
