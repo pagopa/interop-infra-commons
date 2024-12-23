@@ -22,6 +22,8 @@ resource "aws_cloudwatch_metric_alarm" "avg_cpu" {
   period              = var.performance_alarms_period_seconds
   evaluation_periods  = var.alarm_eval_periods
   datapoints_to_alarm = var.alarm_datapoints
+
+  tags = var.tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "avg_memory" {
@@ -48,6 +50,8 @@ resource "aws_cloudwatch_metric_alarm" "avg_memory" {
   period              = var.performance_alarms_period_seconds
   evaluation_periods  = var.alarm_eval_periods
   datapoints_to_alarm = var.alarm_datapoints
+
+  tags = var.tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "unavailable_pods" {
@@ -111,6 +115,8 @@ resource "aws_cloudwatch_metric_alarm" "unavailable_pods" {
       }
     }
   }
+
+  tags = var.tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "readiness_pods" {
@@ -174,6 +180,8 @@ resource "aws_cloudwatch_metric_alarm" "readiness_pods" {
       }
     }
   }
+
+  tags = var.tags
 }
 
 resource "aws_cloudwatch_metric_alarm" "app_errors" {
@@ -200,4 +208,6 @@ resource "aws_cloudwatch_metric_alarm" "app_errors" {
   period              = 60 # 1 minute
   evaluation_periods  = 5
   datapoints_to_alarm = 1
+
+  tags = var.tags
 }

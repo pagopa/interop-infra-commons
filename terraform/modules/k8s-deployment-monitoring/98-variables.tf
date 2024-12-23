@@ -3,6 +3,13 @@ variable "env" {
   description = "Environment name"
 }
 
+variable "tags" {
+  type = map(any)
+  default = {
+    CreatedBy = "Terraform"
+  }
+}
+
 variable "eks_cluster_name" {
   description = "Name of the EKS cluster"
   type        = string
