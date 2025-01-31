@@ -4,16 +4,16 @@ resource "terraform_data" "manage_role" {
   triggers_replace = [
     var.username,
     var.db_name,
-    random_password.password.result
+    aws_secretsmanager_secret_version.this.version_id
   ]
 
   depends_on = [
-    aws_secretsmanager_secret.secret
+    aws_secretsmanager_secret_version.this
   ]
 
   provisioner "local-exec" {
     environment = {
-      PASSWORD                     = random_password.password.result
+      PASSWORD                     = random_password.this.result
       USERNAME                     = var.username
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
@@ -51,8 +51,6 @@ resource "terraform_data" "additional_script" {
 
   provisioner "local-exec" {
     environment = {
-      PASSWORD                     = random_password.password.result
-      USERNAME                     = var.username
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
       HOST                         = var.db_host
@@ -88,15 +86,16 @@ resource "terraform_data" "delete_role" {
   }
 
   triggers_replace = [
-    aws_secretsmanager_secret.secret.id
+    aws_secretsmanager_secret.this.id
   ]
 
   depends_on = [
-    aws_secretsmanager_secret.secret
+    aws_secretsmanager_secret.this
   ]
 
   provisioner "local-exec" {
     when = destroy
+
     environment = {
       USERNAME                     = self.input.username
       DATABASE                     = self.input.db_name
