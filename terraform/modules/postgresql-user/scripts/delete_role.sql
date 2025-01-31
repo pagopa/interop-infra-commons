@@ -3,7 +3,9 @@ BEGIN
   IF EXISTS (
     SELECT FROM pg_catalog.pg_roles WHERE rolname = '${USERNAME}'
   ) THEN
-    DROP ROLE ${USERNAME};
+      REASSIGN OWNED BY ${USERNAME} TO ${ADMIN_USERNAME};
+      DROP OWNED BY ${USERNAME};
+      DROP ROLE ${USERNAME};
   END IF;
 END
 $$;

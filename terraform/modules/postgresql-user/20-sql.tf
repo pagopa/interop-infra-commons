@@ -51,6 +51,8 @@ resource "terraform_data" "additional_script" {
 
   provisioner "local-exec" {
     environment = {
+      PASSWORD                     = random_password.this.result
+      USERNAME                     = var.username
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
       HOST                         = var.db_host
@@ -73,6 +75,49 @@ resource "terraform_data" "additional_script" {
   }
 }
 
+resource "terraform_data" "delete_previous_role" {
+  count = var.enable_sql_statements ? 1 : 0
+
+  input = {
+    username                        = var.username
+    db_name                         = var.db_name
+    db_host                         = var.db_host
+    db_admin_credentials_secret_arn = var.db_admin_credentials_secret_arn
+  }
+
+  triggers_replace = [
+    var.username
+  ]
+
+  depends_on = [
+    aws_secretsmanager_secret_version.this
+  ]
+
+  provisioner "local-exec" {
+    environment = {
+      DATABASE                     = self.input.db_name
+      HOST                         = self.input.db_host
+      ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
+      USERNAME                     = self.triggers_replace[0]
+    }
+
+    command = <<EOT
+      set -euo pipefail
+      
+      secret_json=$(aws secretsmanager get-secret-value --secret-id $ADMIN_CREDENTIALS_SECRET_ARN --query SecretString --output text)
+
+      ADMIN_USERNAME=$(echo $secret_json | jq -r '.username')
+      ADMIN_PASSWORD=$(echo $secret_json | jq -r '.password')
+
+      export PGPASSWORD=$ADMIN_PASSWORD
+      export ADMIN_USERNAME=$ADMIN_USERNAME
+      
+      echo "Deleting old role $USERNAME from database $DATABASE"
+      envsubst < ${path.module}/scripts/delete_role.sql | \
+      psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE
+    EOT
+  }
+}
 
 resource "terraform_data" "delete_role" {
   count = var.enable_sql_statements ? 1 : 0
@@ -114,7 +159,8 @@ resource "terraform_data" "delete_role" {
       ADMIN_PASSWORD=$(echo $secret_json | jq -r '.password')
 
       export PGPASSWORD=$ADMIN_PASSWORD
-
+      export ADMIN_USERNAME=$ADMIN_USERNAME
+      
       echo "Deleting role $USERNAME from database $DATABASE"
       envsubst < ${path.module}/scripts/delete_role.sql | \
       psql -h "$HOST" -U "$ADMIN_USERNAME" -d "$DATABASE" -p "$DATABASE_PORT"
