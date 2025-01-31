@@ -1,1 +1,0 @@
-terraform-docs markdown --output-file README.md --footer-from README.body.md .
