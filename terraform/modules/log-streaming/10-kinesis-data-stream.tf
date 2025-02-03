@@ -1,5 +1,12 @@
-resource "aws_kinesis_stream" "log_stream" {
-  name             = var.stream_name
-  shard_count      = 1
-  retention_period = 24
+resource "aws_kinesis_stream" "this" {
+  name             = var.datastream_stream_name
+  retention_period = var.datastream_stream_retention_period
+  encryption_type  = "KMS"
+
+  stream_mode_details {
+    stream_mode = "ON_DEMAND"
+  }
+
+  tags = var.datastream_tags
 }
+
