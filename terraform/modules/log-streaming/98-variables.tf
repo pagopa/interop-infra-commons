@@ -3,6 +3,21 @@ variable "env" {
   description = "Environment name"
 }
 
+variable "cloudwatch_log_group_name" {
+  description = "Firehose Cloudwatch log group name"
+  type = string
+}
+variable "cloudwatch_log_stream_name" {
+  description = "Firehose Cloudwatch log stream name"
+  type = string
+}
+
+variable "cloudwatch_log_group_retention_in_days" {
+  description = "Firehose Cloudwatch log group logs retention in days"
+  type = number
+  default = 14
+}
+
 variable "datastream_stream_name" {
   type        = string
   description = "AWS Kinesis Data stream name"
@@ -12,7 +27,7 @@ variable "datastream_stream_name" {
 variable "datastream_stream_retention_period" {
   type        = string
   description = "AWS Kinesis Data stream data retention period"
-  default     = 24
+  default     = 720
 }
 
 variable "datastream_tags" {
@@ -33,9 +48,9 @@ variable "firehose_stream_tags" {
   default     = {}
 }
 
-variable "s3_bucket_name" {
+variable "s3_bucket_prefix" {
   type        = string
-  description = "S3 target bucket name"
+  description = "S3 target bucket name prefix"
 }
 
 variable "s3_bucket_tags" {
