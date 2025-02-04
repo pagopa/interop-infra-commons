@@ -1,10 +1,20 @@
+# TODO utilizzare modulo per S3
+module "log_streaming_bucket" {
+  source  = "terraform-aws-modules/s3-bucket/aws"
+  version = "3.15.1"
 
-resource "aws_s3_bucket" "this" {
-  bucket = var.s3_bucket_name
-  tags   = var.s3_bucket_tags
-}
+  bucket = format("%s-log-streaming-%s", var.s3_bucket_prefix, var.env)
 
-resource "aws_s3_bucket_acl" "this" {
-  bucket = aws_s3_bucket.this.id
-  acl    = "private"
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+
+  versioning = {
+    enabled = true
+  }
+
+  acl = "private"
+
+  tags = var.s3_bucket_tags
 }
