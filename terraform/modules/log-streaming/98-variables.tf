@@ -3,6 +3,13 @@ variable "env" {
   description = "Environment name"
 }
 
+# Metrics and alarms configuration
+variable "sns_topic_name" {
+  description = "Value of the sns topic name used to deliver the alarms"
+  type = "string"
+}
+
+# Cloudwatch log group configuration for AWS Data Firehose 
 variable "cloudwatch_log_group_name" {
   description = "Firehose Cloudwatch log group name"
   type = string
@@ -18,12 +25,12 @@ variable "cloudwatch_log_group_retention_in_days" {
   default = 14
 }
 
+# AWS Kinesis Data Stream configuration
 variable "datastream_stream_name" {
   type        = string
   description = "AWS Kinesis Data stream name"
 }
 
-#https://docs.aws.amazon.com/streams/latest/dev/kinesis-extended-retention.html
 variable "datastream_stream_retention_period" {
   type        = string
   description = "AWS Kinesis Data stream data retention period"
@@ -36,6 +43,7 @@ variable "datastream_tags" {
   default     = {}
 }
 
+# AWS Data Firehose configuration
 variable "firehose_stream_name" {
   type        = string
   description = "AWS Data Firehose stream name"
@@ -48,6 +56,7 @@ variable "firehose_stream_tags" {
   default     = {}
 }
 
+# AWS S3 target bucket configuration
 variable "s3_bucket_prefix" {
   type        = string
   description = "S3 target bucket name prefix"
