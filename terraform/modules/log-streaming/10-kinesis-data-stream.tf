@@ -10,3 +10,7 @@ resource "aws_kinesis_stream" "this" {
   tags = var.datastream_tags
 }
 
+
+# TODO verificare se gestire log group
+
+# TODO allarmi per eventuali errori su kinesis data stream e firehose (allarme sul 30%)
