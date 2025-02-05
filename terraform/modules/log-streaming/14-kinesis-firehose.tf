@@ -59,7 +59,7 @@ resource "aws_kinesis_firehose_delivery_stream" "this" {
       processors {
         type = "CloudWatchLogProcessing"
         parameters {
-          parameter_name = "DataMessageExtraction"
+          parameter_name  = "DataMessageExtraction"
           parameter_value = "true"
         }
       }

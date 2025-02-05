@@ -6,23 +6,23 @@ variable "env" {
 # Metrics and alarms configuration
 variable "sns_topic_name" {
   description = "Value of the sns topic name used to deliver the alarms"
-  type = "string"
+  type        = string
 }
 
 # Cloudwatch log group configuration for AWS Data Firehose 
 variable "cloudwatch_log_group_name" {
   description = "Firehose Cloudwatch log group name"
-  type = string
+  type        = string
 }
 variable "cloudwatch_log_stream_name" {
   description = "Firehose Cloudwatch log stream name"
-  type = string
+  type        = string
 }
 
 variable "cloudwatch_log_group_retention_in_days" {
   description = "Firehose Cloudwatch log group logs retention in days"
-  type = number
-  default = 14
+  type        = number
+  default     = 14
 }
 
 # AWS Kinesis Data Stream configuration
