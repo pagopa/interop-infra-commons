@@ -42,6 +42,8 @@ resource "terraform_data" "additional_script" {
   count = var.enable_sql_statements && var.additional_sql_statements != null ? 1 : 0
 
   triggers_replace = [
+    var.username,
+    var.db_name,
     var.additional_sql_statements
   ]
 
@@ -63,7 +65,7 @@ resource "terraform_data" "additional_script" {
       #!/bin/bash
       set -euo pipefail
       
-      secret_json=$(aws --endpoint-url=http://localhost:4566 secretsmanager get-secret-value --secret-id $ADMIN_CREDENTIALS_SECRET_ARN --query SecretString --output text)
+      secret_json=$(aws secretsmanager get-secret-value --secret-id $ADMIN_CREDENTIALS_SECRET_ARN --query SecretString --output text)
 
       ADMIN_USERNAME=$(echo $secret_json | jq -r '.username')
       ADMIN_PASSWORD=$(echo $secret_json | jq -r '.password')
@@ -102,6 +104,7 @@ resource "terraform_data" "delete_previous_role" {
     }
 
     command = <<EOT
+      #!/bin/bash
       set -euo pipefail
       
       secret_json=$(aws secretsmanager get-secret-value --secret-id $ADMIN_CREDENTIALS_SECRET_ARN --query SecretString --output text)
