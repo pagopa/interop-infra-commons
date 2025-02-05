@@ -1,0 +1,12 @@
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT FROM pg_catalog.pg_roles WHERE rolname = '${USERNAME}'
+  ) THEN
+      GRANT ${USERNAME} TO ${ADMIN_USERNAME};
+      REASSIGN OWNED BY ${USERNAME} TO ${ADMIN_USERNAME};
+      DROP OWNED BY ${USERNAME};
+      DROP ROLE ${USERNAME};
+  END IF;
+END
+$$;
