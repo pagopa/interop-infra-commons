@@ -4,13 +4,13 @@
 # - DeliveryToS3.DataFreshness
 #
 # Also, create alarms based on the following metric math expressions.
-# - IncomingBytes (Sum per 5 Minutes) / 300 approaches a percentage of BytesPerSecondLimit.
-# - IncomingRecords (Sum per 5 Minutes) / 300 approaches a percentage of RecordsPerSecondLimit.
-# - IncomingPutRequests (Sum per 5 Minutes) / 300 approaches a percentage of PutRequestsPerSecondLimit.
-#
-# Another metric for which we recommend an alarm is ThrottledRecords.
-# - ThrottledRecords (Sum per 5 Minutes) / 300 approaches a percentage of ThrottledRecordsPerSecondLimit.
+# - IncomingBytes
+# - IncomingRecords
+# - IncomingPutRequests
+# - ThrottledRecords
 
+
+# DeliveryToS3.DataFreshness - Time taken to deliver data to S3 (track data freshness)
 resource "aws_cloudwatch_metric_alarm" "firehose_data_freshness" {
 
   depends_on = [aws_kinesis_firehose_delivery_stream.this]
@@ -61,14 +61,14 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_incoming_bytes" {
 
   alarm_name          = "Kinesis-IncomingBytes-High"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
+  evaluation_periods  = 1
   metric_name         = "IncomingBytes"
   namespace           = "AWS/Kinesis"
-  period              = 60
+  period              = 300
   statistic           = "Average"
   threshold           = 50000000 # 50MB per minute threshold
 
-  datapoints_to_alarm = 2
+  datapoints_to_alarm = 1
   alarm_description   = "High incoming data rate on Kinesis Stream"
   alarm_actions       = [data.aws_sns_topic.this.arn]
   dimensions = {
@@ -121,14 +121,14 @@ resource "aws_cloudwatch_metric_alarm" "firehose_incoming_records" {
 
   alarm_name          = "Firehose-IncomingRecords-High"
   comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 2
+  evaluation_periods  = 1
   metric_name         = "IncomingRecords"
   namespace           = "AWS/Firehose"
-  period              = 60
+  period              = 300
   statistic           = "Average"
-  threshold           = 100000 # Trigger alarm if more than 100k records per minute during 2 periods
+  threshold           = 100000 # Trigger alarm if more than 100k records per minute during 1 period (>300/s)
 
-  datapoints_to_alarm = 2
+  datapoints_to_alarm = 1
   alarm_description   = "High volume of incoming records to Firehose"
   alarm_actions       = [data.aws_sns_topic.this.arn]
   dimensions = {
@@ -163,7 +163,7 @@ resource "aws_cloudwatch_metric_alarm" "firehose_incoming_records_utilization" {
 
   metric_query {
     id          = "incomingrecordsutilization2"
-    expression  = "(incomingrecordsutilization1 / 300) / 10000 * 100" # Limit is 10000 records/sec
+    expression  = "(incomingrecordsutilization1 / 300) / 100000 * 100" # Limit is 100000 records/s
     label       = "IncomingRecordsUtilization"
     return_data = true
   }
@@ -191,7 +191,7 @@ resource "aws_cloudwatch_metric_alarm" "firehose_incoming_put_requests_utilizati
     id          = "incomingputrequestsutilization1"
     return_data = false
     metric {
-      metric_name = "IncomingRecords"
+      metric_name = "IncomingPutRequests"
       namespace   = "AWS/Firehose"
       stat        = "Sum"
       period      = 300
@@ -199,17 +199,8 @@ resource "aws_cloudwatch_metric_alarm" "firehose_incoming_put_requests_utilizati
   }
 
   metric_query {
-    id          = "m1"
-    metric_name = "IncomingPutRequests"
-    namespace   = "AWS/Firehose"
-    period      = 300
-    stat        = "Sum"
-    return_data = false
-  }
-
-  metric_query {
-    id          = "m2"
-    expression  = "(m1 / 300) / 500 * 100" # Assuming limit is 500 put requests/sec
+    id          = "incomingputrequestsutilization2"
+    expression  = "(incomingputrequestsutilization1 / 300) / 500 * 100" # Assuming limit is 500 put requests/min
     label       = "IncomingPutRequestsUtilization"
     return_data = true
   }
@@ -219,25 +210,58 @@ resource "aws_cloudwatch_metric_alarm" "firehose_incoming_put_requests_utilizati
   }
 }
 
-# 🔹 CloudWatch Alarm for Firehose - ThrottledRecords
+# ThrottledRecords 
 resource "aws_cloudwatch_metric_alarm" "firehose_throttled_records" {
-  alarm_name          = "Firehose-ThrottledRecords"
+
+  depends_on = [aws_kinesis_firehose_delivery_stream.this]
+
+  alarm_name          = "Firehose-ThrottledRecords-High"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ThrottledRecords"
+  namespace           = "AWS/Firehose"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 100
+
+  datapoints_to_alarm = 1
+  alarm_description   = "High volume of throttled records to Firehose"
+  alarm_actions       = [data.aws_sns_topic.this.arn]
+  dimensions = {
+    DeliveryStreamName = aws_kinesis_firehose_delivery_stream.this.name
+  }
+}
+
+# ThrottledRecords Percentage
+resource "aws_cloudwatch_metric_alarm" "firehose_throttled_records_percentage" {
+  alarm_name          = "Firehose-ThrottledRecords-Percentage"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   threshold           = 10 # Alert if more than 10 records are throttled
+
+  datapoints_to_alarm = 1
   alarm_description   = "Firehose is throttling incoming records."
   alarm_actions       = [data.aws_sns_topic.this.arn]
 
   metric_query {
-    id          = "m1"
-    metric_name = "ThrottledRecords"
-    namespace   = "AWS/Firehose"
-    period      = 300
-    stat        = "Sum"
+    id          = "throttledrecords1"
+    return_data = false
+    metric {
+      metric_name = "ThrottledRecords"
+      namespace   = "AWS/Firehose"
+      stat        = "Sum"
+      period      = 60
+    }
+  }
+
+  metric_query {
+    id          = "throttledrecords2"
+    expression  = "(throttledrecords1 / 60) / 500 * 100" # Assuming limit is 500 put requests/sec
+    label       = "ThrottledRecordsPercentage"
     return_data = true
   }
 
   dimensions = {
-    DeliveryStreamName = "your-firehose-stream-name"
+    DeliveryStreamName = aws_kinesis_firehose_delivery_stream.this.name
   }
 }
