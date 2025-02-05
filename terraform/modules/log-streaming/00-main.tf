@@ -12,3 +12,8 @@ terraform {
 data "aws_caller_identity" "current" {}
 
 data "aws_region" "current" {}
+
+# SNS Target topic for Kinesis and Firehose alerts
+data "aws_sns_topic" "this" {
+  name = var.sns_topic_name
+}
