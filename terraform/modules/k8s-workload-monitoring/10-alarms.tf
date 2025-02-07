@@ -86,6 +86,7 @@ resource "aws_cloudwatch_metric_alarm" "unavailable_pods" {
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
   treat_missing_data  = "missing"
+# TODO: pass as variables?
   threshold           = 1
   datapoints_to_alarm = 1
   evaluation_periods  = 5
@@ -244,7 +245,7 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_avg_cpu" {
   count = local.is_cronjob_performance_alarm_required ? 1 : 0
 
   alarm_name        = format("k8s-%s-cronjob-avg-cpu-%s", var.k8s_cronjob_name, var.k8s_namespace)
-  alarm_description = format("AVG CPU usage alarm for CronJob %s in %s", var.k8s_cronjob_name, var.k8s_namespace)
+  alarm_description = format("AVG CPU usage alarm for CronJob %s", var.k8s_cronjob_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -273,7 +274,7 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_avg_memory" {
   count = local.is_cronjob_performance_alarm_required ? 1 : 0
 
   alarm_name        = format("k8s-%s-cronjob-avg-memory-%s", var.k8s_cronjob_name, var.k8s_namespace)
-  alarm_description = format("AVG memory usage alarm for CronJob %s in %s", var.k8s_cronjob_name, var.k8s_namespace)
+  alarm_description = format("AVG memory usage alarm for CronJob %s", var.k8s_cronjob_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -302,7 +303,7 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_app_errors" {
   count = local.is_cronjob_app_logs_errors_alarm_required ? 1 : 0
 
   alarm_name        = format("k8s-%s-cronjob-errors-%s", var.k8s_cronjob_name, var.k8s_namespace)
-  alarm_description = format("App logs errors alarm for CronJob %s in %s", var.k8s_cronjob_name, var.k8s_namespace)
+  alarm_description = format("App logs errors alarm for CronJob %s", var.k8s_cronjob_name)
 
   alarm_actions = var.sns_topics_arns
 
