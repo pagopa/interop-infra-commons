@@ -1,13 +1,3 @@
-resource "aws_cloudwatch_log_group" "this" {
-  name              = var.cloudwatch_log_group_name
-  retention_in_days = var.cloudwatch_log_group_retention_in_days
-}
-
-resource "aws_cloudwatch_log_stream" "this" {
-  name           = var.cloudwatch_log_stream_name
-  log_group_name = aws_cloudwatch_log_group.this.name
-}
-
 resource "aws_kinesis_firehose_delivery_stream" "this" {
 
   depends_on = [
@@ -28,18 +18,18 @@ resource "aws_kinesis_firehose_delivery_stream" "this" {
     role_arn   = aws_iam_role.firehose_role.arn
     bucket_arn = aws_s3_bucket.this.arn
 
-    buffering_size     = 64
-    buffering_interval = 300
+    buffering_size     = var.firehose_buffering_size_mb
+    buffering_interval = var.firehos_buffering_interval_seconds
     compression_format = "GZIP"
     custom_time_zone   = "UTC"
 
-    prefix              = "fh-output/namespace=!{partitionKeyFromQuery:namespace}/app=!{partitionKeyFromQuery:app}/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/"
-    error_output_prefix = "fh-errors/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}/"
+    prefix              = "firehose-output/namespace=!{partitionKeyFromQuery:namespace}/app=!{partitionKeyFromQuery:app}/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/"
+    error_output_prefix = "firehose-errors/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}/"
 
-    cloudwatch_logging_options {
+    cloudwatch_logging_options { #TODO verificare se usato -> non è indicato in documentazione TF ma su AWS si può configurare
       enabled         = true
-      log_group_name  = format("firehose-%s-%s", var.firehose_stream_name, var.env)
-      log_stream_name = "extended_s3"
+      log_group_name  = aws_cloudwatch_log_group.firehose.name
+      log_stream_name = aws_cloudwatch_log_stream.firehose.name
     }
 
     dynamic_partitioning_configuration {
