@@ -13,13 +13,13 @@ data "aws_iam_policy_document" "firehose_assume_role" {
 }
 
 resource "aws_iam_role" "firehose_role" {
-  name               = format("log_stream_firehose_role_%s", var.env)
+  name               = format("%s_log_stream_firehose_role_%s", var.module_resource_prefix, var.env)
   assume_role_policy = data.aws_iam_policy_document.firehose_assume_role.json
 }
 
 # IAM Policy for Firehose
 resource "aws_iam_policy" "firehose_policy" {
-  name        = format("log_stream_firehose_policy_%s", var.env)
+  name        = format("%s_log_stream_firehose_policy_%s", var.module_resource_prefix, var.env)
   description = "Policy to allow Firehose to read from Kinesis Data Stream and write to S3 bucket"
 
   policy = jsonencode({
@@ -56,7 +56,7 @@ resource "aws_iam_policy" "firehose_policy" {
           "logs:PutLogEvents"
         ],
         Resource = [
-          aws_cloudwatch_log_stream.this.arn
+          format("%s:log-stream:*", aws_cloudwatch_log_group.firehose.arn) #TODO modificare in base a gestione log Firehose
         ]
       }
     ]
