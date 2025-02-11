@@ -133,7 +133,7 @@ variable "cronjob_avg_memory_alarm_threshold" {
 }
 
 variable "cronjob_performance_alarms_period_seconds" {
-  description = "Periodo (in secondi) per CPU/mem (CronJob)"
+  description = "Period (in seconds) over which the alarm statistic is applied for performance alarms (CronJob)."
   type        = number
   default     = 60
 }
