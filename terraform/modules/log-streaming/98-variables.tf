@@ -27,10 +27,7 @@ variable "cloudwatch_source_log_group_name" {
 }
 
 # Cloudwatch log group configuration for AWS Data Firehose 
-variable "firehose_cloudwatch_log_group_name" {
-  description = "Firehose Cloudwatch log group name"
-  type        = string
-}
+
 variable "firehose_cloudwatch_log_stream_name" {
   description = "Firehose Cloudwatch log stream name"
   type        = string
