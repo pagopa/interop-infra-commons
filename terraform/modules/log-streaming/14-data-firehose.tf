@@ -2,11 +2,11 @@ resource "aws_kinesis_firehose_delivery_stream" "this" {
 
   depends_on = [
     aws_kinesis_stream.this,
-    aws_s3_bucket.this,
+    module.log_streaming_bucket,
     aws_cloudwatch_log_group.this,
     aws_cloudwatch_log_stream.this
   ]
-
+  
   name        = var.firehose_stream_name
   tags        = var.firehose_stream_tags
   destination = "extended_s3"
@@ -16,17 +16,18 @@ resource "aws_kinesis_firehose_delivery_stream" "this" {
   }
   extended_s3_configuration {
     role_arn   = aws_iam_role.firehose_role.arn
-    bucket_arn = aws_s3_bucket.this.arn
+    bucket_arn = module.log_streaming_bucket.s3_bucket_arn
 
     buffering_size     = var.firehose_buffering_size_mb
-    buffering_interval = var.firehos_buffering_interval_seconds
+    buffering_interval = var.firehose_buffering_interval_seconds
     compression_format = "GZIP"
     custom_time_zone   = "UTC"
 
     prefix              = "firehose-output/namespace=!{partitionKeyFromQuery:namespace}/app=!{partitionKeyFromQuery:app}/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/"
     error_output_prefix = "firehose-errors/year=!{timestamp:yyyy}/month=!{timestamp:MM}/day=!{timestamp:dd}/hour=!{timestamp:HH}/!{firehose:error-output-type}/"
 
-    cloudwatch_logging_options { #TODO verificare se usato -> non è indicato in documentazione TF ma su AWS si può configurare
+    # s3 backup mode - NO
+    cloudwatch_logging_options {
       enabled         = true
       log_group_name  = aws_cloudwatch_log_group.firehose.name
       log_stream_name = aws_cloudwatch_log_stream.firehose.name
