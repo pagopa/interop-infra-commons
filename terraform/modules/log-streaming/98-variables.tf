@@ -57,6 +57,33 @@ variable "datastream_tags" {
   default     = {}
 }
 
+# AWS Kinesis Data Stream monitoring configuration
+
+variable "data_stream_cw_iterator_age_millis"{ 
+  type        = number
+  description = "Kinesis Data Stream Cloudwatch iterator age in milliseconds"
+  default     = 30000
+}
+
+variable "data_stream_write_provisioned_throughput_threshold_percentage" {
+  type        = number
+  description = "Kinesis Data Stream write provisioned throughput exceeded threshold percentage"
+  default     = 0.3
+}
+
+variable "data_stream_read_provisioned_throughput_threshold_percentage" {
+  type        = number
+  description = "Kinesis Data Stream read provisioned throughput exceeded threshold percentage"
+  default     = 0.3
+  
+}
+
+variable "data_stream_getrecord_bytes_threshold_percentage" {
+  type        = number
+  description = "Kinesis Data Stream get record bytes exceeded threshold percentage"
+  default     = 0.3
+}
+
 # AWS Data Firehose configuration
 variable "firehose_stream_name" {
   type        = string

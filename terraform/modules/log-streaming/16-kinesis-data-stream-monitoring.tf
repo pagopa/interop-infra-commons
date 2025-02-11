@@ -3,14 +3,11 @@
 # AWS Kinesis Data Stream Quotas & Limits - https://docs.aws.amazon.com/streams/latest/dev/service-sizes-and-limits.html
 
 
-#PutRecords.FailedRecords
-#PutRecords.ThrottledRecords	
-#PutRecord.Success, PutRecords.Success
-
-# NumberOfDataStreams - Needs custom lambda to monitor it:
-# Custom metric - Total number of Kinesis streams in the account/region (50 default limit)
-
-
+locals {
+  kinesis_data_stream_write_quota = 200000000  # 200 MB/s
+  kinesis_data_stream_read_quota = 400000000  # 400 MB/s
+  kinesis_get_records_bytes_quota = 10000000  # 10 MB
+}
 
 # WriteProvisionedThroughputExceeded - Number of records rejected due to exceeding provisioned throughput
 resource "aws_cloudwatch_metric_alarm" "kinesis_write_provision_exceeded" {
@@ -25,7 +22,7 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_write_provision_exceeded" {
   period              = 60
   statistic           = "Sum"
   threshold           = 1
-  alarm_description   = "%s - Kinesis Data Stream Write Provisioning exceeded" # TODO - Aggiungere nome stream
+  alarm_description   = format("%s - Kinesis Data Stream Write Provisioning exceeded", aws_kinesis_stream.this.name)
   alarm_actions       = [data.aws_sns_topic.this.arn]
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
@@ -45,14 +42,17 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_write_provision_exceeded" {
   period              = 60
   statistic           = "Sum"
   threshold           = 1
-  alarm_description   = "Kinesis Data Stream Read Provisioning exceeded"
+
+  alarm_description   = format("%s - Kinesis Data Stream Read Provisioning exceeded", aws_kinesis_stream.this.name)
   alarm_actions       = [data.aws_sns_topic.this.arn]
+  
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
 }
 
 # IteratorAgeMilliseconds - Age of the last record retrieved from the stream (latency indicator)
+# Age is the difference between the current time and when the last record of the GetRecords call was written to the stream.
 resource "aws_cloudwatch_metric_alarm" "kinesis_iterator_age" {
 
   depends_on = [aws_kinesis_stream.this]
@@ -64,9 +64,11 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_iterator_age" {
   namespace           = "AWS/Kinesis"
   period              = 60
   statistic           = "Average"
-  threshold           = 60000 # 1 minute delay ? Verificare
-  alarm_description   = "Kinesis consumer is lagging behind in data processing"
+  threshold           = var.data_stream_cw_iterator_age_millis # should be defined according to data stream consumer reading capacity
+  
+  alarm_description   = format("%s - Kinesis consumer is lagging behind in data processing", aws_kinesis_stream.this.name)
   alarm_actions       = [data.aws_sns_topic.this.arn]
+  
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
@@ -85,10 +87,11 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_incoming_bytes" {
   namespace           = "AWS/Kinesis"
   period              = 60
   statistic           = "Sum"
-  threshold           = data.aws_servicequotas_service_quota.kinesis_data_stream_write_quota.value * 0.3  # Warning before 200 MB/s limit - Threshold (30%)
+  threshold           = local.kinesis_data_stream_write_quota * var.data_stream_write_provisioned_throughput_threshold_percentage  # Warning before 200 MB/s limit - Threshold (30%)
 
-  alarm_description   = "Triggers when incoming data rate approaches quota"
+  alarm_description   = format("%s - Triggers when incoming data rate approaches quota", aws_kinesis_stream.this.name)
   alarm_actions       = [aws_sns_topic.this.arn]
+  
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
@@ -108,9 +111,11 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_outgoing_bytes" {
   namespace           = "AWS/Kinesis"
   period              = 60
   statistic           = "Sum"
-  threshold           = 320000000  # Warning before 400 MB/s limit (30%)
-  alarm_description   = "Triggers when outgoing data rate approaches quota"
+  threshold           = local.kinesis_data_stream_read_quota * var.data_stream_read_provisioned_throughput_threshold_percentage # Warning before 400 MB/s limit (30%)
+  
+  alarm_description   = format("%s - Triggers when outgoing data rate approaches quota", aws_kinesis_stream.this.name)
   alarm_actions       = [aws_sns_topic.this.arn]
+  
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
@@ -133,9 +138,11 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_get_records_bytes" {
   namespace           = "AWS/Kinesis"
   period              = 60
   statistic           = "Maximum"
-  threshold           = 3000000  # Warning before 10 MB limit per call (30%) # TODO con quota
-  alarm_description   = "Triggers when a single GetRecords call approaches size limit"
+  
+  threshold           = local.kinesis_get_records_bytes_quota * var.data_stream_getrecord_bytes_threshold_percentage  # Warning before 10 MB limit per call
+  alarm_description   = format("%s - Triggers when a single GetRecords call approaches size limit", aws_kinesis_stream.this.name)
   alarm_actions       = [aws_sns_topic.this.arn]
+
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
