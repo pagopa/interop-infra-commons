@@ -20,6 +20,12 @@ variable "firehose_active_partition_count_percentage_threshold" {
   default     = 60
 }
 
+# Cloudwatch source log group configuration for AWS Kinesis Data Stream
+variable "cloudwatch_source_log_group_name" {
+  description = "Cloudwatch source log group name"
+  type        = string
+}
+
 # Cloudwatch log group configuration for AWS Data Firehose 
 variable "firehose_cloudwatch_log_group_name" {
   description = "Firehose Cloudwatch log group name"
@@ -67,7 +73,7 @@ variable "firehose_buffering_size_mb" {
   default     = 5
 }
 
-variable "firehos_buffering_interval_seconds" {
+variable "firehose_buffering_interval_seconds" {
   type        = number
   description = "AWS Data Firehose stream buffering interval in seconds"
   default     = 300
@@ -80,28 +86,11 @@ variable "firehose_stream_tags" {
 }
 
 # AWS S3 target bucket configuration
-
 variable "s3_bucket_name" {
   type        = string
   description = "AWS target S3 bucket name"
 }
 
-variable "s3_bucket_object_lock_enabled" {
-  type = bool
-  description = "Enable S3 bucket object lock"
-  default = false
-}
-
-variable "s3_bucket_object_lock_mode" {
-  type = string
-  description = "S3 bucket object lock mode"
-  default = "COMPLIANCE"
-
-  validation {
-    condition = contains(["GOVERNANCE", "COMPLIANCE"], var.s3_bucket_object_lock_mode)
-    error_message = "value must be either 'GOVERNANCE' or 'COMPLIANCE'"
-  }
-}
 variable "s3_bucket_tags" {
   type        = map(string)
   description = "AWS target S3 bucket tags"
