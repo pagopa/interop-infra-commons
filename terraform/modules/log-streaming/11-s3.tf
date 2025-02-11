@@ -9,11 +9,6 @@ module "log_streaming_bucket" {
   ignore_public_acls      = true
   restrict_public_buckets = true
 
-  # TODO - add Object lock configurabile (modalità compliance o governance [enum]) -> da ragionare
-  object_lock_enabled = var.s3_bucket_object_lock_enabled
-  object_lock_configuration = {
-    mode = var.s3_bucket_object_lock_mode
-  }
   versioning = {
     enabled = true
   }
