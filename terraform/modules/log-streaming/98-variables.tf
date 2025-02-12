@@ -14,12 +14,6 @@ variable "sns_topic_name" {
   type        = string
 }
 
-variable "firehose_active_partition_count_percentage_threshold" {
-  description = "Firehose active partition count percentage threshold"
-  type        = number
-  default     = 60
-}
-
 # Cloudwatch source log group configuration for AWS Kinesis Data Stream
 variable "cloudwatch_source_log_group_name" {
   description = "Cloudwatch source log group name"
@@ -107,6 +101,52 @@ variable "firehose_stream_tags" {
   type        = map(string)
   description = "AWS Data Firehose stream tags"
   default     = {}
+}
+
+
+# AWS Data Firehose monitoring configuration
+variable "firehose_active_partition_count_threshold" {
+  description = "Firehose active partition count threshold"
+  type        = number
+  default     = 0.7
+}
+variable "firehose_active_partition_count_percentage_threshold" {
+  description = "Firehose active partition count percentage threshold"
+  type        = number
+  default     = 400
+}
+variable "firehose_active_data_freshness_threshold_seconds" {
+  description = "Firehose active data freshness threshold, based on buffering interval"
+  type        = number
+  default     = 300
+}
+variable "firehose_incoming_bytes_bytespersecondlimit_threshold_percentage" {
+  description = "Firehose incoming bytes bytes per second limit threshold"
+  type        = number
+  default     = 30
+}
+
+variable "firehose_throttled_records_threshold" {
+  description = "Firehose throttled records threshold"
+  type        = number
+  default     = 10
+}
+variable "firehose_throttled_describe_stream_threshold" {
+  description = "Firehose throttled describe stream threshold"
+  type        = number
+  default     = 1
+}
+
+variable "firehose_throttled_get_records_threshold" {
+  description = "Firehose throttled get records threshold"
+  type        = number
+  default     = 1
+}
+
+variable "firehose_throttled_get_shard_iterator_threshold" {
+  description = "Firehose throttled get shard iterator threshold"
+  type        = number
+  default     = 1
 }
 
 # AWS S3 target bucket configuration
