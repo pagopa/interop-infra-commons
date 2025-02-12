@@ -4,8 +4,8 @@
 
 
 locals {
-  kinesis_data_stream_write_quota = 200000000  # 200 MB/s
-  kinesis_data_stream_read_quota = 400000000  # 400 MB/s
+  kinesis_data_stream_write_quota = 200000000 # 200 MB/s
+  kinesis_data_stream_read_quota  = 400000000 # 400 MB/s
   kinesis_get_records_bytes_quota = 10000000  # 10 MB
 }
 
@@ -43,9 +43,9 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_write_provision_exceeded" {
   statistic           = "Sum"
   threshold           = 1
 
-  alarm_description   = format("%s - Kinesis Data Stream Read Provisioning exceeded", aws_kinesis_stream.this.name)
-  alarm_actions       = [data.aws_sns_topic.this.arn]
-  
+  alarm_description = format("%s - Kinesis Data Stream Read Provisioning exceeded", aws_kinesis_stream.this.name)
+  alarm_actions     = [data.aws_sns_topic.this.arn]
+
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
@@ -65,10 +65,10 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_iterator_age" {
   period              = 60
   statistic           = "Average"
   threshold           = var.data_stream_cw_iterator_age_millis # should be defined according to data stream consumer reading capacity
-  
-  alarm_description   = format("%s - Kinesis consumer is lagging behind in data processing", aws_kinesis_stream.this.name)
-  alarm_actions       = [data.aws_sns_topic.this.arn]
-  
+
+  alarm_description = format("%s - Kinesis consumer is lagging behind in data processing", aws_kinesis_stream.this.name)
+  alarm_actions     = [data.aws_sns_topic.this.arn]
+
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
@@ -87,11 +87,11 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_incoming_bytes" {
   namespace           = "AWS/Kinesis"
   period              = 60
   statistic           = "Sum"
-  threshold           = local.kinesis_data_stream_write_quota * var.data_stream_write_provisioned_throughput_threshold_percentage  # Warning before 200 MB/s limit - Threshold (30%)
+  threshold           = local.kinesis_data_stream_write_quota * var.data_stream_write_provisioned_throughput_threshold_percentage # Warning before 200 MB/s limit - Threshold (30%)
 
-  alarm_description   = format("%s - Triggers when incoming data rate approaches quota", aws_kinesis_stream.this.name)
-  alarm_actions       = [aws_sns_topic.this.arn]
-  
+  alarm_description = format("%s - Triggers when incoming data rate approaches quota", aws_kinesis_stream.this.name)
+  alarm_actions     = [aws_sns_topic.this.arn]
+
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
@@ -112,10 +112,10 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_outgoing_bytes" {
   period              = 60
   statistic           = "Sum"
   threshold           = local.kinesis_data_stream_read_quota * var.data_stream_read_provisioned_throughput_threshold_percentage # Warning before 400 MB/s limit (30%)
-  
-  alarm_description   = format("%s - Triggers when outgoing data rate approaches quota", aws_kinesis_stream.this.name)
-  alarm_actions       = [aws_sns_topic.this.arn]
-  
+
+  alarm_description = format("%s - Triggers when outgoing data rate approaches quota", aws_kinesis_stream.this.name)
+  alarm_actions     = [aws_sns_topic.this.arn]
+
   dimensions = {
     StreamName = aws_kinesis_stream.this.name
   }
@@ -138,10 +138,10 @@ resource "aws_cloudwatch_metric_alarm" "kinesis_get_records_bytes" {
   namespace           = "AWS/Kinesis"
   period              = 60
   statistic           = "Maximum"
-  
-  threshold           = local.kinesis_get_records_bytes_quota * var.data_stream_getrecord_bytes_threshold_percentage  # Warning before 10 MB limit per call
-  alarm_description   = format("%s - Triggers when a single GetRecords call approaches size limit", aws_kinesis_stream.this.name)
-  alarm_actions       = [aws_sns_topic.this.arn]
+
+  threshold         = local.kinesis_get_records_bytes_quota * var.data_stream_getrecord_bytes_threshold_percentage # Warning before 10 MB limit per call
+  alarm_description = format("%s - Triggers when a single GetRecords call approaches size limit", aws_kinesis_stream.this.name)
+  alarm_actions     = [aws_sns_topic.this.arn]
 
   dimensions = {
     StreamName = aws_kinesis_stream.this.name

@@ -21,11 +21,11 @@ resource "aws_iam_role" "cloudwatch_to_kinesis" {
 
 resource "aws_iam_policy" "cloudwatch_to_kinesis" {
 
-  depends_on = [ aws_kinesis_stream.this  ]
+  depends_on = [aws_kinesis_stream.this]
 
   name        = format("%s_cloudwatch_to_kinesis_policy_%s", var.module_resource_prefix, var.env)
   description = "Allows CloudWatch Logs to send data to Kinesis Data Stream"
-  
+
   policy = jsonencode({
     Version = "2012-10-17"
     Statement = [

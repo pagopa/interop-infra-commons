@@ -12,7 +12,7 @@ locals {
   # When dynamic partitioning on a Firehose stream is enabled, there is a default quota of 500 active partitions that can be created for that Firehose stream. 
   # The active partition count is the total number of active partitions within the delivery buffer.
   # Is it possible to request an increase of this quota up to 5000 active partitions per given Firehose stream
-  firehose_active_partitions_limit = 500
+  firehose_active_partitions_limit              = 500
   firehose_bytes_per_second_per_partition_limit = 1073741824 # 1GB/s = 1,073,741,824 Bytes/s
 }
 
@@ -20,7 +20,7 @@ locals {
 resource "aws_cloudwatch_metric_alarm" "firehose_partition_count" {
 
   depends_on = [aws_kinesis_firehose_delivery_stream.this]
-  
+
   alarm_name          = "firehose-${var.module_resource_prefix}-partitioncount-high-${var.env}"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 2
@@ -41,7 +41,7 @@ resource "aws_cloudwatch_metric_alarm" "firehose_partition_count" {
 resource "aws_cloudwatch_metric_alarm" "firehose_partition_count" {
 
   depends_on = [aws_kinesis_firehose_delivery_stream.this]
-  
+
   alarm_name          = "firehose-${var.module_resource_prefix}-partitioncount-exceeded-${var.env}"
   comparison_operator = "GreaterThanOrEqualToThreshold"
   evaluation_periods  = 1
@@ -59,9 +59,9 @@ resource "aws_cloudwatch_metric_alarm" "firehose_partition_count" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "firehose_partition_count_percentage" {
-  
+
   depends_on = [aws_kinesis_firehose_delivery_stream.this]
-  
+
   alarm_name          = "firehose-${var.module_resource_prefix}-partitioncount-percentage-${var.env}"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
@@ -72,7 +72,7 @@ resource "aws_cloudwatch_metric_alarm" "firehose_partition_count_percentage" {
   alarm_actions       = [data.aws_sns_topic.this.arn]
 
   metric_query {
-    id = "partitioncountpercentage1"
+    id          = "partitioncountpercentage1"
     return_data = false
 
     metric {
@@ -85,7 +85,7 @@ resource "aws_cloudwatch_metric_alarm" "firehose_partition_count_percentage" {
 
   metric_query {
     id          = "partitioncountpercentage2"
-    expression  = "(partitioncountpercentage1 / 60) / ${local.firehose_active_partitions_limit} * 100" 
+    expression  = "(partitioncountpercentage1 / 60) / ${local.firehose_active_partitions_limit} * 100"
     label       = "PartitionCountPercentage"
     return_data = true
   }
@@ -155,7 +155,7 @@ resource "aws_cloudwatch_metric_alarm" "firehose_throttled_records" {
   datapoints_to_alarm = 1
   alarm_description   = format("%s - High volume of throttled records", aws_kinesis_firehose_delivery_stream.this.name)
   alarm_actions       = [data.aws_sns_topic.this.arn]
-  
+
   dimensions = {
     DeliveryStreamName = aws_kinesis_firehose_delivery_stream.this.name
   }

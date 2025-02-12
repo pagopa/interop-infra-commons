@@ -6,7 +6,7 @@ resource "aws_kinesis_firehose_delivery_stream" "this" {
     aws_cloudwatch_log_group.this,
     aws_cloudwatch_log_stream.this
   ]
-  
+
   name        = var.firehose_stream_name
   tags        = var.firehose_stream_tags
   destination = "extended_s3"

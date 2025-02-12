@@ -53,7 +53,7 @@ variable "datastream_tags" {
 
 # AWS Kinesis Data Stream monitoring configuration
 
-variable "data_stream_cw_iterator_age_millis"{ 
+variable "data_stream_cw_iterator_age_millis" {
   type        = number
   description = "Kinesis Data Stream Cloudwatch iterator age in milliseconds"
   default     = 30000
@@ -69,7 +69,7 @@ variable "data_stream_read_provisioned_throughput_threshold_percentage" {
   type        = number
   description = "Kinesis Data Stream read provisioned throughput exceeded threshold percentage"
   default     = 0.3
-  
+
 }
 
 variable "data_stream_getrecord_bytes_threshold_percentage" {
