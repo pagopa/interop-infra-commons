@@ -6,13 +6,7 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.46.0"
     }
-
-    random = {
-      source  = "hashicorp/random"
-      version = "~> 3.6.3"
-    }
   }
-
 }
 
 data "aws_caller_identity" "current" {}

@@ -26,13 +26,13 @@ variable "username" {
 
 variable "generated_password_length" {
   description = "Length of the generated password for the user"
-  type = number
+  type        = number
 }
 
 variable "generated_password_use_special_characters" {
   description = "Enable special characters in the generated password for the user"
-  type = bool
-  default = false
+  type        = bool
+  default     = false
 }
 
 variable "secret_prefix" {
