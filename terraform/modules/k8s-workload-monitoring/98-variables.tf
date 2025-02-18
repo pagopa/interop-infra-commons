@@ -37,26 +37,32 @@ variable "sns_topics_arns" {
 
 
 ################################################################################
-# DEPLOYMENT
+# WORKLOAD
 ################################################################################
-variable "k8s_deployment_name" {
+variable "k8s_workload_name" {
   description = "Name of the K8s deployment"
   type        = string
 }
 
+################################################################################
+# DEPLOYMENT
+################################################################################
 variable "create_pod_availability_alarm" {
   description = "If set to true, creates the unavailable_pods alarm (Deployment)."
   type        = bool
+  default     = false
 }
 
 variable "create_pod_readiness_alarm" {
   description = "If set to true, creates the readiness_pods alarm (Deployment)"
   type        = bool
+  default     = false
 }
 
 variable "create_performance_alarm" {
   description = "If set to true, creates the avg_cpu and avg_memory alarms (Deployment)"
   type        = bool
+  default     = false
 }
 
 variable "avg_cpu_alarm_threshold" {
@@ -92,6 +98,7 @@ variable "alarm_datapoints" {
 variable "create_app_logs_errors_alarm" {
   description = "If set to true, creates the app_errors alarms (Deployment)"
   type        = bool
+  default     = false
 }
 
 variable "cloudwatch_app_logs_errors_metric_name" {
@@ -109,15 +116,11 @@ variable "cloudwatch_app_logs_errors_metric_namespace" {
 ################################################################################
 # CRONJOB
 ################################################################################
-variable "k8s_cronjob_name" {
-  description = "Name of the K8s CronJob"
-  type        = string
-}
-
 
 variable "create_cronjob_performance_alarm" {
   description = "If set to true, creates the avg_cpu and avg_memory alarms (CronJob)"
   type        = bool
+  default     = false
 }
 
 variable "cronjob_avg_cpu_alarm_threshold" {

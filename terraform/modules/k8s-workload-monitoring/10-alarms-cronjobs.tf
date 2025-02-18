@@ -15,8 +15,8 @@ locals {
 resource "aws_cloudwatch_metric_alarm" "cronjob_avg_cpu" {
   count = local.is_cronjob_performance_alarm_required ? 1 : 0
 
-  alarm_name        = format("k8s-%s-cronjob-avg-cpu-%s", var.k8s_cronjob_name, var.k8s_namespace)
-  alarm_description = format("AVG CPU usage alarm for CronJob %s", var.k8s_cronjob_name)
+  alarm_name        = format("k8s-%s-cronjob-avg-cpu-%s", var.k8s_workload_name, var.k8s_namespace)
+  alarm_description = format("AVG CPU usage alarm for CronJob %s", var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -24,7 +24,7 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_avg_cpu" {
   namespace   = "ContainerInsights"
   dimensions = {
     ClusterName = var.eks_cluster_name
-    Service     = var.k8s_cronjob_name
+    Service     = var.k8s_workload_name
     Namespace   = var.k8s_namespace
   }
 
@@ -44,8 +44,8 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_avg_cpu" {
 resource "aws_cloudwatch_metric_alarm" "cronjob_avg_memory" {
   count = local.is_cronjob_performance_alarm_required ? 1 : 0
 
-  alarm_name        = format("k8s-%s-cronjob-avg-memory-%s", var.k8s_cronjob_name, var.k8s_namespace)
-  alarm_description = format("AVG memory usage alarm for CronJob %s", var.k8s_cronjob_name)
+  alarm_name        = format("k8s-%s-cronjob-avg-memory-%s", var.k8s_workload_name, var.k8s_namespace)
+  alarm_description = format("AVG memory usage alarm for CronJob %s", var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -53,7 +53,7 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_avg_memory" {
   namespace   = "ContainerInsights"
   dimensions = {
     ClusterName = var.eks_cluster_name
-    Service     = var.k8s_cronjob_name
+    Service     = var.k8s_workload_name
     Namespace   = var.k8s_namespace
   }
 
@@ -73,8 +73,8 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_avg_memory" {
 resource "aws_cloudwatch_metric_alarm" "cronjob_app_errors" {
   count = local.is_cronjob_app_logs_errors_alarm_required ? 1 : 0
 
-  alarm_name        = format("k8s-%s-cronjob-errors-%s", var.k8s_cronjob_name, var.k8s_namespace)
-  alarm_description = format("App logs errors alarm for CronJob %s", var.k8s_cronjob_name)
+  alarm_name        = format("k8s-%s-cronjob-errors-%s", var.k8s_workload_name, var.k8s_namespace)
+  alarm_description = format("App logs errors alarm for CronJob %s", var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -82,7 +82,7 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_app_errors" {
   namespace   = var.cronjob_cloudwatch_app_logs_errors_metric_namespace
 
   dimensions = {
-    PodApp       = var.k8s_cronjob_name
+    PodApp       = var.k8s_workload_name
     PodNamespace = var.k8s_namespace
   }
 
