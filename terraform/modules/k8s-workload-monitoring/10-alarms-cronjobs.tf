@@ -3,8 +3,8 @@
 ###############################################################################
 
 locals {
-  is_cronjob_performance_alarm_required = var.create_cronjob_performance_alarm && var.kind == "CronJob"
-  is_cronjob_app_logs_errors_alarm_required = var.create_cronjob_app_logs_errors_alarm && var.kind == "CronJob" && var.cronjob_cloudwatch_app_logs_errors_metric_name != null && var.cronjob_cloudwatch_app_logs_errors_metric_namespace != null
+  is_cronjob_performance_alarm_required = var.create_performance_alarm && var.kind == "CronJob"
+  is_cronjob_app_logs_errors_alarm_required = var.create_app_logs_errors_alarm && var.kind == "CronJob" && var.cronjob_cloudwatch_app_logs_errors_metric_name != null && var.cronjob_cloudwatch_app_logs_errors_metric_namespace != null
 }
 
 ###############################################################################
