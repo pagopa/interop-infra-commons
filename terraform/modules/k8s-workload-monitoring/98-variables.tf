@@ -40,15 +40,69 @@ variable "sns_topics_arns" {
 # WORKLOAD
 ################################################################################
 variable "k8s_workload_name" {
-  description = "Name of the K8s deployment"
+  description = "Name of the K8s workload"
   type        = string
 }
 
+variable "create_performance_alarm" {
+  description = "If set to true, creates the avg_cpu and avg_memory alarms"
+  type        = bool
+  default     = false
+}
+
+variable "avg_cpu_alarm_threshold" {
+  description = "Threshold to trigger the AVG cpu alarm"
+  type        = number
+  default     = null
+}
+
+variable "avg_memory_alarm_threshold" {
+  description = "Threshold to trigger the AVG memory alarm"
+  type        = number
+  default     = null
+}
+
+variable "performance_alarms_period_seconds" {
+  description = "Period (in seconds) over which the alarm statistic is applied for performance alarms"
+  type        = number
+  default     = null
+}
+
+variable "alarm_eval_periods" {
+  description = "Number of periods to evaluate for the alarms"
+  type        = number
+  default     = 1
+}
+
+variable "alarm_datapoints" {
+  description = "Number of breaching datapoints in the evaluation period to trigger the alarms"
+  type        = number
+  default     = 1
+}
+
+variable "create_app_logs_errors_alarm" {
+  description = "If set to true, creates the app_errors alarms"
+  type        = bool
+  default     = false
+}
+
+variable "cloudwatch_app_logs_errors_metric_name" {
+  description = "Name of the app logs metric in CloudWatch"
+  type        = string
+  default     = null
+}
+
+variable "cloudwatch_app_logs_errors_metric_namespace" {
+  description = "Namespace of the app logs metric in CloudWatch"
+  type        = string
+  default     = null
+}
 ################################################################################
 # DEPLOYMENT
 ################################################################################
+
 variable "create_pod_availability_alarm" {
-  description = "If set to true, creates the unavailable_pods alarm (Deployment)."
+  description = "If set to true, creates the unavailable_pods alarm (Deployment)"
   type        = bool
   default     = false
 }
@@ -59,123 +113,11 @@ variable "create_pod_readiness_alarm" {
   default     = false
 }
 
-variable "create_performance_alarm" {
-  description = "If set to true, creates the avg_cpu and avg_memory alarms (Deployment)"
-  type        = bool
-  default     = false
-}
-
-variable "avg_cpu_alarm_threshold" {
-  description = "Threshold to trigger the AVG cpu alarm (Deployment)"
-  type        = number
-  default     = null
-}
-
-variable "avg_memory_alarm_threshold" {
-  description = "Threshold to trigger the AVG memory alarm (Deployment)"
-  type        = number
-  default     = null
-}
-
-variable "performance_alarms_period_seconds" {
-  description = "Period (in seconds) over which the alarm statistic is applied for performance alarms (Deployment)"
-  type        = number
-  default     = null
-}
-
-variable "alarm_eval_periods" {
-  description = "Number of periods to evaluate for the alarms (Deployment)"
-  type        = number
-  default     = 1
-}
-
-variable "alarm_datapoints" {
-  description = "Number of breaching datapoints in the evaluation period to trigger the alarms (Deployment)"
-  type        = number
-  default     = 1
-}
-
-variable "create_app_logs_errors_alarm" {
-  description = "If set to true, creates the app_errors alarms (Deployment)"
-  type        = bool
-  default     = false
-}
-
-variable "cloudwatch_app_logs_errors_metric_name" {
-  description = "Name of the app logs metric in CloudWatch (Deployment)"
-  type        = string
-  default     = null
-}
-
-variable "cloudwatch_app_logs_errors_metric_namespace" {
-  description = "Namespace of the app logs metric in CloudWatch (Deployment)"
-  type        = string
-  default     = null
-}
-
-################################################################################
-# CRONJOB
-################################################################################
-
-variable "create_cronjob_performance_alarm" {
-  description = "If set to true, creates the avg_cpu and avg_memory alarms (CronJob)"
-  type        = bool
-  default     = false
-}
-
-variable "cronjob_avg_cpu_alarm_threshold" {
-  description = "Threshold to trigger the AVG cpu alarm (CronJob)"
-  type        = number
-  default     = null
-}
-
-variable "cronjob_avg_memory_alarm_threshold" {
-  description = "Threshold to trigger the AVG memory alarm (CronJob)"
-  type        = number
-  default     = null
-}
-
-variable "cronjob_performance_alarms_period_seconds" {
-  description = "Period (in seconds) over which the alarm statistic is applied for performance alarms (CronJob)."
-  type        = number
-  default     = 60
-}
-
-variable "cronjob_alarms_eval_periods" {
-  description = "Number of periods to evaluate for the alarms (CronJob)"
-  type        = number
-  default     = 1
-}
-
-variable "cronjob_alarms_datapoints" {
-  description = "Number of breaching datapoints in the evaluation period to trigger the alarms (CronJob)."
-  type        = number
-  default     = 1
-}
-
-variable "create_cronjob_app_logs_errors_alarm" {
-  description = "If set to true, creates the app_errors alarms (CronJob)"
-  type        = bool
-  default     = false
-}
-
-variable "cronjob_cloudwatch_app_logs_errors_metric_name" {
-  description = "Name of the app logs metric in CloudWatch (CronJob)."
-  type        = string
-  default     = null
-}
-
-variable "cronjob_cloudwatch_app_logs_errors_metric_namespace" {
-  description = "Namespace of the app logs metric in CloudWatch (CronJob)."
-  type        = string
-  default     = null
-}
-
 ################################################################################
 # DASHBOARD
 ################################################################################
 variable "create_dashboard" {
-  description = "If set to true, creates the dashboard (if kind = Deployment)."
+  description = "If set to true, creates the dashboard (if kind = Deployment)"
   type        = bool
   default     = false
 }
