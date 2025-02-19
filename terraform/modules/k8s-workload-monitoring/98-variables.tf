@@ -53,13 +53,13 @@ variable "create_performance_alarm" {
 variable "avg_cpu_alarm_threshold" {
   description = "Threshold to trigger the AVG cpu alarm"
   type        = number
-  default     = null
+  default     = 60
 }
 
 variable "avg_memory_alarm_threshold" {
   description = "Threshold to trigger the AVG memory alarm"
   type        = number
-  default     = null
+  default     = 60
 }
 
 variable "performance_alarms_period_seconds" {
