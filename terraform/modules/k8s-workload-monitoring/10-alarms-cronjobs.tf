@@ -4,7 +4,7 @@
 
 locals {
   is_cronjob_performance_alarm_required = var.create_performance_alarm && var.kind == "CronJob"
-  is_cronjob_app_logs_errors_alarm_required = var.create_app_logs_errors_alarm && var.kind == "CronJob" && var.cronjob_cloudwatch_app_logs_errors_metric_name != null && var.cronjob_cloudwatch_app_logs_errors_metric_namespace != null
+  is_cronjob_app_logs_errors_alarm_required = var.create_app_logs_errors_alarm && var.kind == "CronJob" && var.cloudwatch_app_logs_errors_metric_name != null && var.cloudwatch_app_logs_errors_metric_namespace != null
 }
 
 ###############################################################################
@@ -32,10 +32,10 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_avg_cpu" {
   statistic           = "Average"
   treat_missing_data  = "notBreaching"
 
-  threshold           = var.cronjob_avg_cpu_alarm_threshold
-  period              = var.cronjob_performance_alarms_period_seconds
-  evaluation_periods  = var.cronjob_alarms_eval_periods
-  datapoints_to_alarm = var.cronjob_alarms_datapoints
+  threshold           = var.avg_cpu_alarm_threshold
+  period              = var.performance_alarms_period_seconds
+  evaluation_periods  = var.alarm_eval_periods
+  datapoints_to_alarm = var.alarm_datapoints
 
   tags = var.tags
 }
@@ -61,10 +61,11 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_avg_memory" {
   statistic           = "Average"
   treat_missing_data  = "notBreaching"
 
-  threshold           = var.cronjob_avg_memory_alarm_threshold
-  period              = var.cronjob_performance_alarms_period_seconds
-  evaluation_periods  = var.cronjob_alarms_eval_periods
-  datapoints_to_alarm = var.cronjob_alarms_datapoints
+  threshold           = var.avg_cpu_alarm_threshold
+  period              = var.performance_alarms_period_seconds
+  evaluation_periods  = var.alarm_eval_periods
+  datapoints_to_alarm = var.alarm_datapoints
+
 
   tags = var.tags
 }
@@ -78,8 +79,8 @@ resource "aws_cloudwatch_metric_alarm" "cronjob_app_errors" {
 
   alarm_actions = var.sns_topics_arns
 
-  metric_name = var.cronjob_cloudwatch_app_logs_errors_metric_name
-  namespace   = var.cronjob_cloudwatch_app_logs_errors_metric_namespace
+  metric_name = var.cloudwatch_app_logs_errors_metric_name
+  namespace   = var.cloudwatch_app_logs_errors_metric_namespace
 
   dimensions = {
     PodApp       = var.k8s_workload_name
