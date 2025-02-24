@@ -1,7 +1,7 @@
 # TODO: make time periods configurable
 
 resource "aws_cloudwatch_dashboard" "k8s_deployment" {
-  count = var.create_dashboard && var.kind == "Deployment" ? 1 : 0 
+  count = var.create_dashboard ? 1 : 0 
   dashboard_name = format("k8s-%s-%s", var.k8s_workload_name, var.k8s_namespace)
   dashboard_body = templatefile("${path.module}/k8s_deployment_dashboard.tpl.json",
     {

@@ -11,11 +11,11 @@ locals {
 ###############################################################################
 
 # 1) Performance CPU
-resource "aws_cloudwatch_metric_alarm" "workload_avg_cpu" {
+resource "aws_cloudwatch_metric_alarm" "avg_cpu" {
   count = var.create_performance_alarm ? 1 : 0
 
   alarm_name        = format("k8s-%s-avg-cpu-%s", var.k8s_workload_name, var.k8s_namespace)
-  alarm_description = format("AVG CPU usage alarm for %s %s", lower(var.kind), var.k8s_workload_name)
+  alarm_description = format("AVG CPU usage alarm for %s", var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -40,11 +40,11 @@ resource "aws_cloudwatch_metric_alarm" "workload_avg_cpu" {
 }
 
 # 2) Performance Memory
-resource "aws_cloudwatch_metric_alarm" "workload_avg_memory" {
+resource "aws_cloudwatch_metric_alarm" "avg_memory" {
   count = var.create_performance_alarm ? 1 : 0
 
   alarm_name        = format("k8s-%s-avg-memory-%s", var.k8s_workload_name, var.k8s_namespace)
-  alarm_description = format("AVG memory usage alarm for %s %s",lower(var.kind), var.k8s_workload_name)
+  alarm_description = format("AVG memory usage alarm for %s", var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -69,11 +69,11 @@ resource "aws_cloudwatch_metric_alarm" "workload_avg_memory" {
 }
 
 # 3) Application errors
-resource "aws_cloudwatch_metric_alarm" "workload_app_errors" {
+resource "aws_cloudwatch_metric_alarm" "app_errors" {
   count = local.is_app_logs_errors_alarm_required ? 1 : 0
 
   alarm_name        = format("k8s-%s-errors-%s", var.k8s_workload_name, var.k8s_namespace)
-  alarm_description = format("App logs errors alarm for %s %s", lower(var.kind), var.k8s_workload_name)
+  alarm_description = format("Application errors alarm for %s",  var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 

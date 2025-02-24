@@ -3,12 +3,12 @@
 ###############################################################################
 
 locals {
-  is_pod_availability_alarm_required   = var.create_pod_availability_alarm && var.kind == "Deployment"
-  is_pod_readiness_alarm_required      = var.create_pod_readiness_alarm && var.kind == "Deployment"
+  is_pod_availability_alarm_required   = var.create_pod_availability_alarm && (var.kind == "Deployment" || var.kind == "StatefulSet")
+  is_pod_readiness_alarm_required      = var.create_pod_readiness_alarm && (var.kind == "Deployment" || var.kind == "StatefulSet")
 }
 
 ###############################################################################
-# DEPLOYMENT ALARMS
+# AVAILABILITY ALARMS
 ###############################################################################
 
 # 1) Unavailable pods
@@ -16,7 +16,7 @@ resource "aws_cloudwatch_metric_alarm" "unavailable_pods" {
   count = local.is_pod_availability_alarm_required ? 1 : 0
 
   alarm_name        = format("k8s-%s-unavailable-pods-%s", var.k8s_workload_name, var.k8s_namespace)
-  alarm_description = format("Unavailable pods alarm for %s %s", lower(var.kind), var.k8s_workload_name)
+  alarm_description = format("Unavailable pods alarm for %s", var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 
@@ -77,12 +77,12 @@ resource "aws_cloudwatch_metric_alarm" "unavailable_pods" {
   tags = var.tags
 }
 
-# 2) Readiness pods (Deployment)
+# 2) Readiness pods
 resource "aws_cloudwatch_metric_alarm" "readiness_pods" {
   count = local.is_pod_readiness_alarm_required ? 1 : 0
 
   alarm_name        = format("k8s-%s-readiness-pods-%s", var.k8s_workload_name, var.k8s_namespace)
-  alarm_description = format("Readiness pods alarm for %s %s", lower(var.kind), var.k8s_workload_name)
+  alarm_description = format("Readiness pods alarm for %s", var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 
