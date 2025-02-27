@@ -1,9 +1,9 @@
 ################################################################################
-# KIND: Deployment or CronJob
+# K8S WORKLOAD TYPE
 ################################################################################
 variable "kind" {
   type        = string
-  description = "Kubernetes workload type: 'Deployment' or 'CronJob'"
+  description = "Kubernetes workload type"
 }
 
 ################################################################################
@@ -26,6 +26,11 @@ variable "k8s_namespace" {
   type        = string
 }
 
+variable "k8s_workload_name" {
+  description = "Name of the K8s workload"
+  type        = string
+}
+
 ################################################################################
 # SNS
 ################################################################################
@@ -37,17 +42,11 @@ variable "sns_topics_arns" {
 
 
 ################################################################################
-# WORKLOAD
+# COMMON
 ################################################################################
-variable "k8s_workload_name" {
-  description = "Name of the K8s workload"
-  type        = string
-}
-
 variable "create_performance_alarm" {
   description = "If set to true, creates the avg_cpu and avg_memory alarms"
   type        = bool
-  default     = false
 }
 
 variable "avg_cpu_alarm_threshold" {
@@ -83,7 +82,6 @@ variable "alarm_datapoints" {
 variable "create_app_logs_errors_alarm" {
   description = "If set to true, creates the app_errors alarms"
   type        = bool
-  default     = false
 }
 
 variable "cloudwatch_app_logs_errors_metric_name" {
@@ -98,28 +96,24 @@ variable "cloudwatch_app_logs_errors_metric_namespace" {
   default     = null
 }
 ################################################################################
-# DEPLOYMENT
+# AVAILABILITY
 ################################################################################
-
 variable "create_pod_availability_alarm" {
-  description = "If set to true, creates the unavailable_pods alarm (Deployment)"
+  description = "If set to true, creates the unavailable_pods alarm"
   type        = bool
-  default     = false
 }
 
 variable "create_pod_readiness_alarm" {
-  description = "If set to true, creates the readiness_pods alarm (Deployment)"
+  description = "If set to true, creates the readiness_pods alarm"
   type        = bool
-  default     = false
 }
 
 ################################################################################
 # DASHBOARD
 ################################################################################
 variable "create_dashboard" {
-  description = "If set to true, creates the dashboard (if kind = Deployment)"
+  description = "If set to true, creates the dashboard"
   type        = bool
-  default     = false
 }
 
 variable "number_of_digits" {
