@@ -101,23 +101,26 @@ resource "terraform_data" "delete_previous_role" {
       HOST                         = self.input.db_host
       ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
       USERNAME                     = self.triggers_replace[0]
+      CURRENT_USERNAME             = self.input.username
     }
 
     command = <<EOT
       #!/bin/bash
       set -euo pipefail
       
-      secret_json=$(aws secretsmanager get-secret-value --secret-id $ADMIN_CREDENTIALS_SECRET_ARN --query SecretString --output text)
+      if [[ "$USERNAME" != "$CURRENT_USERNAME" ]]; then
+        secret_json=$(aws secretsmanager get-secret-value --secret-id $ADMIN_CREDENTIALS_SECRET_ARN --query SecretString --output text)
 
-      ADMIN_USERNAME=$(echo $secret_json | jq -r '.username')
-      ADMIN_PASSWORD=$(echo $secret_json | jq -r '.password')
+        ADMIN_USERNAME=$(echo $secret_json | jq -r '.username')
+        ADMIN_PASSWORD=$(echo $secret_json | jq -r '.password')
 
-      export PGPASSWORD=$ADMIN_PASSWORD
-      export ADMIN_USERNAME=$ADMIN_USERNAME
-      
-      echo "Deleting old role $USERNAME from database $DATABASE"
-      envsubst < ${path.module}/scripts/delete_role.sql | \
-      psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE
+        export PGPASSWORD=$ADMIN_PASSWORD
+        export ADMIN_USERNAME=$ADMIN_USERNAME
+        
+        echo "Deleting old role $USERNAME from database $DATABASE"
+        envsubst < ${path.module}/scripts/delete_role.sql | \
+        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE
+      fi
     EOT
   }
 }
