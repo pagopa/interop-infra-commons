@@ -89,6 +89,7 @@ variable "enable_continuous_logging" {
 variable "cloudwatch_log_stream_prefix" {
   description = "Prefix of the CloudWatch log stream"
   type        = string
+  default     = ""
 }
 variable "enable_observability_metrics" {
   description = "Enable observability metrics"
