@@ -45,7 +45,19 @@ variable "glue_job_concurrency" {
   default     = 1
 }
 
-# Glue job script inputs
+# Glue job script
+variable "s3_script_target_bucket" {
+  description = "S3 bucket to store the Glue script"
+  type        = string
+}
+
+variable "glue_script_tags" {
+  description = "List of Glue script tags"
+  type        = map(string)
+  default     = {}
+}
+
+# Glue job inputs
 variable "s3_destination_bucket" {
   description = "S3 destination bucket"
   type        = string
@@ -67,6 +79,7 @@ variable "glue_job_predicate" {
 variable "cloudwatch_log_group_name" {
   description = "Name of the CloudWatch log group"
   type        = string
+  default     = "/aws-glue/jobs/logs"
 }
 variable "enable_continuous_logging" {
   description = "Enable continuous logging"
