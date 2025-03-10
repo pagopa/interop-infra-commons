@@ -3,7 +3,7 @@ resource "aws_glue_job" "glue_job" {
   role_arn = aws_iam_role.glue_role.arn
 
   command {
-    script_location = "s3://${var.s3_script_bucket}/${var.script_key}"
+    script_location = "${data.aws_s3_bucket.glue_script_bucket.bucket}/${local.glue_job_script_name}"
     python_version  = "3"
   }
 
@@ -24,7 +24,7 @@ resource "aws_glue_job" "glue_job" {
     "--glue_database"         = var.glue_database_name
     "--glue_table"            = var.glue_table_name
     "--predicate"             = var.glue_job_predicate
-    # TODO logging
+
     "--continuous-log-logGroup"          = var.cloudwatch_log_group_name
     "--enable-continuous-cloudwatch-log" = var.enable_continuous_logging
     "--continuous-log-logStreamPrefix"   = var.cloudwatch_log_stream_prefix
