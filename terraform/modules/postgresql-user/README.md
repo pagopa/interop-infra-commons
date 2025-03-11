@@ -27,6 +27,7 @@ No modules.
 | [aws_secretsmanager_secret_version.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/secretsmanager_secret_version) | resource |
 | [random_password.this](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/password) | resource |
 | [terraform_data.additional_script](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
+| [terraform_data.delete_previous_role](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.delete_role](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.manage_role](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
@@ -45,6 +46,7 @@ No modules.
 | <a name="input_generated_password_length"></a> [generated\_password\_length](#input\_generated\_password\_length) | Length of the generated password for the user | `number` | n/a | yes |
 | <a name="input_generated_password_use_special_characters"></a> [generated\_password\_use\_special\_characters](#input\_generated\_password\_use\_special\_characters) | Enable special characters in the generated password for the user | `bool` | `false` | no |
 | <a name="input_secret_prefix"></a> [secret\_prefix](#input\_secret\_prefix) | Prefix for the secret that will be created | `string` | n/a | yes |
+| <a name="input_secret_recovery_window_in_days"></a> [secret\_recovery\_window\_in\_days](#input\_secret\_recovery\_window\_in\_days) | Number of days that AWS Secrets Manager waits before it can delete the secret | `number` | `0` | no |
 | <a name="input_secret_tags"></a> [secret\_tags](#input\_secret\_tags) | Tags to apply to the secret that will be created | `map(string)` | `{}` | no |
 | <a name="input_username"></a> [username](#input\_username) | Username to be created | `string` | n/a | yes |
 
