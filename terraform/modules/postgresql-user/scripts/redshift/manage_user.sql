@@ -1,4 +1,4 @@
-CREATE OR REPLACE PROCEDURE test.sp_create_user(user_name varchar, user_password VARCHAR) 
+CREATE OR REPLACE PROCEDURE ${SCHEMA_NAME}.create_user(user_name varchar, user_password VARCHAR) 
 AS $$
 DECLARE 
   create_sql TEXT;
@@ -25,4 +25,4 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
-CALL test.sp_create_user('${USERNAME}', '${PASSWORD}');
+CALL ${SCHEMA_NAME}.create_user('${USERNAME}', '${PASSWORD}');

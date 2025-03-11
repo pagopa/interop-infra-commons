@@ -84,6 +84,7 @@ resource "terraform_data" "delete_previous_role" {
     username                        = var.username
     db_name                         = var.db_name
     db_host                         = var.db_host
+    db_port                         = var.db_port
     db_admin_credentials_secret_arn = var.db_admin_credentials_secret_arn
   }
 
@@ -98,6 +99,7 @@ resource "terraform_data" "delete_previous_role" {
   provisioner "local-exec" {
     environment = {
       DATABASE                     = self.input.db_name
+      DATABASE_PORT                = self.input.db_port
       HOST                         = self.input.db_host
       ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
       USERNAME                     = self.triggers_replace[0]
@@ -119,7 +121,7 @@ resource "terraform_data" "delete_previous_role" {
         
         echo "Deleting old role $USERNAME from database $DATABASE"
         envsubst < ${path.module}/scripts/pgsql/delete_role.sql | \
-        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE -p "$DATABASE_PORT"
+        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE -p $DATABASE_PORT
       fi
     EOT
   }

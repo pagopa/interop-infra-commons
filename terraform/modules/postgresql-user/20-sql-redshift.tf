@@ -1,5 +1,5 @@
 resource "terraform_data" "manage_user" {
-  count = var.enable_sql_statements && var.redshift_cluster ? 1 : 0
+  count = var.enable_sql_statements && var.redshift_cluster && var.redshift_schema_name_procedures != null ? 1 : 0
 
   triggers_replace = [
     var.username,
@@ -18,6 +18,7 @@ resource "terraform_data" "manage_user" {
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
       HOST                         = var.db_host
+      SCHEMA_NAME                  = var.redshift_schema_name_procedures
       ADMIN_CREDENTIALS_SECRET_ARN = var.db_admin_credentials_secret_arn
     }
 
@@ -39,7 +40,7 @@ resource "terraform_data" "manage_user" {
 }
 
 resource "terraform_data" "additional_script_redshift" {
-  count = var.enable_sql_statements && var.additional_sql_statements != null && var.redshift_cluster ? 1 : 0
+  count = var.enable_sql_statements && var.additional_sql_statements != null && var.redshift_cluster && var.redshift_schema_name_procedures != null ? 1 : 0
 
   triggers_replace = [
     var.username,
@@ -58,6 +59,7 @@ resource "terraform_data" "additional_script_redshift" {
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
       HOST                         = var.db_host
+      SCHEMA_NAME                  = var.redshift_schema_name_procedures
       ADMIN_CREDENTIALS_SECRET_ARN = var.db_admin_credentials_secret_arn
     }
 
@@ -78,13 +80,15 @@ resource "terraform_data" "additional_script_redshift" {
 }
 
 resource "terraform_data" "delete_previous_user" {
-  count = var.enable_sql_statements && var.redshift_cluster ? 1 : 0
+  count = var.enable_sql_statements && var.redshift_cluster && var.redshift_schema_name_procedures != null ? 1 : 0
 
   input = {
     username                        = var.username
     db_name                         = var.db_name
     db_host                         = var.db_host
+    db_port                         = var.db_port
     db_admin_credentials_secret_arn = var.db_admin_credentials_secret_arn
+    redshift_schema_name            = var.redshift_schema_name_procedures
   }
 
   triggers_replace = [
@@ -98,7 +102,9 @@ resource "terraform_data" "delete_previous_user" {
   provisioner "local-exec" {
     environment = {
       DATABASE                     = self.input.db_name
+      DATABASE_PORT                = self.input.db_port
       HOST                         = self.input.db_host
+      SCHEMA_NAME                  = self.input.redshift_schema_name
       ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
       USERNAME                     = self.triggers_replace[0]
       CURRENT_USERNAME             = self.input.username
@@ -119,14 +125,14 @@ resource "terraform_data" "delete_previous_user" {
         
         echo "Deleting old user $USERNAME from database $DATABASE"
         envsubst < ${path.module}/scripts/redshift/delete_user.sql | \
-        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE -p "$DATABASE_PORT"
+        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE -p $DATABASE_PORT
       fi
     EOT
   }
 }
 
 resource "terraform_data" "delete_user" {
-  count = var.enable_sql_statements && var.redshift_cluster ? 1 : 0
+  count = var.enable_sql_statements && var.redshift_cluster && var.redshift_schema_name_procedures != null ? 1 : 0
 
   input = {
     username                        = var.username
@@ -134,6 +140,7 @@ resource "terraform_data" "delete_user" {
     db_host                         = var.db_host
     db_port                         = var.db_port
     db_admin_credentials_secret_arn = var.db_admin_credentials_secret_arn
+    redshift_schema_name            = var.redshift_schema_name_procedures
   }
 
   triggers_replace = [
@@ -152,6 +159,7 @@ resource "terraform_data" "delete_user" {
       DATABASE                     = self.input.db_name
       DATABASE_PORT                = self.input.db_port
       HOST                         = self.input.db_host
+      SCHEMA_NAME                  = self.input.redshift_schema_name
       ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
     }
 

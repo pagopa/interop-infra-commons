@@ -2,7 +2,7 @@
 \i ./v_generate_user_grant_revoke_ddl.sql 
 
 -- Create a procedure to revoke all the privileges of the target_user and, then, to drop it 
-CREATE OR REPLACE PROCEDURE test.drop_user_with_revoke(target_user VARCHAR)
+CREATE OR REPLACE PROCEDURE ${SCHEMA_NAME}.drop_user_with_revoke(target_user VARCHAR)
 LANGUAGE plpgsql
 AS $$
 DECLARE 
@@ -32,4 +32,4 @@ BEGIN
 END $$;
 
 -- Execute the procedure
-CALL test.drop_user_with_revoke('${USERNAME}');
+CALL ${SCHEMA_NAME}.drop_user_with_revoke('${USERNAME}');
