@@ -46,6 +46,12 @@ variable "secret_tags" {
   default     = {}
 }
 
+variable "secret_recovery_window_in_days" {
+  description = "Number of days that AWS Secrets Manager waits before it can delete the secret"
+  type        = number
+  default     = 0
+}
+
 variable "enable_sql_statements" {
   description = "Enable SQL scripts execution"
   type        = bool
