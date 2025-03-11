@@ -1,5 +1,5 @@
-resource "terraform_data" "manage_role" {
-  count = var.enable_sql_statements ? 1 : 0
+resource "terraform_data" "manage_user" {
+  count = var.enable_sql_statements && var.redshift_cluster ? 1 : 0
 
   triggers_replace = [
     var.username,
@@ -32,14 +32,14 @@ resource "terraform_data" "manage_role" {
 
       export PGPASSWORD=$ADMIN_PASSWORD
 
-      envsubst < ${path.module}/scripts/manage_role.sql | \
+      envsubst < ${path.module}/scripts/redshift/manage_user.sql | \
       psql --host "$HOST" --username "$ADMIN_USERNAME" --port "$DATABASE_PORT" --dbname "$DATABASE"
     EOT
   }
 }
 
-resource "terraform_data" "additional_script" {
-  count = var.enable_sql_statements && var.additional_sql_statements != null ? 1 : 0
+resource "terraform_data" "additional_script_redshift" {
+  count = var.enable_sql_statements && var.additional_sql_statements != null && var.redshift_cluster ? 1 : 0
 
   triggers_replace = [
     var.username,
@@ -48,7 +48,7 @@ resource "terraform_data" "additional_script" {
   ]
 
   depends_on = [
-    terraform_data.manage_role
+    terraform_data.manage_user
   ]
 
   provisioner "local-exec" {
@@ -77,8 +77,8 @@ resource "terraform_data" "additional_script" {
   }
 }
 
-resource "terraform_data" "delete_previous_role" {
-  count = var.enable_sql_statements ? 1 : 0
+resource "terraform_data" "delete_previous_user" {
+  count = var.enable_sql_statements && var.redshift_cluster ? 1 : 0
 
   input = {
     username                        = var.username
@@ -117,16 +117,16 @@ resource "terraform_data" "delete_previous_role" {
         export PGPASSWORD=$ADMIN_PASSWORD
         export ADMIN_USERNAME=$ADMIN_USERNAME
         
-        echo "Deleting old role $USERNAME from database $DATABASE"
-        envsubst < ${path.module}/scripts/delete_role.sql | \
-        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE
+        echo "Deleting old user $USERNAME from database $DATABASE"
+        envsubst < ${path.module}/scripts/redshift/delete_user.sql | \
+        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE -p "$DATABASE_PORT"
       fi
     EOT
   }
 }
 
-resource "terraform_data" "delete_role" {
-  count = var.enable_sql_statements ? 1 : 0
+resource "terraform_data" "delete_user" {
+  count = var.enable_sql_statements && var.redshift_cluster ? 1 : 0
 
   input = {
     username                        = var.username
@@ -167,8 +167,8 @@ resource "terraform_data" "delete_role" {
       export PGPASSWORD=$ADMIN_PASSWORD
       export ADMIN_USERNAME=$ADMIN_USERNAME
       
-      echo "Deleting role $USERNAME from database $DATABASE"
-      envsubst < ${path.module}/scripts/delete_role.sql | \
+      echo "Deleting user $USERNAME from database $DATABASE"
+      envsubst < ${path.module}/scripts/redshift/delete_user.sql | \
       psql -h "$HOST" -U "$ADMIN_USERNAME" -d "$DATABASE" -p "$DATABASE_PORT"
     EOT
   }
