@@ -45,6 +45,8 @@ No modules.
 | <a name="input_enable_sql_statements"></a> [enable\_sql\_statements](#input\_enable\_sql\_statements) | Enable SQL scripts execution | `bool` | `true` | no |
 | <a name="input_generated_password_length"></a> [generated\_password\_length](#input\_generated\_password\_length) | Length of the generated password for the user | `number` | n/a | yes |
 | <a name="input_generated_password_use_special_characters"></a> [generated\_password\_use\_special\_characters](#input\_generated\_password\_use\_special\_characters) | Enable special characters in the generated password for the user | `bool` | `false` | no |
+| <a name="input_redshift_cluster"></a> [redshift\_cluster](#input\_redshift\_cluster) | Use Redshift-compatible SQL scripts | `bool` | `false` | no |
+| <a name="input_redshift_schema_name_procedures"></a> [redshift\_schema\_name\_procedures](#input\_redshift\_schema\_name\_procedures) | Redshift schema name in which to create stored procedures. Be sure this schema exists in the database | `string` | `null` | no |
 | <a name="input_secret_prefix"></a> [secret\_prefix](#input\_secret\_prefix) | Prefix for the secret that will be created | `string` | n/a | yes |
 | <a name="input_secret_recovery_window_in_days"></a> [secret\_recovery\_window\_in\_days](#input\_secret\_recovery\_window\_in\_days) | Number of days that AWS Secrets Manager waits before it can delete the secret | `number` | `0` | no |
 | <a name="input_secret_tags"></a> [secret\_tags](#input\_secret\_tags) | Tags to apply to the secret that will be created | `map(string)` | `{}` | no |

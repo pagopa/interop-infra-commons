@@ -1,3 +1,7 @@
+locals {
+  path_to_scripts = var.redshift_cluster && var.redshift_schema_name_procedures != null ? "${path.module}/scripts/redshift" : "${path.module}/scripts/pgsql"
+}
+
 resource "terraform_data" "manage_role" {
   count = var.enable_sql_statements ? 1 : 0
 
@@ -18,6 +22,7 @@ resource "terraform_data" "manage_role" {
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
       HOST                         = var.db_host
+      SCHEMA_NAME                  = var.redshift_schema_name_procedures
       ADMIN_CREDENTIALS_SECRET_ARN = var.db_admin_credentials_secret_arn
     }
 
@@ -32,7 +37,7 @@ resource "terraform_data" "manage_role" {
 
       export PGPASSWORD=$ADMIN_PASSWORD
 
-      envsubst < ${path.module}/scripts/manage_role.sql | \
+      envsubst < ${local.path_to_scripts}/manage_role.sql | \
       psql --host "$HOST" --username "$ADMIN_USERNAME" --port "$DATABASE_PORT" --dbname "$DATABASE"
     EOT
   }
@@ -58,6 +63,7 @@ resource "terraform_data" "additional_script" {
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
       HOST                         = var.db_host
+      SCHEMA_NAME                  = var.redshift_schema_name_procedures
       ADMIN_CREDENTIALS_SECRET_ARN = var.db_admin_credentials_secret_arn
     }
 
@@ -84,7 +90,10 @@ resource "terraform_data" "delete_previous_role" {
     username                        = var.username
     db_name                         = var.db_name
     db_host                         = var.db_host
+    db_port                         = var.db_port
     db_admin_credentials_secret_arn = var.db_admin_credentials_secret_arn
+    redshift_schema_name            = var.redshift_schema_name_procedures
+    path_to_scripts                 = local.path_to_scripts
   }
 
   triggers_replace = [
@@ -98,7 +107,9 @@ resource "terraform_data" "delete_previous_role" {
   provisioner "local-exec" {
     environment = {
       DATABASE                     = self.input.db_name
+      DATABASE_PORT                = self.input.db_port
       HOST                         = self.input.db_host
+      SCHEMA_NAME                  = self.input.redshift_schema_name
       ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
       USERNAME                     = self.triggers_replace[0]
       CURRENT_USERNAME             = self.input.username
@@ -118,8 +129,8 @@ resource "terraform_data" "delete_previous_role" {
         export ADMIN_USERNAME=$ADMIN_USERNAME
         
         echo "Deleting old role $USERNAME from database $DATABASE"
-        envsubst < ${path.module}/scripts/delete_role.sql | \
-        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE
+        envsubst < ${self.input.path_to_scripts}/delete_role.sql | \
+        psql -h $HOST -U $ADMIN_USERNAME -d $DATABASE -p $DATABASE_PORT
       fi
     EOT
   }
@@ -134,6 +145,8 @@ resource "terraform_data" "delete_role" {
     db_host                         = var.db_host
     db_port                         = var.db_port
     db_admin_credentials_secret_arn = var.db_admin_credentials_secret_arn
+    redshift_schema_name            = var.redshift_schema_name_procedures
+    path_to_scripts                 = local.path_to_scripts
   }
 
   triggers_replace = [
@@ -152,6 +165,7 @@ resource "terraform_data" "delete_role" {
       DATABASE                     = self.input.db_name
       DATABASE_PORT                = self.input.db_port
       HOST                         = self.input.db_host
+      SCHEMA_NAME                  = self.input.redshift_schema_name
       ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
     }
 
@@ -168,7 +182,7 @@ resource "terraform_data" "delete_role" {
       export ADMIN_USERNAME=$ADMIN_USERNAME
       
       echo "Deleting role $USERNAME from database $DATABASE"
-      envsubst < ${path.module}/scripts/delete_role.sql | \
+      envsubst < ${self.input.path_to_scripts}/delete_role.sql | \
       psql -h "$HOST" -U "$ADMIN_USERNAME" -d "$DATABASE" -p "$DATABASE_PORT"
     EOT
   }

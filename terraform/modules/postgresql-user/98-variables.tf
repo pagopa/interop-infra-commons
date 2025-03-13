@@ -64,3 +64,14 @@ variable "additional_sql_statements" {
   default     = null
 }
 
+variable "redshift_cluster" {
+  description = "Use Redshift-compatible SQL scripts"
+  type        = bool
+  default     = false
+}
+
+variable "redshift_schema_name_procedures" {
+  description = "Redshift schema name in which to create stored procedures. Be sure this schema exists in the database"
+  type        = string
+  default     = null
+}
