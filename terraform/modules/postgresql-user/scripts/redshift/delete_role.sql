@@ -1,7 +1,7 @@
 -- Execute external file to create or update a view containing revoke commands for the users
 \i ./v_generate_user_grant_revoke_ddl.sql 
 
--- Create a procedure to revoke all the privileges from the target_user and, then, to drop it 
+-- Create a procedure to revoke all the privileges of the target_user and, then, to drop it 
 CREATE OR REPLACE PROCEDURE ${SCHEMA_NAME}.drop_user_with_revoke(target_user VARCHAR)
 LANGUAGE plpgsql
 AS $$
@@ -12,7 +12,7 @@ BEGIN
 -- Check if the user exists
     SELECT 1 FROM pg_user WHERE usename = target_user) THEN
       RAISE INFO 'User exists, privileges will be revoked and user will be dropped.';
--- Revokes privileges from the target_user
+-- Revokes privileges of the target_user
       FOR rec IN 
           SELECT ddl 
           FROM v_generate_user_grant_revoke_ddl
