@@ -26,13 +26,13 @@ variable "username" {
 
 variable "generated_password_length" {
   description = "Length of the generated password for the user"
-  type = number
+  type        = number
 }
 
 variable "generated_password_use_special_characters" {
   description = "Enable special characters in the generated password for the user"
-  type = bool
-  default = false
+  type        = bool
+  default     = false
 }
 
 variable "secret_prefix" {
@@ -44,6 +44,12 @@ variable "secret_tags" {
   description = "Tags to apply to the secret that will be created"
   type        = map(string)
   default     = {}
+}
+
+variable "secret_recovery_window_in_days" {
+  description = "Number of days that AWS Secrets Manager waits before it can delete the secret"
+  type        = number
+  default     = 0
 }
 
 variable "enable_sql_statements" {
