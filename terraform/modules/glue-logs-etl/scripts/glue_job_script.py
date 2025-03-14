@@ -36,7 +36,7 @@ AmazonS3_source_node = glueContext.create_dynamic_frame.from_catalog(
 # Script generated for node Select Fields
 SelectFields_node1741103889300 = SelectFields.apply(
     frame=AmazonS3_source_node, 
-    paths=["message", "year", "month", "day", "cw_timestamp"], 
+    paths=["message", "year", "month", "day"], 
     transformation_ctx="SelectFields_node1741103889300"
 )
 
