@@ -1,3 +1,5 @@
+CREATE SCHEMA IF NOT EXISTS ${SCHEMA_NAME};
+
 CREATE OR REPLACE PROCEDURE ${SCHEMA_NAME}.create_user(user_name varchar, user_password VARCHAR) 
 AS $$
 DECLARE 

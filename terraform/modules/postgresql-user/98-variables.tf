@@ -71,7 +71,7 @@ variable "redshift_cluster" {
 }
 
 variable "redshift_schema_name_procedures" {
-  description = "Redshift schema name in which to create stored procedures. Be sure this schema exists in the database"
+  description = "Redshift schema name in which to create stored procedures"
   type        = string
-  default     = null
+  default     = "terraform_postgresql_user_module"
 }
