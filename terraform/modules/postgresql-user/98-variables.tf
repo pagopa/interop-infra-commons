@@ -75,3 +75,9 @@ variable "redshift_schema_name_procedures" {
   type        = string
   default     = "terraform_postgresql_user_module"
 }
+
+variable "grant_groups" {
+  description = "List of groups the user must be added to. If a group does not exist, it will be created"
+  type        = list(string)
+  default     = []
+}

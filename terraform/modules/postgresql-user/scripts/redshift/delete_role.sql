@@ -11,10 +11,10 @@ AS $$
 DECLARE 
     rec RECORD;
 BEGIN
-  IF EXISTS (
 -- Check if the user exists
-    SELECT 1 FROM pg_user WHERE usename = target_user) THEN
+  IF EXISTS (SELECT 1 FROM pg_user WHERE usename = target_user) THEN
       RAISE INFO 'User exists, privileges will be revoked and user will be dropped.';
+
 -- Revokes privileges of the target_user
       FOR rec IN 
           SELECT ddl 
@@ -25,10 +25,12 @@ BEGIN
       LOOP
           EXECUTE rec.ddl;
       END LOOP;
-      RAISE INFO 'Privileges have been revoked correctly.';
+      RAISE INFO 'User privileges have been revoked correctly.';
+
 -- Drop the target_user
       EXECUTE 'DROP USER "' || target_user || '";';
-      RAISE INFO 'User dropped.';
+      RAISE INFO 'User % dropped.', target_user;
+  
   ELSE
     RAISE INFO 'User does not exist.';
   END IF;
