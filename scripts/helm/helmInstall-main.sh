@@ -156,5 +156,3 @@ if [[ $template_jobs == true ]]; then
     sh "$SCRIPTS_FOLDER"/helmInstall-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi
-
- # TEST: sh scripts/helm/helmInstall-main.sh -sd --dry-run --debug -e dev -d -j -m -i $PROJECT_DIR/commons/dev/images.yaml 
