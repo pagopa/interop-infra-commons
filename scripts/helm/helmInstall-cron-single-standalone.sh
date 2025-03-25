@@ -9,6 +9,7 @@ help()
     echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm install
         [ -dr | --dry-run ] Enable dry-run mode
         [ -d | --debug ] Enable debug
+        [ -a | --atomic ] Enable helm install atomic option 
         [ -j | --job ] Cronjob defined in jobs folder
         [ -i | --image ] File with cronjob image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
@@ -20,6 +21,7 @@ help()
 args=$#
 environment=""
 job=""
+enable_atomic=false
 enable_debug=false
 enable_dryrun=false
 post_clean=false
@@ -37,6 +39,11 @@ do
           environment=$2
           step=2
           shift 2
+          ;;
+        -a | --atomic)
+          enable_atomic=true
+          step=1
+          shift 1
           ;;
         -d | --debug)
           enable_debug=true
@@ -115,6 +122,9 @@ fi
 
 ENV=$environment
 OPTIONS=" "
+if [[ $enable_atomic == true ]]; then
+  OPTIONS=$OPTIONS" --atomic"
+fi
 if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" --debug"
 fi
@@ -132,7 +142,7 @@ fi
 # END - Find image version and digest
 
 
-helm upgrade --atomic --dependency-update --create-namespace \
+helm upgrade --dependency-update --create-namespace \
   $OPTIONS \
   --install $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
   --namespace $ENV \

@@ -11,6 +11,7 @@ help()
     echo "Usage:  [ -e | --environment ] Environment used to execute helm install
         [ -dr | --dry-run ] Enable dry-run mode
         [ -d | --debug ] Enable debug
+        [ -a | --atomic ] Enable helm install atomic option 
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
@@ -22,6 +23,7 @@ help()
 
 args=$#
 environment=""
+enable_atomic=false
 enable_debug=false
 enable_dryrun=false
 template_microservices=false
@@ -41,6 +43,11 @@ do
           environment=$2
           step=2
           shift 2
+          ;;
+        -a | --atomic)
+          enable_atomic=true
+          step=1
+          shift 1
           ;;
         -d | --debug)
           enable_debug=true
@@ -105,6 +112,9 @@ MICROSERVICES_DIR=$(getMicroservicesDir)
 CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
+if [[ $enable_atomic == true ]]; then
+  OPTIONS=$OPTIONS" --atomic"
+fi
 if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" --debug"
 fi
