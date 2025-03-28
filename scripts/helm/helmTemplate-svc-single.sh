@@ -138,7 +138,7 @@ fi
 # Find image version and digest
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 
-TEMPLATE_CMD="helm template "
+TEMPLATE_CMD="helm template --dry-run=server "
 if [[ $enable_debug == true ]]; then
     TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
 fi
