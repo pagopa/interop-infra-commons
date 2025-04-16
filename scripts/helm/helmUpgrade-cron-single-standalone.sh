@@ -142,7 +142,7 @@ fi
 # END - Find image version and digest
 
 
-helm upgrade --dependency-update --create-namespace \
+helm upgrade --dependency-update --take-ownership --create-namespace \
   $OPTIONS \
   --install $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
   --namespace $ENV \
