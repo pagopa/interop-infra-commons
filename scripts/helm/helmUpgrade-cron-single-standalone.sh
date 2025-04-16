@@ -6,12 +6,12 @@ SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 help()
 {
-    echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm install
+    echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm upgrade
         [ -dr | --dry-run ] Enable dry-run mode
         [ -d | --debug ] Enable debug
         [ -a | --atomic ] Enable helm install atomic option 
-        [ -m | --microservice ] Microservice defined in microservices folder
-        [ -i | --image ] File with microservice image tag and digest
+        [ -j | --job ] Cronjob defined in jobs folder
+        [ -i | --image ] File with cronjob image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -h | --help ] This help"
@@ -20,7 +20,7 @@ help()
 
 args=$#
 environment=""
-microservice=""
+job=""
 enable_atomic=false
 enable_debug=false
 enable_dryrun=false
@@ -55,15 +55,15 @@ do
           step=1
           shift 1
           ;;
-        -m | --microservice )
-          [[ "${2:-}" ]] || "Microservice cannot be null" || help
-
-          microservice=$2
-          serviceAllowedRes=$(isAllowedMicroservice $microservice)
-          if [[ -z $serviceAllowedRes || $serviceAllowedRes == "" ]]; then
-            echo "$microservice is not allowed"
-            echo "Allowed values: " $(getAllowedMicroservices)
-            help
+        -j | --job )
+          [[ "${2:-}" ]] || "Job cannot be null" || help
+          
+          job=$2
+          jobAllowedRes=$(isAllowedCronjob $job)
+          if [[ -z $jobAllowedRes || $jobAllowedRes == "" ]]; then
+              echo "$job is not allowed"
+              echo "Allowed values: " $(getAllowedCronjobs)
+              help
           fi
 
           step=2
@@ -105,8 +105,8 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help
 fi
-if [[ -z $microservice || $microservice == "" ]]; then
-  echo "Microservice cannot be null"
+if [[ -z $job || $job == "" ]]; then
+  echo "Job cannot null"
   help
 fi
 if [[ $skip_dep == false ]]; then
@@ -114,9 +114,9 @@ if [[ $skip_dep == false ]]; then
   skip_dep=true
 fi
 
-VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
+VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  echo "Environment configuration '$environment' not found for microservice '$microservice'"
+  echo "Environment configuration '$environment' not found for cronjob '$job'"
   help
 fi
 
@@ -138,13 +138,13 @@ if [[ -n $images_file ]]; then
   IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
 fi
 
-. "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
+. "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
 
 helm upgrade --dependency-update --create-namespace \
   $OPTIONS \
-  --install $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" \
+  --install $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
   --namespace $ENV \
- -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
- -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\"
+ -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" \
+ -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\"

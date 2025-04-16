@@ -1,14 +1,14 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Running helm install process"
+echo "Running helm upgrade process"
 
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
 help()
 {
-    echo "Usage:  [ -e | --environment ] Environment used to execute helm install
+    echo "Usage:  [ -e | --environment ] Environment used to execute helm upgrade
         [ -dr | --dry-run ] Enable dry-run mode
         [ -d | --debug ] Enable debug
         [ -a | --atomic ] Enable helm install atomic option 
@@ -143,7 +143,7 @@ if [[ $template_microservices == true ]]; then
   do
     CURRENT_SVC=$(basename "$dir");
     echo "Diff $CURRENT_SVC"
-    sh "$SCRIPTS_FOLDER"/helmInstall-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
   done
 fi
 
@@ -153,6 +153,6 @@ if [[ $template_jobs == true ]]; then
   do
     CURRENT_JOB=$(basename "$dir");
     echo "Diff $CURRENT_JOB"
-    sh "$SCRIPTS_FOLDER"/helmInstall-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
+    sh "$SCRIPTS_FOLDER"/helmUpgrade-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi
