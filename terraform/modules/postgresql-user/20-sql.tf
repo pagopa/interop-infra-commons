@@ -24,6 +24,7 @@ resource "terraform_data" "manage_role" {
       HOST                         = var.db_host
       SCHEMA_NAME                  = var.redshift_schema_name_procedures
       ADMIN_CREDENTIALS_SECRET_ARN = var.db_admin_credentials_secret_arn
+      GRANT_GROUPS                 = var.grant_redshift_groups == [] ? "" : join(", ", var.grant_redshift_groups) #Pass the groups list as a comma separated string
     }
 
     command = <<EOT

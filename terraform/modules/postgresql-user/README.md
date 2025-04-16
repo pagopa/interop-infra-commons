@@ -4,14 +4,14 @@
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.8.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.46.0 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.46 |
 | <a name="requirement_random"></a> [random](#requirement\_random) | ~> 3.6.3 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.46.0 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.46 |
 | <a name="provider_random"></a> [random](#provider\_random) | ~> 3.6.3 |
 | <a name="provider_terraform"></a> [terraform](#provider\_terraform) | n/a |
 
@@ -45,6 +45,7 @@ No modules.
 | <a name="input_enable_sql_statements"></a> [enable\_sql\_statements](#input\_enable\_sql\_statements) | Enable SQL scripts execution | `bool` | `true` | no |
 | <a name="input_generated_password_length"></a> [generated\_password\_length](#input\_generated\_password\_length) | Length of the generated password for the user | `number` | n/a | yes |
 | <a name="input_generated_password_use_special_characters"></a> [generated\_password\_use\_special\_characters](#input\_generated\_password\_use\_special\_characters) | Enable special characters in the generated password for the user | `bool` | `false` | no |
+| <a name="input_grant_redshift_groups"></a> [grant\_redshift\_groups](#input\_grant\_redshift\_groups) | List of groups the user must be added to. If a group does not exist, it will be created. Specifically for Redshift | `list(string)` | `[]` | no |
 | <a name="input_redshift_cluster"></a> [redshift\_cluster](#input\_redshift\_cluster) | Use Redshift-compatible SQL scripts | `bool` | `false` | no |
 | <a name="input_redshift_schema_name_procedures"></a> [redshift\_schema\_name\_procedures](#input\_redshift\_schema\_name\_procedures) | Redshift schema name in which to create stored procedures | `string` | `"terraform_postgresql_user_module"` | no |
 | <a name="input_secret_prefix"></a> [secret\_prefix](#input\_secret\_prefix) | Prefix for the secret that will be created | `string` | n/a | yes |
