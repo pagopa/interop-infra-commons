@@ -15,6 +15,7 @@ help()
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -v | --verbose ] Show debug messages
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -dr | --dry-run ] Use Helm --dry-run=server option
         [ -h | --help ] This help"
     exit 2
 }
@@ -26,6 +27,7 @@ enable_debug=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+dry_run=false
 verbose=false
 images_file=""
 
@@ -85,6 +87,11 @@ do
           step=1
           shift 1
           ;;
+        -dr | --dry-run)
+          dry_run=true
+          step=1
+          shift 1
+          ;;
         -v| --verbose )
           verbose=true
           step=1
@@ -141,6 +148,9 @@ fi
 TEMPLATE_CMD="helm template "
 if [[ $enable_debug == true ]]; then
     TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
+fi
+if [[ $dry_run == true ]]; then
+    TEMPLATE_CMD=$TEMPLATE_CMD"--dry-run=server "
 fi
 
 OUTPUT_FILE="\"$OUT_DIR/$microservice.out.yaml\""
