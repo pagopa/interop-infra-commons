@@ -16,7 +16,6 @@ help()
         [ -v | --verbose ] Show debug messages
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -dr | --dry-run ] Use Helm --dry-run=server option
-        [ -ch | --configmap-hash ] Create configmapHash key into deployment template 
         [ -h | --help ] This help"
     exit 2
 }
@@ -31,7 +30,6 @@ skip_dep=false
 dry_run=false
 verbose=false
 images_file=""
-configmap_hash=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -93,13 +91,6 @@ do
           dry_run=true
           step=1
           shift 1
-          ;;
-        -ch| --configmap-hash) 
-          [[ "${2:-}" ]] || "When specified, configmap hash cannot be null" || help
-
-          configmap_hash=$2
-          step=2
-          shift 2
           ;;
         -v| --verbose )
           verbose=true
@@ -168,17 +159,8 @@ if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
 fi
 
-if [[ $configmap_hash != "" ]]; then
-  values_file_path="$ROOT_DIR/microservices/$microservice/$ENV/values.yaml"
-  
-  yq eval ".deployment.configmapHash = \"$configmap_hash\"" "$values_file_path" > "$ROOT_DIR/microservices/$microservice/$ENV/values-with-configmap-hash.yaml"
-
-  #TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values-with-configmap-hash.yaml\" $OUTPUT_TO"
-  TEMPLATE_CMD=$TEMPLATE_CMD" $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values-with-configmap-hash.yaml\" $OUTPUT_TO"
-else
-  #TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
-  TEMPLATE_CMD=$TEMPLATE_CMD" $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
-fi
+#TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
+TEMPLATE_CMD=$TEMPLATE_CMD" $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
 
 eval $TEMPLATE_CMD
 if [[ $verbose == true ]]; then

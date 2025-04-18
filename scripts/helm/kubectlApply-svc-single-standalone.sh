@@ -12,7 +12,6 @@ help()
         [ -i | --image ] File with microservice image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
-        [ -ftcf | --force-template-configmap-first ] Force a first helm template to get the configmap hash before performing a second helm template followed by kubectl apply
         [ -h | --help ] This help"
     exit 2
 }
@@ -25,7 +24,6 @@ post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
-force_template_configmap_first=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -75,11 +73,6 @@ do
           ;;
         -sd | --skip-dep)
           skip_dep=true
-          step=1
-          shift 1
-          ;;
-        -ftcf | --force-template-configmap-first) 
-          force_template_configmap_first=true
           step=1
           shift 1
           ;;
@@ -137,12 +130,4 @@ fi
 HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-svc-single.sh"
 APPLY_CMD="kubectl apply --show-managed-fields=false -f -"
 
-if [[ $force_template_configmap_first == true ]]; then
-  CONFIGMAP_YAML=$("$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" $OPTIONS | yq eval 'select(.kind == "ConfigMap")' -)
-  if [[ -n "$CONFIGMAP_YAML" ]]; then
-    CONFIGMAP_HASH=$(echo "$CONFIGMAP_YAML" | sha256sum | awk '{print $1}')
-    "$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" --configmap-hash "$CONFIGMAP_HASH" --dry-run $OPTIONS | $APPLY_CMD
-  fi
-else
-  "$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" $OPTIONS | $APPLY_CMD
-fi
+"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" $OPTIONS | $APPLY_CMD
