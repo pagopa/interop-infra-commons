@@ -89,6 +89,15 @@ function setupHelmDeps()
         cd ..
     fi
 
+    set +e
+    # Install helm diff plugin
+    helm plugin install https://github.com/databus23/helm-diff
+    diff_plugin_result=$?
+     if [[ $verbose == true ]]; then
+        echo "Helm-Diff plugin install result: $diff_plugin_result"
+    fi
+    set -e
+
     cd -
     echo "-- Helm dependencies setup ended --"
     exit 0
