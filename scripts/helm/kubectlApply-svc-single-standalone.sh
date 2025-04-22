@@ -12,6 +12,7 @@ help()
         [ -i | --image ] File with microservice image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -dr | --dry-run ] Use Helm --dry-run=server option when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -23,6 +24,7 @@ enable_debug=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+dry_run=false
 images_file=""
 
 step=1
@@ -76,6 +78,11 @@ do
           step=1
           shift 1
           ;;
+        -dr | --dry-run)
+          dry_run=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -121,6 +128,9 @@ if [[ -n $images_file ]]; then
 fi
 if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
+fi
+if [[ $dry_run == true ]]; then
+  OPTIONS=$OPTIONS" --dry-run=server "
 fi
 
 #HELM_TEMPLATE_CMD="$SCRIPTS_FOLDER/helmTemplate-svc-single.sh -e $ENV -m $microservice $OPTIONS"
