@@ -130,7 +130,7 @@ if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
 fi
 if [[ $enable_templating_lookup == true ]]; then
-  OPTIONS=$OPTIONS" --dry-run=server "
+  OPTIONS=$OPTIONS" --enable-templating-lookup "
 fi
 
 #HELM_TEMPLATE_CMD="$SCRIPTS_FOLDER/helmTemplate-svc-single.sh -e $ENV -m $microservice $OPTIONS"
