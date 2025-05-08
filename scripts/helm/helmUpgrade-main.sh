@@ -17,6 +17,7 @@ help()
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ --force ] Force helm upgrade
         [ -h | --help ] This help"
     exit 2
 }
@@ -32,6 +33,7 @@ post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
+force=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -90,6 +92,11 @@ do
           step=1
           shift 1
           ;;
+        --force)
+          force=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -121,6 +128,9 @@ fi
 if [[ $enable_dryrun == true ]]; then
   OPTIONS=$OPTIONS" --dry-run"
 fi
+if [[ $force == true ]]; then
+  OPTIONS=$OPTIONS" --force"
+fi
 if [[ $post_clean == true ]]; then
   OPTIONS=$OPTIONS" -c"
 fi
@@ -142,7 +152,7 @@ if [[ $template_microservices == true ]]; then
   for dir in "$MICROSERVICES_DIR"/*;
   do
     CURRENT_SVC=$(basename "$dir");
-    echo "Diff $CURRENT_SVC"
+    echo "Upgrade $CURRENT_SVC"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
   done
 fi
@@ -152,7 +162,7 @@ if [[ $template_jobs == true ]]; then
   for dir in "$CRONJOBS_DIR"/*;
   do
     CURRENT_JOB=$(basename "$dir");
-    echo "Diff $CURRENT_JOB"
+    echo "Upgrade $CURRENT_JOB"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi

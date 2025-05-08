@@ -14,6 +14,7 @@ help()
         [ -i | --image ] File with cronjob image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ --force ] Force helm upgrade
         [ -h | --help ] This help"
     exit 2
 }
@@ -28,6 +29,7 @@ post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
+force=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -90,6 +92,11 @@ do
           step=1
           shift 1
           ;;
+        --force)
+          force=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -130,6 +137,9 @@ if [[ $enable_debug == true ]]; then
 fi
 if [[ $enable_dryrun == true ]]; then
   OPTIONS=$OPTIONS" --dry-run"
+fi
+if [[ $force == true ]]; then
+  OPTIONS=$OPTIONS" --force"
 fi
 
 # START - Find image version and digest
