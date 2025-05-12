@@ -115,7 +115,20 @@ fi
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
+set +e
 helm diff upgrade --install  "$microservice"  "$ROOT_DIR/charts/interop-eks-microservice-chart" \
-  --namespace "$ENV" --normalize-manifests \
+  --namespace "$ENV" --normalize-manifests --detailed-exitcode \
   -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
   -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\"
+diff_result=$?
+set -e
+
+#if [[ $diff_result -eq 0 ]]; then
+#  echo "No changes detected"
+#elif [[ $diff_result -eq 2 ]]; then
+#  echo "Changes detected"
+#else
+#  echo "Unexpected error"
+#fi
+
+exit $diff_result
