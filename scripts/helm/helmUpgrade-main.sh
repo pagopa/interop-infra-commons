@@ -17,6 +17,7 @@ help()
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -hm | --history-max ] Set the maximum number of revisions saved per release
         [ --force ] Force helm upgrade
         [ -h | --help ] This help"
     exit 2
@@ -34,6 +35,7 @@ output_redirect=""
 skip_dep=false
 images_file=""
 force=false
+history_max=3
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -92,6 +94,17 @@ do
           step=1
           shift 1
           ;;
+        -hm | --history-max )
+          [[ "${2:-}" ]] || "When specified, history-max cannot be null" || help
+          history_max=$2
+          if [[ $history_max -lt 0 ]]; then
+            echo "History-max must be equal or greater than 0"
+            help
+          fi
+
+          step=2
+          shift 2
+          ;;
         --force)
           force=true
           step=1
@@ -145,7 +158,7 @@ if [[ $skip_dep == false ]]; then
   skip_dep=true
 fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
-OPTIONS=$OPTIONS" -sd"
+OPTIONS=$OPTIONS" -sd -hm $history_max"
 
 if [[ $template_microservices == true ]]; then
   echo "Start microservices helm install"

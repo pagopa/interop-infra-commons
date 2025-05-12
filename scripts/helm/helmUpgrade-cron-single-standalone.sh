@@ -14,6 +14,7 @@ help()
         [ -i | --image ] File with cronjob image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -hm | --history-max ] Set the maximum number of revisions saved per release
         [ --force ] Force helm upgrade
         [ -h | --help ] This help"
     exit 2
@@ -30,6 +31,7 @@ output_redirect=""
 skip_dep=false
 images_file=""
 force=false
+history_max=3
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -92,6 +94,17 @@ do
           step=1
           shift 1
           ;;
+        -hm | --history-max )
+          [[ "${2:-}" ]] || "When specified, history-max cannot be null" || help
+          history_max=$2
+          if [[ $history_max -lt 0 ]]; then
+            echo "History-max must be equal or greater than 0"
+            help
+          fi
+
+          step=2
+          shift 2
+          ;;
         --force)
           force=true
           step=1
@@ -152,7 +165,7 @@ fi
 # END - Find image version and digest
 
 
-helm upgrade --dependency-update --take-ownership --create-namespace \
+helm upgrade --dependency-update --take-ownership --create-namespace --history-max $history_max \
   $OPTIONS \
   --install $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
   --namespace $ENV \
