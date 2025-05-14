@@ -117,7 +117,7 @@ fi
 
 set +e
 helm diff upgrade --install  "$microservice"  "$ROOT_DIR/charts/interop-eks-microservice-chart" \
-  --namespace "$ENV" --normalize-manifests --detailed-exitcode \
+  --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
   -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
   -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\"
 diff_result=$?

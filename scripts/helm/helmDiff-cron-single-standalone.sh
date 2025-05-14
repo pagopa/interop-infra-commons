@@ -118,7 +118,7 @@ fi
 
 set +e
 helm diff upgrade --install  "$job"  "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
-  --namespace "$ENV" --normalize-manifests --detailed-exitcode \
+  --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
   -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" \
   -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\"
 diff_result=$?
