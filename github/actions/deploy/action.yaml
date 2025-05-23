@@ -185,6 +185,7 @@ runs:
             HELM_UPGRADE_OPTIONS="--debug --skip-dep --output console"
 
             if [[ "${{ inputs.helm_force_upgrade }}" == "true" ]]; then
+              echo "::warning::INFO - Helm force upgrade requested for $MICROSERVICE_FULLNAME."
               HELM_UPGRADE_OPTIONS=$HELM_UPGRADE_OPTIONS" --force"
             fi
 
@@ -231,6 +232,7 @@ runs:
             HELM_UPGRADE_OPTIONS="--debug --skip-dep --output console"
 
             if [[ "${{ inputs.helm_force_upgrade }}" == "true" ]]; then
+              echo "::warning::INFO - Helm force upgrade requested for $CRONJOB_FULLNAME."
               HELM_UPGRADE_OPTIONS=$HELM_UPGRADE_OPTIONS" --force"
             fi
 
