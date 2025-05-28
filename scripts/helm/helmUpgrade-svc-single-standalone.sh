@@ -15,6 +15,8 @@ help()
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -hm | --history-max ] Set the maximum number of revisions saved per release
+        [ -nw | --no-wait ] Do not wait for the release to be ready
+        [ -t | --timeout ] Set the timeout for the upgrade operation (default is 5m0s)
         [ --force ] Force helm upgrade
         [ -h | --help ] This help"
     exit 2
@@ -32,6 +34,8 @@ skip_dep=false
 images_file=""
 force=false
 history_max=3
+wait=true
+timeout="5m0s"
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -110,6 +114,18 @@ do
           step=1
           shift 1
           ;;
+        -nw | --no-wait)
+          wait=false
+          step=1
+          shift 1
+          ;;
+        -t | --timeout)
+          [[ "${2:-}" ]] || "When specified, timeout cannot be null" || help
+          timeout=$2
+          
+          step=2
+          shift 2
+          ;;
         -h | --help )
           help
           ;;
@@ -154,6 +170,9 @@ fi
 if [[ $force == true ]]; then
   OPTIONS=$OPTIONS" --force"
 fi
+if [[ $wait == true ]]; then
+  OPTIONS=$OPTIONS" --wait --timeout $timeout"
+fi
 
 # START - Find image version and digest
 IMAGE_VERSION_READER_OPTIONS=""
@@ -163,7 +182,6 @@ fi
 
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
-
 
 helm upgrade --dependency-update --take-ownership --create-namespace --history-max $history_max \
   $OPTIONS \
