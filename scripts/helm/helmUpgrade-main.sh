@@ -18,6 +18,8 @@ help()
         [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -hm | --history-max ] Set the maximum number of revisions saved per release
+        [ -nw | --no-wait ] Do not wait for the release to be ready
+        [ -t | --timeout ] Set the timeout for the upgrade operation (default is 5m0s)
         [ --force ] Force helm upgrade
         [ -h | --help ] This help"
     exit 2
@@ -36,6 +38,8 @@ skip_dep=false
 images_file=""
 force=false
 history_max=3
+wait=true
+timeout="5m0s"
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -110,6 +114,18 @@ do
           step=1
           shift 1
           ;;
+        -nw | --no-wait)
+          wait=false
+          step=1
+          shift 1
+          ;;
+        -t | --timeout)
+          [[ "${2:-}" ]] || "When specified, timeout cannot be null" || help
+          timeout=$2
+          
+          step=2
+          shift 2
+          ;;
         -h | --help )
           help
           ;;
@@ -160,13 +176,18 @@ fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
 OPTIONS=$OPTIONS" -sd -hm $history_max"
 
+MICROSERVICE_OPTIONS=" "
+if [[ $wait == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --wait --timeout $timeout"
+fi
+
 if [[ $template_microservices == true ]]; then
   echo "Start microservices helm install"
   for dir in "$MICROSERVICES_DIR"/*;
   do
     CURRENT_SVC=$(basename "$dir");
     echo "Upgrade $CURRENT_SVC"
-    sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
