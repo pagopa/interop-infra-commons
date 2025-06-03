@@ -146,11 +146,14 @@ fi
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 
 TEMPLATE_CMD="helm template "
+ADDITIONAL_VALUES=" "
 if [[ $enable_debug == true ]]; then
     TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
 fi
 if [[ $enable_templating_lookup == true ]]; then
     TEMPLATE_CMD=$TEMPLATE_CMD"--dry-run=server "
+else
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
 fi
 
 OUTPUT_FILE="\"$OUT_DIR/$microservice.out.yaml\""
@@ -160,7 +163,7 @@ if [[ $output_redirect == "console" ]]; then
 fi
 
 #TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
-TEMPLATE_CMD=$TEMPLATE_CMD" $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
+TEMPLATE_CMD=$TEMPLATE_CMD" "$microservice" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $ADDITIONAL_VALUES $OUTPUT_TO"
 
 eval $TEMPLATE_CMD
 if [[ $verbose == true ]]; then
