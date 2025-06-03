@@ -127,10 +127,11 @@ fi
 if [[ $skip_dep == false ]]; then
   bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
 fi
-if [[ $enable_templating_lookup == true ]]; then
-  OPTIONS=$OPTIONS" --enable-templating-lookup"
-fi
 
+MICROSERVICE_OPTIONS=" "
+if [[ $enable_templating_lookup == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
+fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
 OPTIONS=$OPTIONS" -sd"
 
@@ -144,7 +145,7 @@ if [[ $template_microservices == true ]]; then
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
       echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
     else
-     "$SCRIPTS_FOLDER"/helmTemplate-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+     "$SCRIPTS_FOLDER"/helmTemplate-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
     fi
   done
 fi

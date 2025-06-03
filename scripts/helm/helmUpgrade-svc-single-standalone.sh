@@ -7,7 +7,6 @@ SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 help()
 {
     echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm upgrade
-        [ -dr | --dry-run ] Enable dry-run mode
         [ -d | --debug ] Enable debug
         [ -a | --atomic ] Enable helm install atomic option 
         [ -m | --microservice ] Microservice defined in microservices folder
@@ -18,6 +17,7 @@ help()
         [ -nw | --no-wait ] Do not wait for the release to be ready
         [ -t | --timeout ] Set the timeout for the upgrade operation (default is 5m0s)
         [ --force ] Force helm upgrade
+        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -27,7 +27,6 @@ environment=""
 microservice=""
 enable_atomic=false
 enable_debug=false
-enable_dryrun=false
 post_clean=false
 output_redirect=""
 skip_dep=false
@@ -36,6 +35,7 @@ force=false
 history_max=3
 wait=true
 timeout="5m0s"
+enable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -55,11 +55,6 @@ do
           ;;
         -d | --debug)
           enable_debug=true
-          step=1
-          shift 1
-          ;;
-        -dr | --dry-run)
-          enable_dryrun=true
           step=1
           shift 1
           ;;
@@ -126,6 +121,11 @@ do
           step=2
           shift 2
           ;;
+        -etl | --enable-templating-lookup)
+          enable_templating_lookup=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -164,14 +164,19 @@ fi
 if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" --debug"
 fi
-if [[ $enable_dryrun == true ]]; then
-  OPTIONS=$OPTIONS" --dry-run=server"
-fi
 if [[ $force == true ]]; then
   OPTIONS=$OPTIONS" --force"
 fi
 if [[ $wait == true ]]; then
   OPTIONS=$OPTIONS" --wait --timeout $timeout"
+fi
+
+ADDITIONAL_VALUES=" "
+if [[ $enable_templating_lookup == true ]]; then
+  OPTIONS=$OPTIONS" --dry-run=server"
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=true"
+else
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
 fi
 
 # START - Find image version and digest
@@ -188,4 +193,5 @@ helm upgrade --dependency-update --take-ownership --create-namespace --history-m
   --install $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" \
   --namespace $ENV \
  -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
- -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\"
+ -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" \
+ $ADDITIONAL_VALUES

@@ -9,7 +9,6 @@ SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 help()
 {
     echo "Usage:  [ -e | --environment ] Environment used to execute helm upgrade
-        [ -dr | --dry-run ] Enable dry-run mode
         [ -d | --debug ] Enable debug
         [ -a | --atomic ] Enable helm install atomic option 
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
@@ -21,6 +20,7 @@ help()
         [ -nw | --no-wait ] Do not wait for the release to be ready
         [ -t | --timeout ] Set the timeout for the upgrade operation (default is 5m0s)
         [ --force ] Force helm upgrade
+        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -29,7 +29,6 @@ args=$#
 environment=""
 enable_atomic=false
 enable_debug=false
-enable_dryrun=false
 template_microservices=false
 template_jobs=false
 post_clean=false
@@ -40,6 +39,7 @@ force=false
 history_max=3
 wait=true
 timeout="5m0s"
+enable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -59,11 +59,6 @@ do
           ;;
         -d | --debug)
           enable_debug=true
-          step=1
-          shift 1
-          ;;
-        -dr | --dry-run)
-          enable_dryrun=true
           step=1
           shift 1
           ;;
@@ -126,6 +121,11 @@ do
           step=2
           shift 2
           ;;
+        -etl | --enable-templating-lookup)
+          enable_templating_lookup=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -154,9 +154,6 @@ fi
 if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" --debug"
 fi
-if [[ $enable_dryrun == true ]]; then
-  OPTIONS=$OPTIONS" --dry-run"
-fi
 if [[ $force == true ]]; then
   OPTIONS=$OPTIONS" --force"
 fi
@@ -179,6 +176,9 @@ OPTIONS=$OPTIONS" -sd -hm $history_max"
 MICROSERVICE_OPTIONS=" "
 if [[ $wait == true ]]; then
   MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --wait --timeout $timeout"
+fi
+if [[ $enable_templating_lookup == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
 fi
 
 if [[ $template_microservices == true ]]; then
