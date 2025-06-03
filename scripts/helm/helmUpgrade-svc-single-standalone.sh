@@ -165,7 +165,7 @@ if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" --debug"
 fi
 if [[ $enable_dryrun == true ]]; then
-  OPTIONS=$OPTIONS" --dry-run"
+  OPTIONS=$OPTIONS" --dry-run=server"
 fi
 if [[ $force == true ]]; then
   OPTIONS=$OPTIONS" --force"
