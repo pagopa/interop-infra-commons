@@ -13,6 +13,7 @@ help()
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
+        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -h | --help ] This help"
     exit 2
@@ -26,6 +27,7 @@ template_jobs=false
 post_clean=false
 skip_dep=false
 images_file=""
+enable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -61,6 +63,11 @@ do
           ;;
         -sd | --skip-dep)
           skip_dep=true
+          step=1
+          shift 1
+          ;;
+        -etl | --enable-templating-lookup)
+          enable_templating_lookup=true
           step=1
           shift 1
           ;;
@@ -102,6 +109,10 @@ fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
 OPTIONS=$OPTIONS" -sd"
 
+MICROSERVICE_OPTIONS=" "
+if [[ $enable_templating_lookup == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
+fi
 
 if [[ $template_microservices == true ]]; then
   echo "Start microservices templates diff"
@@ -109,7 +120,7 @@ if [[ $template_microservices == true ]]; then
   do
     CURRENT_SVC=$(basename "$dir");
     echo "Diff $CURRENT_SVC"
-    "$SCRIPTS_FOLDER"/helmDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    "$SCRIPTS_FOLDER"/helmDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 

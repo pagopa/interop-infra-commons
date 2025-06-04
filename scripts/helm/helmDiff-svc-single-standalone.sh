@@ -11,6 +11,7 @@ help()
         [ -m | --microservice ] Microservice defined in microservices folder
         [ -i | --image ] File with microservice image tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -22,6 +23,7 @@ enable_debug=false
 post_clean=false
 skip_dep=false
 images_file=""
+enable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -61,6 +63,11 @@ do
           ;;
         -sd | --skip-dep)
           skip_dep=true
+          step=1
+          shift 1
+          ;;
+        -etl | --enable-templating-lookup)
+          enable_templating_lookup=true
           step=1
           shift 1
           ;;
@@ -106,6 +113,14 @@ if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
 fi
 
+ADDITIONAL_VALUES=" "
+if [[ $enable_templating_lookup == true ]]; then
+  OPTIONS=$OPTIONS" --dry-run=server"
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=true"
+else
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
+fi
+
 # START - Find image version and digest
 IMAGE_VERSION_READER_OPTIONS=""
 if [[ -n $images_file ]]; then
@@ -119,7 +134,8 @@ set +e
 helm diff upgrade --install  "$microservice"  "$ROOT_DIR/charts/interop-eks-microservice-chart" \
   --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
   -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
-  -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\"
+  -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" \
+ $ADDITIONAL_VALUES
 diff_result=$?
 set -e
 
