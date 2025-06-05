@@ -1,19 +1,19 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Running kubectl apply process"
+echo "Running helm diff process"
 
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
 help()
 {
-    echo "Usage:  [ -e | --environment ] Environment used to execute kubectl diff
+    echo "Usage:  [ -e | --environment ] Environment used to execute helm diff
         [ -d | --debug ] Enable debug
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
+        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -h | --help ] This help"
     exit 2
@@ -25,9 +25,9 @@ enable_debug=false
 template_microservices=false
 template_jobs=false
 post_clean=false
-output_redirect=""
 skip_dep=false
 images_file=""
+enable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -61,18 +61,13 @@ do
           step=2
           shift 2
           ;;
-        -o | --output)
-          [[ "${2:-}" ]] || "When specified, output cannot be null" || help
-          output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
-            help
-          fi
-
-          step=2
-          shift 2
-          ;;
         -sd | --skip-dep)
           skip_dep=true
+          step=1
+          shift 1
+          ;;
+        -etl | --enable-templating-lookup)
+          enable_templating_lookup=true
           step=1
           shift 1
           ;;
@@ -104,9 +99,6 @@ fi
 if [[ $post_clean == true ]]; then
   OPTIONS=$OPTIONS" -c"
 fi
-if [[ -n $output_redirect ]]; then
-  OPTIONS=$OPTIONS" -o $output_redirect"
-fi
 if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
@@ -117,22 +109,27 @@ fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
 OPTIONS=$OPTIONS" -sd"
 
+MICROSERVICE_OPTIONS=" "
+if [[ $enable_templating_lookup == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
+fi
+
 if [[ $template_microservices == true ]]; then
-  echo "Start microservices kubectl apply"
+  echo "Start microservices templates diff"
   for dir in "$MICROSERVICES_DIR"/*;
   do
     CURRENT_SVC=$(basename "$dir");
     echo "Diff $CURRENT_SVC"
-    sh "$SCRIPTS_FOLDER"/kubectlApply-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    "$SCRIPTS_FOLDER"/helmDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  echo "Start cronjobs kubectl apply"
+  echo "Start cronjobs templates diff"
   for dir in "$CRONJOBS_DIR"/*;
   do
     CURRENT_JOB=$(basename "$dir");
     echo "Diff $CURRENT_JOB"
-    sh "$SCRIPTS_FOLDER"/kubectlApply-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
+    "$SCRIPTS_FOLDER"/helmDiff-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi

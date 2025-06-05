@@ -11,6 +11,7 @@ help()
     echo "Usage:  [ -e | --environment ] Environment used to execute kubectl diff
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
+        [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -h | --help ] This help"
     exit 2
@@ -23,6 +24,7 @@ template_microservices=false
 template_jobs=false
 post_clean=false
 skip_dep=false
+images_file=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -44,6 +46,12 @@ do
           template_jobs=true
           step=1
           shift 1
+          ;;
+        -i | --image )
+          images_file=$2
+          
+          step=2
+          shift 2
           ;;
         -sd | --skip-dep)
           skip_dep=true
@@ -77,6 +85,9 @@ if [[ $enable_debug == true ]]; then
 fi
 if [[ $post_clean == true ]]; then
   OPTIONS=$OPTIONS" -c"
+fi
+if [[ -n $images_file ]]; then
+  OPTIONS=$OPTIONS" -i $images_file"
 fi
 if [[ $skip_dep == false ]]; then
   bash "$SCRIPTS_FOLDER"/helmDep.sh --untar

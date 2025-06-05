@@ -6,11 +6,10 @@ SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 help()
 {
-    echo "Usage:  [ -e | --environment ] Cluster environment used to execute kubectl diff
+    echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm diff
         [ -d | --debug ] Enable debug
         [ -j | --job ] Cronjob defined in jobs folder
         [ -i | --image ] File with cronjob image tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -h | --help ] This help"
     exit 2
@@ -21,7 +20,6 @@ environment=""
 job=""
 enable_debug=false
 post_clean=false
-output_redirect=""
 skip_dep=false
 images_file=""
 
@@ -58,16 +56,6 @@ do
         -i | --image )
           images_file=$2
           
-          step=2
-          shift 2
-          ;;
-        -o | --output)
-          [[ "${2:-}" ]] || "When specified, output cannot be null" || help
-          output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
-            help
-          fi
-
           step=2
           shift 2
           ;;
@@ -112,11 +100,6 @@ OPTIONS=" "
 if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" -d"
 fi
-if [[ -n $output_redirect ]]; then
-  OPTIONS=$OPTIONS" -o $output_redirect"
-else
-  OPTIONS=$OPTIONS" -o console "
-fi
 if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
@@ -124,12 +107,29 @@ if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
 fi
 
-#HELM_TEMPLATE_CMD="$SCRIPTS_FOLDER/helmTemplate-cron-single.sh -e $ENV -j $job $OPTIONS"
-#DIFF_CMD="KUBECTL_EXTERNAL_DIFF=$SCRIPTS_FOLDER/diff.sh kubectl diff --show-managed-fields=false  -f -"
-#eval $HELM_TEMPLATE_CMD" | "$DIFF_CMD
+# START - Find image version and digest
+IMAGE_VERSION_READER_OPTIONS=""
+if [[ -n $images_file ]]; then
+  IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
+fi
 
-HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-cron-single.sh"
-DIFF_SCRIPT="$SCRIPTS_FOLDER/diff.sh"
+. "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
+# END - Find image version and digest
 
-"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS | \
- KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -
+set +e
+helm diff upgrade --install  "$job"  "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
+  --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
+  -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" \
+  -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\"
+diff_result=$?
+set -e
+
+#if [[ $diff_result -eq 0 ]]; then
+#  echo "No changes detected"
+#elif [[ $diff_result -eq 2 ]]; then
+#  echo "Changes detected"
+#else
+#  echo "Unexpected error"
+#fi
+
+exit $diff_result

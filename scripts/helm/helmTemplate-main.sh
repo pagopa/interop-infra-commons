@@ -13,9 +13,11 @@ help()
         [ -d | --debug ] Enable Helm template debug
         [ -m | --microservices ] Generate templates for all microserviceservices
         [ -j | --jobs ] Generate templates for all cronjobs
+        [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -c | --clean ] Clean files and directories after scripts successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -28,6 +30,8 @@ template_jobs=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+enable_templating_lookup=false
+images_file=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -49,6 +53,12 @@ do
           template_jobs=true
           step=1
           shift 1
+          ;;
+        -i | --image )
+          images_file=$2
+          
+          step=2
+          shift 2
           ;;
         -d | --debug)
           enable_debug=true
@@ -72,6 +82,11 @@ do
           ;;
         -sd | --skip-dep)
           skip_dep=true
+          step=1
+          shift 1
+          ;;
+        -etl | --enable-templating-lookup)
+          enable_templating_lookup=true
           step=1
           shift 1
           ;;
@@ -106,8 +121,16 @@ fi
 if [[ -n $output_redirect ]]; then
   OPTIONS=$OPTIONS" -o $output_redirect"
 fi
+if [[ -n $images_file ]]; then
+  OPTIONS=$OPTIONS" -i $images_file"
+fi
 if [[ $skip_dep == false ]]; then
   bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+fi
+
+MICROSERVICE_OPTIONS=" "
+if [[ $enable_templating_lookup == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
 fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
 OPTIONS=$OPTIONS" -sd"
@@ -122,7 +145,7 @@ if [[ $template_microservices == true ]]; then
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
       echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
     else
-     "$SCRIPTS_FOLDER"/helmTemplate-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+     "$SCRIPTS_FOLDER"/helmTemplate-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
     fi
   done
 fi

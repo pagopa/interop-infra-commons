@@ -9,8 +9,10 @@ help()
     echo "Usage:  [ -e | --environment ] Cluster environment used to execute kubectl diff
         [ -d | --debug ] Enable debug
         [ -m | --microservice ] Microservice defined in microservices folder
+        [ -i | --image ] File with microservice image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -22,6 +24,8 @@ enable_debug=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+enable_templating_lookup=false
+images_file=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -53,6 +57,12 @@ do
           step=2
           shift 2
           ;;
+        -i | --image )
+          images_file=$2
+          
+          step=2
+          shift 2
+          ;;
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
@@ -65,6 +75,11 @@ do
           ;;
         -sd | --skip-dep)
           skip_dep=true
+          step=1
+          shift 1
+          ;;
+        -etl | --enable-templating-lookup)
+          enable_templating_lookup=true
           step=1
           shift 1
           ;;
@@ -108,8 +123,14 @@ if [[ -n $output_redirect ]]; then
 else
   OPTIONS=$OPTIONS" -o console "
 fi
+if [[ -n $images_file ]]; then
+  OPTIONS=$OPTIONS" -i $images_file"
+fi
 if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
+fi
+if [[ $enable_templating_lookup == true ]]; then
+  OPTIONS=$OPTIONS" --enable-templating-lookup "
 fi
 
 #HELM_TEMPLATE_CMD="$SCRIPTS_FOLDER/helmTemplate-svc-single.sh -e $ENV -m $microservice $OPTIONS"
@@ -119,6 +140,5 @@ fi
 HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-svc-single.sh"
 DIFF_SCRIPT="$SCRIPTS_FOLDER/diff.sh"
 
-KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" \
-  "$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" $OPTIONS | \
-  kubectl diff --show-managed-fields=false -f -
+"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" $OPTIONS | \
+ KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -

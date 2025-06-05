@@ -6,12 +6,16 @@ SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 help()
 {
-    echo "Usage:  [ -e | --environment ] Cluster environment used to execute kubectl diff
+    echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm upgrade
+        [ -dr | --dry-run ] Enable dry-run mode
         [ -d | --debug ] Enable debug
+        [ -a | --atomic ] Enable helm install atomic option 
         [ -j | --job ] Cronjob defined in jobs folder
         [ -i | --image ] File with cronjob image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -hm | --history-max ] Set the maximum number of revisions saved per release
+        [ --force ] Force helm upgrade
         [ -h | --help ] This help"
     exit 2
 }
@@ -19,11 +23,15 @@ help()
 args=$#
 environment=""
 job=""
+enable_atomic=false
 enable_debug=false
+enable_dryrun=false
 post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
+force=false
+history_max=3
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -36,8 +44,18 @@ do
           step=2
           shift 2
           ;;
+        -a | --atomic)
+          enable_atomic=true
+          step=1
+          shift 1
+          ;;
         -d | --debug)
           enable_debug=true
+          step=1
+          shift 1
+          ;;
+        -dr | --dry-run)
+          enable_dryrun=true
           step=1
           shift 1
           ;;
@@ -76,6 +94,22 @@ do
           step=1
           shift 1
           ;;
+        -hm | --history-max )
+          [[ "${2:-}" ]] || "When specified, history-max cannot be null" || help
+          history_max=$2
+          if [[ $history_max -lt 0 ]]; then
+            echo "History-max must be equal or greater than 0"
+            help
+          fi
+
+          step=2
+          shift 2
+          ;;
+        --force)
+          force=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -86,7 +120,6 @@ do
           ;;
     esac
 done
-
 
 if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
@@ -109,27 +142,32 @@ fi
 
 ENV=$environment
 OPTIONS=" "
+if [[ $enable_atomic == true ]]; then
+  OPTIONS=$OPTIONS" --atomic"
+fi
 if [[ $enable_debug == true ]]; then
-  OPTIONS=$OPTIONS" -d"
+  OPTIONS=$OPTIONS" --debug"
 fi
-if [[ -n $output_redirect ]]; then
-  OPTIONS=$OPTIONS" -o $output_redirect"
-else
-  OPTIONS=$OPTIONS" -o console "
+if [[ $enable_dryrun == true ]]; then
+  OPTIONS=$OPTIONS" --dry-run"
 fi
+if [[ $force == true ]]; then
+  OPTIONS=$OPTIONS" --force"
+fi
+
+# START - Find image version and digest
+IMAGE_VERSION_READER_OPTIONS=""
 if [[ -n $images_file ]]; then
-  OPTIONS=$OPTIONS" -i $images_file"
-fi
-if [[ $skip_dep == true ]]; then
-  OPTIONS=$OPTIONS" -sd "
+  IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
 fi
 
-#HELM_TEMPLATE_CMD="$SCRIPTS_FOLDER/helmTemplate-cron-single.sh -e $ENV -j $job $OPTIONS"
-#DIFF_CMD="KUBECTL_EXTERNAL_DIFF=$SCRIPTS_FOLDER/diff.sh kubectl diff --show-managed-fields=false  -f -"
-#eval $HELM_TEMPLATE_CMD" | "$DIFF_CMD
+. "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
+# END - Find image version and digest
 
-HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-cron-single.sh"
-DIFF_SCRIPT="$SCRIPTS_FOLDER/diff.sh"
 
-"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS | \
- KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -
+helm upgrade --dependency-update --take-ownership --create-namespace --history-max $history_max \
+  $OPTIONS \
+  --install $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
+  --namespace $ENV \
+ -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" \
+ -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\"

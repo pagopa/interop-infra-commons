@@ -10,6 +10,7 @@ help()
     echo "Usage:  [ -e | --environment ] Environment used to detect values.yaml for linting
         [ -d | --debug ] Enable Helm template debug
         [ -m | --microservice ] Microservice defined in microservices folder
+        [ -i | --image ] File with microservice image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print linting output on terminal
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
@@ -24,6 +25,7 @@ enable_debug=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+images_file=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -47,6 +49,12 @@ do
             help
           fi
 
+          step=2
+          shift 2
+          ;;
+        -i | --image )
+          images_file=$2
+          
           step=2
           shift 2
           ;;
@@ -114,8 +122,13 @@ else
   OUT_DIR=""
 fi
 
+IMAGE_VERSION_READER_OPTIONS=""
+if [[ -n $images_file ]]; then
+  IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
+fi
+
 # Find image version and digest
-. "$SCRIPTS_FOLDER"/image-version-reader.sh -e $environment -m $microservice
+. "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 
 LINT_CMD="helm lint "
 if [[ $enable_debug == true ]]; then

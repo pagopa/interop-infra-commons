@@ -10,6 +10,7 @@ help()
     echo "Usage:  [ -e | --environment ] Cluster environment used for template generation
         [ -d | --debug ] Enable Helm template debug
         [ -j | --job ] Cronjob defined in jobs folder
+        [ -i | --image ] File with cronjob image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -v | --verbose ] Show debug messages
@@ -26,6 +27,7 @@ post_clean=false
 output_redirect=""
 skip_dep=false
 verbose=false
+images_file=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -49,6 +51,12 @@ do
               help
           fi
 
+          step=2
+          shift 2
+          ;;
+        -i | --image )
+          images_file=$2
+          
           step=2
           shift 2
           ;;
@@ -121,8 +129,13 @@ else
   OUT_DIR=""
 fi
 
+IMAGE_VERSION_READER_OPTIONS=""
+if [[ -n $images_file ]]; then
+  IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
+fi
+
 # Find image version and digest
-. "$SCRIPTS_FOLDER"/image-version-reader.sh -e $environment -j $job
+. "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 
 TEMPLATE_CMD="helm template "
 if [[ $enable_debug == true ]]; then

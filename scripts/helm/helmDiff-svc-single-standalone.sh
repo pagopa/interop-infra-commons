@@ -1,19 +1,15 @@
 #!/bin/bash
 set -euo pipefail
 
-ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
 help()
 {
-    echo "Usage:  [ -e | --environment ] Cluster environment used for template generation
-        [ -d | --debug ] Enable Helm template debug
+    echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm diff
+        [ -d | --debug ] Enable debug
         [ -m | --microservice ] Microservice defined in microservices folder
         [ -i | --image ] File with microservice image tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
-        [ -c | --clean ] Clean files and directories after script successfull execution
-        [ -v | --verbose ] Show debug messages
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -h | --help ] This help"
@@ -25,11 +21,9 @@ environment=""
 microservice=""
 enable_debug=false
 post_clean=false
-output_redirect=""
 skip_dep=false
-enable_templating_lookup=false
-verbose=false
 images_file=""
+enable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -42,6 +36,11 @@ do
           step=2
           shift 2
           ;;
+        -d | --debug)
+          enable_debug=true
+          step=1
+          shift 1
+          ;;
         -m | --microservice )
           [[ "${2:-}" ]] || "Microservice cannot be null" || help
 
@@ -52,7 +51,7 @@ do
             echo "Allowed values: " $(getAllowedMicroservices)
             help
           fi
-          
+
           step=2
           shift 2
           ;;
@@ -62,26 +61,6 @@ do
           step=2
           shift 2
           ;;
-        -d | --debug)
-          enable_debug=true
-          step=1
-          shift 1
-          ;;
-        -o | --output)
-          [[ "${2:-}" ]] || "When specified, output cannot be null" || help
-          output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
-            help
-          fi
-
-          step=2
-          shift 2
-          ;;
-        -c | --clean)
-          post_clean=true
-          step=1
-          shift 1
-          ;;
         -sd | --skip-dep)
           skip_dep=true
           step=1
@@ -89,11 +68,6 @@ do
           ;;
         -etl | --enable-templating-lookup)
           enable_templating_lookup=true
-          step=1
-          shift 1
-          ;;
-        -v| --verbose )
-          verbose=true
           step=1
           shift 1
           ;;
@@ -118,6 +92,7 @@ if [[ -z $microservice || $microservice == "" ]]; then
 fi
 if [[ $skip_dep == false ]]; then
   bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  skip_dep=true
 fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
@@ -127,49 +102,49 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
-MICROSERVICE_DIR=$( echo $microservice | sed  's/-/_/g' )
-
-OUT_DIR="$ROOT_DIR/out/templates/$ENV/microservice_$MICROSERVICE_DIR"
-if [[ $output_redirect != "console" ]]; then
-  rm -rf "$OUT_DIR"
-  mkdir  -p "$OUT_DIR"
-else
-  OUT_DIR=""
+OPTIONS=" "
+if [[ $enable_debug == true ]]; then
+  OPTIONS=$OPTIONS" -d"
+fi
+if [[ -n $images_file ]]; then
+  OPTIONS=$OPTIONS" -i $images_file"
+fi
+if [[ $skip_dep == true ]]; then
+  OPTIONS=$OPTIONS" -sd "
 fi
 
+ADDITIONAL_VALUES=" "
+if [[ $enable_templating_lookup == true ]]; then
+  OPTIONS=$OPTIONS" --dry-run=server"
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=true"
+else
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
+fi
+
+# START - Find image version and digest
 IMAGE_VERSION_READER_OPTIONS=""
 if [[ -n $images_file ]]; then
   IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
 fi
 
-# Find image version and digest
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
+# END - Find image version and digest
 
-TEMPLATE_CMD="helm template "
-ADDITIONAL_VALUES=" "
-if [[ $enable_debug == true ]]; then
-    TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
-fi
-if [[ $enable_templating_lookup == true ]]; then
-    TEMPLATE_CMD=$TEMPLATE_CMD"--dry-run=server "
-else
-  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
-fi
+set +e
+helm diff upgrade --install  "$microservice"  "$ROOT_DIR/charts/interop-eks-microservice-chart" \
+  --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
+  -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
+  -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" \
+ $ADDITIONAL_VALUES
+diff_result=$?
+set -e
 
-OUTPUT_FILE="\"$OUT_DIR/$microservice.out.yaml\""
-OUTPUT_TO="> $OUTPUT_FILE"
-if [[ $output_redirect == "console" ]]; then
-  OUTPUT_TO=""
-fi
+#if [[ $diff_result -eq 0 ]]; then
+#  echo "No changes detected"
+#elif [[ $diff_result -eq 2 ]]; then
+#  echo "Changes detected"
+#else
+#  echo "Unexpected error"
+#fi
 
-#TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
-TEMPLATE_CMD=$TEMPLATE_CMD" "$microservice" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $ADDITIONAL_VALUES $OUTPUT_TO"
-
-eval $TEMPLATE_CMD
-if [[ $verbose == true ]]; then
-  echo "Successfully created Helm Template for microservice $microservice at $OUTPUT_FILE"
-fi
-
-if [[ $output_redirect != "console" && $post_clean == true ]]; then
-  rm -rf $OUT_DIR
-fi
+exit $diff_result

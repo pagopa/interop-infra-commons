@@ -1,26 +1,33 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Running kubectl apply process"
+echo "Running helm upgrade process"
 
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
 help()
 {
-    echo "Usage:  [ -e | --environment ] Environment used to execute kubectl diff
+    echo "Usage:  [ -e | --environment ] Environment used to execute helm upgrade
         [ -d | --debug ] Enable debug
+        [ -a | --atomic ] Enable helm install atomic option 
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -hm | --history-max ] Set the maximum number of revisions saved per release
+        [ -nw | --no-wait ] Do not wait for the release to be ready
+        [ -t | --timeout ] Set the timeout for the upgrade operation (default is 5m0s)
+        [ --force ] Force helm upgrade
+        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
 
 args=$#
 environment=""
+enable_atomic=false
 enable_debug=false
 template_microservices=false
 template_jobs=false
@@ -28,6 +35,11 @@ post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
+force=false
+history_max=3
+wait=true
+timeout="5m0s"
+enable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -39,6 +51,11 @@ do
           environment=$2
           step=2
           shift 2
+          ;;
+        -a | --atomic)
+          enable_atomic=true
+          step=1
+          shift 1
           ;;
         -d | --debug)
           enable_debug=true
@@ -76,6 +93,39 @@ do
           step=1
           shift 1
           ;;
+        -hm | --history-max )
+          [[ "${2:-}" ]] || "When specified, history-max cannot be null" || help
+          history_max=$2
+          if [[ $history_max -lt 0 ]]; then
+            echo "History-max must be equal or greater than 0"
+            help
+          fi
+
+          step=2
+          shift 2
+          ;;
+        --force)
+          force=true
+          step=1
+          shift 1
+          ;;
+        -nw | --no-wait)
+          wait=false
+          step=1
+          shift 1
+          ;;
+        -t | --timeout)
+          [[ "${2:-}" ]] || "When specified, timeout cannot be null" || help
+          timeout=$2
+          
+          step=2
+          shift 2
+          ;;
+        -etl | --enable-templating-lookup)
+          enable_templating_lookup=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -98,8 +148,14 @@ MICROSERVICES_DIR=$(getMicroservicesDir)
 CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
+if [[ $enable_atomic == true ]]; then
+  OPTIONS=$OPTIONS" --atomic"
+fi
 if [[ $enable_debug == true ]]; then
-  OPTIONS=$OPTIONS" -d"
+  OPTIONS=$OPTIONS" --debug"
+fi
+if [[ $force == true ]]; then
+  OPTIONS=$OPTIONS" --force"
 fi
 if [[ $post_clean == true ]]; then
   OPTIONS=$OPTIONS" -c"
@@ -115,24 +171,32 @@ if [[ $skip_dep == false ]]; then
   skip_dep=true
 fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
-OPTIONS=$OPTIONS" -sd"
+OPTIONS=$OPTIONS" -sd -hm $history_max"
+
+MICROSERVICE_OPTIONS=" "
+if [[ $wait == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --wait --timeout $timeout"
+fi
+if [[ $enable_templating_lookup == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
+fi
 
 if [[ $template_microservices == true ]]; then
-  echo "Start microservices kubectl apply"
+  echo "Start microservices helm install"
   for dir in "$MICROSERVICES_DIR"/*;
   do
     CURRENT_SVC=$(basename "$dir");
-    echo "Diff $CURRENT_SVC"
-    sh "$SCRIPTS_FOLDER"/kubectlApply-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    echo "Upgrade $CURRENT_SVC"
+    sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  echo "Start cronjobs kubectl apply"
+  echo "Start cronjobs helm install"
   for dir in "$CRONJOBS_DIR"/*;
   do
     CURRENT_JOB=$(basename "$dir");
-    echo "Diff $CURRENT_JOB"
-    sh "$SCRIPTS_FOLDER"/kubectlApply-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
+    echo "Upgrade $CURRENT_JOB"
+    sh "$SCRIPTS_FOLDER"/helmUpgrade-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi
