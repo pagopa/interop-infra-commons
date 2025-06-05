@@ -111,25 +111,7 @@ jobs:
 
             # Linting 
             echo "Linting microservice: $MICROSERVICE_NAME"
-            $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
-              --debug \
-              --skip-dep \
-              --environment ${{ inputs.environment }} \
-              --microservice $MICROSERVICE_NAME \
-              -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-              --output console | kube-linter lint /tmp/helm-template-${MICROSERVICE_NAME}.yaml
-
-              # Templating 
-              # echo "Templating microservice: $MICROSERVICE_NAME"
-              # $SCRIPTS_FOLDER/helmTemplate-svc-single.sh 
-              --debug 
-              --environment ${{ inputs.environment }} 
-              --microservice $MICROSERVICE_NAME 
-              -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml --output console
-              
-              # Linting 
-              # echo "Linting microservice: $MICROSERVICE_NAME"
-              # $SCRIPTS_FOLDER/helmTemplate-svc-single.sh --debug --skip-dep --environment ${{ inputs.environment }} --microservice $MICROSERVICE_NAME -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml --output console | kube-linter lint -
+            kube-linter lint /tmp/helm-template-${MICROSERVICE_NAME}.yaml
               
             done
           else
