@@ -2,7 +2,6 @@
 DIFF_ARGS=(
   "-u"
   "-N"
-  "--color=always"
 )
 if [[ ! $ANSIBLE_MODE = YES ]]; then
   DIFF_ARGS+=("--color=always")
