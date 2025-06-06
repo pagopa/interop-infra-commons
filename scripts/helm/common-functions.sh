@@ -115,3 +115,82 @@ function isAllowedCronjob()
         echo "true"
     fi
 }
+function getAllowedMicroservices()
+{
+    local DELIMITER=";"
+    local SERVICES_DIR=$(getMicroservicesDir)
+    local ALLOWED_SERVICES=""
+    
+    for dir in "$SERVICES_DIR"/*;
+    do
+        CURRENT_SVC=$(basename "$dir");
+        if [[ $ALLOWED_SERVICES == "" ]]; then
+            ALLOWED_SERVICES=$CURRENT_SVC
+        else
+            ALLOWED_SERVICES=$ALLOWED_SERVICES$DELIMITER$CURRENT_SVC
+        fi
+    done
+
+    echo $ALLOWED_SERVICES
+}
+function getAllowedMicroservicesForEnvironment()
+{
+    local DELIMITER=";"
+    local ENVIRONMENT=$1
+    if [[ -z $ENVIRONMENT || $ENVIRONMENT == "" ]]; then
+        exit 1
+    fi
+    
+    local MICROSERVICES_DIR=$(getMicroservicesDir)
+    if [[ ! -d "$MICROSERVICES_DIR" ]]; then
+        exit 1
+    fi
+
+    local ALLOWED_SERVICES=""
+    
+    for dir in "$MICROSERVICES_DIR"/*;
+    do
+        CURRENT_SVC=$(basename "$dir");
+        
+        if [[ -d "$dir/$ENVIRONMENT" ]]; then
+            if [[ $ALLOWED_SERVICES == "" ]]; then
+                ALLOWED_SERVICES=$CURRENT_SVC
+            else
+                ALLOWED_SERVICES=$ALLOWED_SERVICES$DELIMITER$CURRENT_SVC
+            fi
+        fi
+    done
+    
+    echo $ALLOWED_SERVICES
+}
+
+function getAllowedCronjobsForEnvironment()
+{
+    local DELIMITER=";"
+    local ENVIRONMENT=$1
+    if [[ -z $ENVIRONMENT || $ENVIRONMENT == "" ]]; then
+        exit 1
+    fi
+
+    local CRONJOBS_DIR=$(getCronjobsDir)
+    if [[ ! -d "$CRONJOBS_DIR" ]]; then
+        exit 1
+    fi
+
+    local ALLOWED_CRONJOBS=""
+        
+    for dir in "$CRONJOBS_DIR"/*;
+    do
+        CURRENT_JOB=$(basename "$dir");
+        if [[ -d "$dir/$ENVIRONMENT" ]]; then
+            if [[ $ALLOWED_CRONJOBS == "" ]]; then
+                ALLOWED_CRONJOBS=$CURRENT_JOB
+            else
+                ALLOWED_CRONJOBS=$ALLOWED_CRONJOBS$DELIMITER$CURRENT_JOB
+            fi
+        fi
+    done
+    
+    echo $ALLOWED_CRONJOBS
+}
+      

@@ -3,6 +3,8 @@ set -euo pipefail
 
 echo "Running helm diff process"
 
+PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -116,9 +118,14 @@ fi
 
 if [[ $template_microservices == true ]]; then
   echo "Start microservices templates diff"
-  for dir in "$MICROSERVICES_DIR"/*;
+  ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
+
+  if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
+    echo "No microservices found for environment '$ENV'. Skipping microservices diff."
+  fi
+  
+  for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    CURRENT_SVC=$(basename "$dir");
     echo "Diff $CURRENT_SVC"
     "$SCRIPTS_FOLDER"/helmDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
@@ -126,9 +133,14 @@ fi
 
 if [[ $template_jobs == true ]]; then
   echo "Start cronjobs templates diff"
-  for dir in "$CRONJOBS_DIR"/*;
+  ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
+  
+  if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
+    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs diff."
+  fi
+  
+  for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    CURRENT_JOB=$(basename "$dir");
     echo "Diff $CURRENT_JOB"
     "$SCRIPTS_FOLDER"/helmDiff-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done

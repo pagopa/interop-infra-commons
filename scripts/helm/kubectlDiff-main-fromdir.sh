@@ -3,6 +3,8 @@ set -euo pipefail
 
 echo "Running kubectl diff process"
 
+PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
