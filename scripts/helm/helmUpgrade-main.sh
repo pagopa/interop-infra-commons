@@ -185,9 +185,14 @@ fi
 
 if [[ $template_microservices == true ]]; then
   echo "Start microservices helm install"
-  for dir in "$MICROSERVICES_DIR"/*;
+  ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
+  
+  if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
+    echo "No microservices found for environment '$ENV'. Skipping microservices upgrade."
+  fi
+  
+  for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    CURRENT_SVC=$(basename "$dir");
     echo "Upgrade $CURRENT_SVC"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
@@ -195,9 +200,14 @@ fi
 
 if [[ $template_jobs == true ]]; then
   echo "Start cronjobs helm install"
-  for dir in "$CRONJOBS_DIR"/*;
+  ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
+  
+  if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
+    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
+  fi
+  
+  for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    CURRENT_JOB=$(basename "$dir");
     echo "Upgrade $CURRENT_JOB"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
