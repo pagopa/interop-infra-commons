@@ -140,11 +140,11 @@ do
 done
 
 if [[ -z $environment || $environment == "" ]]; then
-  echo "Environment cannot be null"
+  echo "[SVC-UPGRADE] Environment cannot be null"
   help
 fi
 if [[ -z $microservice || $microservice == "" ]]; then
-  echo "Microservice cannot be null"
+  echo "[SVC-UPGRADE] Microservice cannot be null"
   help
 fi
 if [[ $skip_dep == false ]]; then
@@ -154,7 +154,7 @@ fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  echo "Environment configuration '$environment' not found for microservice '$microservice'"
+  echo "[SVC-UPGRADE] Environment configuration '$environment' not found for microservice '$microservice'"
   help
 fi
 
@@ -192,6 +192,7 @@ if [[ -n $images_file ]]; then
   IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
 fi
 
+echo "[SVC-UPGRADE] Computing image version and digest for microservice '$microservice'."
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
@@ -204,4 +205,5 @@ UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/commons/$ENV/values-microservice.compile
 UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" "
 UPGRADE_CMD=$UPGRADE_CMD"$ADDITIONAL_VALUES $OUTPUT_REDIRECT"
 
+echo "[SVC-UPGRADE] Executing $microservice upgrade command."
 eval $UPGRADE_CMD

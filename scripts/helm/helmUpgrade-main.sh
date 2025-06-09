@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Running helm upgrade process"
+echo "[MAIN-UPGRADE] Running helm upgrade process"
 
 PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
 ROOT_DIR=$PROJECT_DIR
@@ -139,10 +139,10 @@ do
 done
 
 if [[ -z $environment || $environment == "" ]]; then
-  echo "Environment cannot be null"
+  echo "[MAIN-UPGRADE] Environment cannot be null"
   help
 fi
-echo "Environment: $environment"
+echo "[MAIN-UPGRADE] Selected Environment: $environment"
 
 ENV=$environment
 DELIMITER=";"
@@ -186,31 +186,31 @@ if [[ $enable_templating_lookup == true ]]; then
 fi
 
 if [[ $template_microservices == true ]]; then
-  echo "Start microservices helm install"
+  echo "[MAIN-UPGRADE] Start microservices helm install"
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
   
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    echo "No microservices found for environment '$ENV'. Skipping microservices upgrade."
+    echo "[MAIN-UPGRADE] No microservices found for environment '$ENV'. Skipping microservices upgrade."
   fi
   
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    echo "Upgrade $CURRENT_SVC"
+    echo "[MAIN-UPGRADE] Upgrade $CURRENT_SVC"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  echo "Start cronjobs helm install"
+  echo "[MAIN-UPGRADE] Start cronjobs helm install"
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
   
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
+    echo "[MAIN-UPGRADE] No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
   fi
   
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    echo "Upgrade $CURRENT_JOB"
+    echo "[MAIN-UPGRADE] Upgrade $CURRENT_JOB"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi
