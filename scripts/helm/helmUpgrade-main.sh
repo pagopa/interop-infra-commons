@@ -13,7 +13,7 @@ help()
     echo "Usage:  [ -e | --environment ] Environment used to execute helm upgrade
         [ -d | --debug ] Enable debug
         [ -a | --atomic ] Enable helm install atomic option 
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or "null" to redirect output to /dev/null
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
@@ -83,7 +83,7 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" && $output_redirect != "null" ]]; then
             help
           fi
 
@@ -177,7 +177,9 @@ OPTIONS=$OPTIONS" -sd -hm $history_max"
 
 MICROSERVICE_OPTIONS=" "
 if [[ $wait == true ]]; then
-  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --wait --timeout $timeout"
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --timeout $timeout"
+else
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --no-wait" 
 fi
 if [[ $enable_templating_lookup == true ]]; then
   MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"

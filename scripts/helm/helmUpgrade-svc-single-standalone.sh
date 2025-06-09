@@ -13,7 +13,7 @@ help()
         [ -a | --atomic ] Enable helm install atomic option 
         [ -m | --microservice ] Microservice defined in microservices folder
         [ -i | --image ] File with microservice image tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or "null" to redirect output to /dev/null
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -hm | --history-max ] Set the maximum number of revisions saved per release
         [ -nw | --no-wait ] Do not wait for the release to be ready
@@ -83,7 +83,7 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" && $output_redirect != "null" ]]; then
             help
           fi
 
@@ -181,6 +181,11 @@ else
   ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
 fi
 
+OUTPUT_REDIRECT=" "
+if [[ -n $output_redirect && $output_redirect == "null" ]]; then
+  OUTPUT_REDIRECT=$OUTPUT_REDIRECT" >/dev/null"
+fi
+
 # START - Find image version and digest
 IMAGE_VERSION_READER_OPTIONS=""
 if [[ -n $images_file ]]; then
@@ -190,10 +195,13 @@ fi
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
-helm upgrade --dependency-update --take-ownership --create-namespace --history-max $history_max \
-  $OPTIONS \
-  --install $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" \
-  --namespace $ENV \
- -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
- -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" \
- $ADDITIONAL_VALUES
+UPGRADE_CMD="helm upgrade "
+UPGRADE_CMD=$UPGRADE_CMD"--dependency-update --take-ownership --create-namespace --history-max $history_max "
+UPGRADE_CMD=$UPGRADE_CMD"$OPTIONS "
+UPGRADE_CMD=$UPGRADE_CMD"--namespace $ENV "
+UPGRADE_CMD=$UPGRADE_CMD"--install $microservice \"$ROOT_DIR/charts/interop-eks-microservice-chart\" "
+UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" "
+UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" "
+UPGRADE_CMD=$UPGRADE_CMD"$ADDITIONAL_VALUES $OUTPUT_REDIRECT"
+
+eval $UPGRADE_CMD
