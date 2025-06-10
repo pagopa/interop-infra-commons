@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -11,7 +13,7 @@ help()
         [ -a | --atomic ] Enable helm install atomic option 
         [ -m | --microservice ] Microservice defined in microservices folder
         [ -i | --image ] File with microservice image tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or "null" to redirect output to /dev/null
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -hm | --history-max ] Set the maximum number of revisions saved per release
         [ -nw | --no-wait ] Do not wait for the release to be ready
@@ -81,7 +83,7 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" && $output_redirect != "null" ]]; then
             help
           fi
 
@@ -138,11 +140,11 @@ do
 done
 
 if [[ -z $environment || $environment == "" ]]; then
-  echo "Environment cannot be null"
+  echo "[SVC-UPGRADE] Environment cannot be null"
   help
 fi
 if [[ -z $microservice || $microservice == "" ]]; then
-  echo "Microservice cannot be null"
+  echo "[SVC-UPGRADE] Microservice cannot be null"
   help
 fi
 if [[ $skip_dep == false ]]; then
@@ -152,7 +154,7 @@ fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  echo "Environment configuration '$environment' not found for microservice '$microservice'"
+  echo "[SVC-UPGRADE] Environment configuration '$environment' not found for microservice '$microservice'"
   help
 fi
 
@@ -179,19 +181,29 @@ else
   ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
 fi
 
+OUTPUT_REDIRECT=" "
+if [[ -n $output_redirect && $output_redirect == "null" ]]; then
+  OUTPUT_REDIRECT=$OUTPUT_REDIRECT" >/dev/null"
+fi
+
 # START - Find image version and digest
 IMAGE_VERSION_READER_OPTIONS=""
 if [[ -n $images_file ]]; then
   IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
 fi
 
+echo "[SVC-UPGRADE] Computing image version and digest for microservice '$microservice'."
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
-helm upgrade --dependency-update --take-ownership --create-namespace --history-max $history_max \
-  $OPTIONS \
-  --install $microservice "$ROOT_DIR/charts/interop-eks-microservice-chart" \
-  --namespace $ENV \
- -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
- -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" \
- $ADDITIONAL_VALUES
+UPGRADE_CMD="helm upgrade "
+UPGRADE_CMD=$UPGRADE_CMD"--dependency-update --take-ownership --create-namespace --history-max $history_max "
+UPGRADE_CMD=$UPGRADE_CMD"$OPTIONS "
+UPGRADE_CMD=$UPGRADE_CMD"--namespace $ENV "
+UPGRADE_CMD=$UPGRADE_CMD"--install $microservice \"$ROOT_DIR/charts/interop-eks-microservice-chart\" "
+UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" "
+UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" "
+UPGRADE_CMD=$UPGRADE_CMD"$ADDITIONAL_VALUES $OUTPUT_REDIRECT"
+
+echo "[SVC-UPGRADE] Executing $microservice upgrade command."
+eval $UPGRADE_CMD

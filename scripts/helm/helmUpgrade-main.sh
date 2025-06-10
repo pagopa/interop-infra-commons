@@ -1,8 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Running helm upgrade process"
+echo "[MAIN-UPGRADE] Running helm upgrade process"
 
+PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
+ROOT_DIR=$PROJECT_DIR
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 . "$SCRIPTS_FOLDER"/common-functions.sh
 
@@ -11,7 +13,7 @@ help()
     echo "Usage:  [ -e | --environment ] Environment used to execute helm upgrade
         [ -d | --debug ] Enable debug
         [ -a | --atomic ] Enable helm install atomic option 
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or "null" to redirect output to /dev/null
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
@@ -81,7 +83,7 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" && $output_redirect != "null" ]]; then
             help
           fi
 
@@ -137,10 +139,10 @@ do
 done
 
 if [[ -z $environment || $environment == "" ]]; then
-  echo "Environment cannot be null"
+  echo "[MAIN-UPGRADE] Environment cannot be null"
   help
 fi
-echo "Environment: $environment"
+echo "[MAIN-UPGRADE] Selected Environment: $environment"
 
 ENV=$environment
 DELIMITER=";"
@@ -175,28 +177,40 @@ OPTIONS=$OPTIONS" -sd -hm $history_max"
 
 MICROSERVICE_OPTIONS=" "
 if [[ $wait == true ]]; then
-  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --wait --timeout $timeout"
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --timeout $timeout"
+else
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --no-wait" 
 fi
 if [[ $enable_templating_lookup == true ]]; then
   MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
 fi
 
 if [[ $template_microservices == true ]]; then
-  echo "Start microservices helm install"
-  for dir in "$MICROSERVICES_DIR"/*;
+  echo "[MAIN-UPGRADE] Start microservices helm install"
+  ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
+  
+  if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
+    echo "[MAIN-UPGRADE] No microservices found for environment '$ENV'. Skipping microservices upgrade."
+  fi
+  
+  for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    CURRENT_SVC=$(basename "$dir");
-    echo "Upgrade $CURRENT_SVC"
+    echo "[MAIN-UPGRADE] Upgrade $CURRENT_SVC"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  echo "Start cronjobs helm install"
-  for dir in "$CRONJOBS_DIR"/*;
+  echo "[MAIN-UPGRADE] Start cronjobs helm install"
+  ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
+  
+  if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
+    echo "[MAIN-UPGRADE] No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
+  fi
+  
+  for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    CURRENT_JOB=$(basename "$dir");
-    echo "Upgrade $CURRENT_JOB"
+    echo "[MAIN-UPGRADE] Upgrade $CURRENT_JOB"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi
