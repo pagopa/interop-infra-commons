@@ -55,8 +55,9 @@ on:
 defaults:
   run:
     shell: bash
-  env:
-    SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
+
+env:
+  SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
 
 jobs:
   deploy:
