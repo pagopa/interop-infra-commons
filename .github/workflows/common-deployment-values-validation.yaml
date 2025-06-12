@@ -1,4 +1,4 @@
-name: Validation Steps (sub) - reusable workflow
+name: Validation Steps (sub)
 
 on: 
   workflow_call:
