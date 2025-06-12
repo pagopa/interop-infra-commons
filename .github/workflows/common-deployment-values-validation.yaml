@@ -99,47 +99,50 @@ jobs:
           MICROSERVICES: ${{ steps.get_microservices.outputs.microservices }}
         run: |
           set -euo pipefail
-          
+                  
           export PROJECT_DIR=$(pwd)
           FAILED_MICROSERVICES=""
           VALIDATION_ERROR_FLAG=0
-          
+                  
           if [[ -n "$MICROSERVICES" ]]; then
             set +e
             for MICROSERVICE_NAME in $MICROSERVICES; do
               echo "=== Processing microservice: $MICROSERVICE_NAME ==="
               TEMPLATE_OUTPUT_PATH="/tmp/helm-template-${MICROSERVICE_NAME}.yaml"
-              
+                  
               echo "Templating microservice: $MICROSERVICE_NAME"
-              if ! $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
+              $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
                 --debug \
                 --environment ${{ inputs.environment }} \
                 --microservice $MICROSERVICE_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output console > $TEMPLATE_OUTPUT_PATH; then
-                
+                --output console > $TEMPLATE_OUTPUT_PATH
+                  
+              if [[ $? -ne 0 ]]; then
                 echo "::error::Template generation failed for microservice: $MICROSERVICE_NAME"
                 FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(template) "
                 VALIDATION_ERROR_FLAG=1
                 continue
               fi
-
+                  
               echo "Linting microservice: $MICROSERVICE_NAME"
-              if ! kube-linter lint $TEMPLATE_OUTPUT_PATH; then
+              kube-linter lint $TEMPLATE_OUTPUT_PATH
+                  
+              if [[ $? -ne 0 ]]; then
                 echo "::error::Linting failed for microservice: $MICROSERVICE_NAME"
                 FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
                 VALIDATION_ERROR_FLAG=1
               else
                 echo "::notice::Microservice $MICROSERVICE_NAME passed all checks"
               fi
-
+                  
               echo "=== Completed processing microservice: $MICROSERVICE_NAME ==="
               echo ""
             done
           else
             echo "No microservices found for environment ${{ inputs.environment }}"
           fi
-          
+                  
           if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
             echo "::error::Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
             echo "MICROSERVICES_VALIDATION_FAILED=true" >> $GITHUB_ENV
@@ -147,7 +150,6 @@ jobs:
             exit 1
           else
             echo "::notice::All microservices passed validation successfully"
-            echo "MICROSERVICES_VALIDATION_FAILED=false" >> $GITHUB_ENV
           fi
 
   cronjobs_validation:
@@ -237,6 +239,5 @@ jobs:
             echo "FAILED_CRONJOBS=$FAILED_CRONJOBS" >> $GITHUB_ENV
             exit 1
           else
-            echo "::notice::All cronjobs passed validation successfully"
-            echo "CRONJOBS_VALIDATION_FAILED=false" >> $GITHUB_ENV
+            echo "::notice::All cronjobs passed validation successfully"   
           fi
