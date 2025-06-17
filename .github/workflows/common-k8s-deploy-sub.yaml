@@ -55,47 +55,10 @@ env:
   SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
 
 jobs:
-  checks:
-    name: Initial checks
-    runs-on: [ self-hosted, "run_id:${{ inputs.environment }}-${{ github.run_id }}" ]
-    environment: ${{ inputs.environment }}
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-      - name: Check inputs
-        id: check_inputs
-        run: |
-          set -euo pipefail
-
-          microservice_defined=false
-          cronjob_defined=false
-
-          if [[ "${{ inputs.kind }}" != "microservice" && "${{ inputs.kind }}" != "cronjob" ]]; then
-            echo "::error::Invalid value for 'kind'. Allowed values are 'microservice' and 'cronjob'."
-            exit 1
-          fi
-          if [[ "${{ inputs.kind }}" == "microservice" ]]; then
-            microservice_defined=true
-          elif [[ "${{ inputs.kind }}" == "cronjob" ]]; then
-            cronjob_defined=true
-          fi
-
-          if [[ "$microservice_defined" != "true" && "$cronjob_defined" != "true" ]]; then
-            echo "::error::Neither microservice nor cronjob is defined."
-            exit 1
-          fi
-
-          echo "microservice_defined=$microservice_defined" >> $GITHUB_ENV
-          echo "cronjob_defined=$cronjob_defined" >> $GITHUB_ENV
-  
-  
   deploy_workflow:
     runs-on: [ self-hosted, "run_id:${{ inputs.environment }}-${{ github.run_id }}" ]
     needs: [ checks ]
     environment: ${{ inputs.environment }}
-    env:
-
     steps:
       - name: Check inputs
         id: check_inputs
