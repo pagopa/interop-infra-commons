@@ -1,0 +1,306 @@
+name: "Deploy Kubernetes Microservices and Cronjobs"
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'Environment to run apply against'
+        required: true
+        type: string
+      timeout_seconds:
+        description: 'Kubectl apply wait timeout in seconds for Deployments'
+        required: false
+        type: number
+      kind:
+        description: 'Kind of resource to deploy (microservice or cronjob)'
+        required: true
+        type: string
+      target:
+        description: 'Name of the target resource to deploy'
+        required: true
+        type: string
+      infra_commons_tag:
+        description: 'Tag of the infra-commons repository to use'
+        required: false
+        type: string
+        default: ''
+      helm_upgrade_no_wait:
+        description: 'Do not wait for Helm upgrade to finish'
+        required: false
+        type: boolean
+        default: false
+      use_kubectl_diff:
+        description: 'Use kubectl diff instead of helm diff'
+        required: false
+        type: boolean
+        default: false
+      use_kubectl_apply:
+        description: 'Use kubectl apply instead of helm upgrade'
+        required: false
+        type: boolean
+        default: false
+    secrets:
+      AWS_REGION:
+        description: 'AWS region for EKS cluster'
+        required: true
+      EKS_CLUSTER_NAME:
+        description: 'Name of the EKS cluster'
+        required: true
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
+
+jobs:
+  deploy_workflow:
+    runs-on: [ self-hosted, "run_id:${{ inputs.environment }}-${{ github.run_id }}" ]
+    needs: [ checks ]
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Check inputs
+        id: check_inputs
+        run: |
+          set -euo pipefail
+
+          microservice_defined=false
+          cronjob_defined=false
+
+          if [[ "${{ inputs.kind }}" != "microservice" && "${{ inputs.kind }}" != "cronjob" ]]; then
+            echo "::error::Invalid value for 'kind'. Allowed values are 'microservice' and 'cronjob'."
+            exit 1
+          fi
+          if [[ "${{ inputs.kind }}" == "microservice" ]]; then
+            microservice_defined=true
+          elif [[ "${{ inputs.kind }}" == "cronjob" ]]; then
+            cronjob_defined=true
+          fi
+
+          if [[ "$microservice_defined" != "true" && "$cronjob_defined" != "true" ]]; then
+            echo "::error::Neither microservice nor cronjob is defined."
+            exit 1
+          fi
+
+          echo "microservice_defined=$microservice_defined" >> $GITHUB_ENV
+          echo "cronjob_defined=$cronjob_defined" >> $GITHUB_ENV
+
+      - name: Checkout repo
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+
+      - name: Checkout infra-commons scripts
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        with:
+          repository: pagopa/interop-infra-commons
+          path: interop-infra-commons
+          fetch-depth: 0
+          sparse-checkout: 'scripts/helm'
+          ref: ${{ inputs.infra_commons_tag || github.ref }}
+
+      - name: Set kubeconfig
+        run: |
+          set -euo pipefail
+          aws eks update-kubeconfig \
+            --region ${{ secrets.AWS_REGION }} \
+            --name ${{ secrets.EKS_CLUSTER_NAME }}
+
+      - name: Helm Template
+        id: helm_template
+        run: |
+          set -euo pipefail
+          export PROJECT_DIR=$(pwd)
+
+          if [[ "${{ env.microservice_defined }}" == "true" ]]; then
+            $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
+              --debug \
+              --environment ${{ inputs.environment }} \
+              --microservice ${{ inputs.target }} \
+              -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
+              --output console
+
+          else
+            $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
+              --debug \
+              --environment ${{ inputs.environment }} \
+              --job ${{ inputs.target }} \
+              -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
+              --output console
+          fi
+
+      - name: Diff
+        id: diff
+        run: |
+          set -euo pipefail
+          export PROJECT_DIR=$(pwd)
+          DIFF_EXIT_CODE=1
+
+         
+          if [[ "${{ env.microservice_defined }}" == "true" ]]; then
+            set +e
+            if [[ "${{ inputs.use_kubectl_diff }}" == "true" ]]; then
+              $SCRIPTS_FOLDER/kubectlDiff-svc-single-standalone.sh \
+                --skip-dep \
+                --environment ${{ inputs.environment }} \
+                --microservice ${{ inputs.target }} \
+                -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
+                --output console
+            else
+              $SCRIPTS_FOLDER/helmDiff-svc-single-standalone.sh \
+                --skip-dep \
+                --environment ${{ inputs.environment }} \
+                --microservice ${{ inputs.target }} \
+                -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml
+            fi
+            DIFF_EXIT_CODE=$?
+            set -e
+
+          else
+            set +e
+            if [[ "${{ inputs.use_kubectl_diff }}" == "true" ]]; then
+              $SCRIPTS_FOLDER/kubectlDiff-cron-single-standalone.sh \
+                --skip-dep \
+                --environment ${{ inputs.environment }} \
+                --job ${{ inputs.target }} \
+                -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
+                --output console
+            else
+              $SCRIPTS_FOLDER/helmDiff-cron-single-standalone.sh \
+                --skip-dep \
+                --environment ${{ inputs.environment }} \
+                --job ${{ inputs.target }} \
+                -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml
+            fi
+            DIFF_EXIT_CODE=$?
+            set -e
+          fi
+
+          if [[ $DIFF_EXIT_CODE -eq 0 ]]; then
+            echo "Diff Output: No diff has been found for ${{ inputs.target }}"
+          elif [[ $DIFF_EXIT_CODE -le 2 ]]; then
+            echo "Diff Output: Diff has been found for ${{ inputs.target }}"
+          else
+            echo "::error title=Diff Error::Error occurred during diff, exit code $DIFF_EXIT_CODE"
+            exit $DIFF_EXIT_CODE
+          fi
+
+      - name: Deploy
+        id: deploy
+        run: |
+          set -euo pipefail
+
+          TIMEOUT_OPT=""
+          NOWAIT_OPT=""
+
+          helm_force_upgrade=false
+          if [[ "${{ env.microservice_defined }}" == "true" ]]; then
+            if [[ "${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}" == "*" || ",${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}," == *",${{ inputs.target }},"* ]]; then
+              helm_force_upgrade=true
+            fi
+          fi
+
+          if [[ -n "${{ inputs.timeout_seconds }}" ]]; then
+            if [[ "${{ inputs.helm_upgrade_no_wait }}" == "true" ]]; then
+              echo "::warning::INFO - Helm upgrade will not wait for the deployment to finish."
+              NOWAIT_OPT="--no-wait"
+            else
+              echo "::warning::INFO - Helm upgrade will wait for the deployment to finish."
+              TIMEOUT_OPT="--timeout ${{ inputs.timeout_seconds }}s"
+            fi
+          fi
+
+          export PROJECT_DIR=$(pwd)
+
+          if [[ "${{ env.microservice_defined }}" == "true" ]]; then
+            $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
+              --debug \
+              --environment ${{ inputs.environment }} \
+              -m "${{ inputs.target }}" \
+              -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
+              --output console > template.yaml
+
+            K8S_NAMESPACE=$(cat template.yaml | yq 'select(.kind == "Deployment") | .metadata.namespace')
+            MICROSERVICE_FULLNAME=$(cat template.yaml | yq 'select(.kind == "Deployment") | .metadata.name')
+
+            CURRENT_RESOURCE_VERSION=$(kubectl get deployment "$MICROSERVICE_FULLNAME" \
+              -n "$K8S_NAMESPACE" -o jsonpath='{.metadata.resourceVersion}')
+
+            echo "INFO - Apply changes for $MICROSERVICE_FULLNAME."
+            if [[ "${{ inputs.use_kubectl_apply }}" == "true" ]]; then
+              $SCRIPTS_FOLDER/kubectlApply-svc-single-standalone.sh \
+                --debug \
+                --skip-dep \
+                --environment "$K8S_NAMESPACE" \
+                -m "${{ inputs.target }}" \
+                -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml \
+                --output console
+            else
+              HELM_UPGRADE_OPTIONS="--debug --skip-dep $TIMEOUT_OPT $NOWAIT_OPT --output console"
+              if [[ "${{ inputs.helm_force_upgrade }}" == "true" ]]; then
+                echo "::warning::INFO - Helm force upgrade requested for $MICROSERVICE_FULLNAME."
+                HELM_UPGRADE_OPTIONS="$HELM_UPGRADE_OPTIONS --force"
+              fi
+              $SCRIPTS_FOLDER/helmUpgrade-svc-single-standalone.sh \
+                $HELM_UPGRADE_OPTIONS \
+                --environment "$K8S_NAMESPACE" \
+                -m "${{ inputs.target }}" \
+                -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml
+            fi
+
+            # Deployment resourceVersion should be updated after the apply or upgrade if successfully executed (always updated when helm upgrade is forced)
+            POLL_INTERVAL=5
+            start_time=$(date +%s)
+            while true; do
+              UPDATED_RESOURCE_VERSION=$(kubectl get deploy "$MICROSERVICE_FULLNAME" \
+                -n "$K8S_NAMESPACE" -o jsonpath='{.metadata.resourceVersion}')
+              if [[ "$UPDATED_RESOURCE_VERSION" != "$CURRENT_RESOURCE_VERSION" ]]; then
+                echo "Resource version changed from $CURRENT_RESOURCE_VERSION to $UPDATED_RESOURCE_VERSION"
+                break
+              fi
+
+              echo "Resource version has not yet changed, waiting for $POLL_INTERVAL seconds before checking again..."
+
+              current_time=$(date +%s)
+              elapsed=$(( current_time - start_time ))
+              # Check if the elapsed time exceeds the timeout (prevent infinite loop if no diff is found but helm upgrade is executed)
+              if (( elapsed > "${{ inputs.timeout_seconds }}" )); then
+                echo "::error::Timeout after ${{ inputs.timeout_seconds }}s waiting for $MICROSERVICE_FULLNAME resource version to change."
+                exit 1
+              fi
+              sleep $POLL_INTERVAL
+            done
+            echo "Deploy for $MICROSERVICE_FULLNAME completed successfully."
+
+          elif [[ "${{ env.cronjob_defined }}" == "true" ]]; then
+            $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
+              --debug \
+              --environment ${{ inputs.environment }} \
+              --job "${{ inputs.target }}" \
+              -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
+              --output console > template.yaml
+
+            K8S_NAMESPACE=$(cat template.yaml | yq 'select(.kind == "CronJob") | .metadata.namespace')
+            CRONJOB_FULLNAME=$(cat template.yaml | yq 'select(.kind == "CronJob") | .metadata.name')
+
+            echo "Apply changes for $CRONJOB_FULLNAME."
+            if [[ "${{ inputs.use_kubectl_apply }}" == "true" ]]; then
+              $SCRIPTS_FOLDER/kubectlApply-cron-single-standalone.sh \
+                --debug \
+                --skip-dep \
+                --environment "$K8S_NAMESPACE" \
+                -j "${{ inputs.target }}" \
+                -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml \
+                --output console
+            else
+              HELM_UPGRADE_OPTIONS="--debug --skip-dep --output console"
+              if [[ "${{ inputs.helm_force_upgrade }}" == "true" ]]; then
+                echo "::warning::INFO - Helm force upgrade requested for $CRONJOB_FULLNAME."
+                HELM_UPGRADE_OPTIONS="$HELM_UPGRADE_OPTIONS --force"
+              fi
+              $SCRIPTS_FOLDER/helmUpgrade-cron-single-standalone.sh \
+                $HELM_UPGRADE_OPTIONS \
+                --environment "$K8S_NAMESPACE" \
+                -j "${{ inputs.target }}" \
+                -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml
+            fi
+          fi
