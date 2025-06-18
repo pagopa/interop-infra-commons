@@ -7,6 +7,9 @@ on:
         description: 'Environment to run tests against'
         required: true
         type: string
+      infra_commons_tag:
+        required: false
+        type: string
 
 defaults:
   run:
@@ -28,6 +31,10 @@ jobs:
         id: checkout
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
 
+      - name: Print tag passed in
+        run: |
+          echo "Using infra_commons_tag: ${{ inputs.infra_commons_tag }}"
+
       - name: Checkout scripts repository
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
         with:
@@ -35,7 +42,7 @@ jobs:
           path: interop-infra-commons 
           fetch-depth: 0
           sparse-checkout: 'scripts/helm'
-          ref: ${{ vars.INFRA_COMMONS_TAG }}
+          ref: ${{ inputs.infra_commons_tag }}
 
       - name: Helm Chart Linting
         id: helm_lint
@@ -51,7 +58,7 @@ jobs:
           elif [[ $CHART_TYPE == "cronjob" ]]; then
             OPTIONS=" --jobs "
           else
-            echo "::error:: Workflow cannot be run on selected chart $CHART_TYPE"
+            echo "Workflow cannot be run on selected chart $CHART_TYPE"
             exit 1
           fi
 
@@ -74,7 +81,7 @@ jobs:
           path: interop-infra-commons 
           fetch-depth: 0
           sparse-checkout: 'scripts/helm'
-          ref: ${{ vars.INFRA_COMMONS_TAG }}
+          ref: ${{ inputs.infra_commons_tag }}
 
       - name: Kube-linter download
         run: |
@@ -119,7 +126,7 @@ jobs:
                 --output console > $TEMPLATE_OUTPUT_PATH
                   
               if [[ $? -ne 0 ]]; then
-                echo "::error::Template generation failed for microservice: $MICROSERVICE_NAME"
+                echo "Template generation failed for microservice: $MICROSERVICE_NAME"
                 FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(template) "
                 VALIDATION_ERROR_FLAG=1
                 continue
@@ -129,11 +136,11 @@ jobs:
               kube-linter lint $TEMPLATE_OUTPUT_PATH
                   
               if [[ $? -ne 0 ]]; then
-                echo "::error::Linting failed for microservice: $MICROSERVICE_NAME"
+                echo "Linting failed for microservice: $MICROSERVICE_NAME"
                 FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
                 VALIDATION_ERROR_FLAG=1
               else
-                echo "::notice::Microservice $MICROSERVICE_NAME passed all checks"
+                echo "Microservice $MICROSERVICE_NAME passed all checks"
               fi
                   
               echo "=== Completed processing microservice: $MICROSERVICE_NAME ==="
@@ -144,12 +151,10 @@ jobs:
           fi
                   
           if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
-            echo "::error::Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
-            echo "MICROSERVICES_VALIDATION_FAILED=true" >> $GITHUB_ENV
-            echo "FAILED_MICROSERVICES=$FAILED_MICROSERVICES" >> $GITHUB_ENV
+            echo "Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
             exit 1
           else
-            echo "::notice::All microservices passed validation successfully"
+            echo "All microservices passed validation successfully"
           fi
 
   cronjobs_validation:
@@ -167,7 +172,7 @@ jobs:
           path: interop-infra-commons 
           fetch-depth: 0
           sparse-checkout: 'scripts/helm'
-          ref: ${{ vars.INFRA_COMMONS_TAG }}
+          ref: ${{ inputs.infra_commons_tag }}
 
       - name: Kube-linter download
         run: |
@@ -204,26 +209,29 @@ jobs:
               TEMPLATE_OUTPUT_PATH="/tmp/helm-template-cronjob-${CRONJOB_NAME}.yaml"
 
               echo "Templating cronjob: $CRONJOB_NAME"
-              if ! $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
+              $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
                 --debug \
                 --environment ${{ inputs.environment }} \
                 --job $CRONJOB_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output console > $TEMPLATE_OUTPUT_PATH; then
+                --output console > $TEMPLATE_OUTPUT_PATH
 
-                echo "::error::Template generation failed for cronjob: $CRONJOB_NAME"
+              if [[ $? -ne 0 ]]; then
+                echo "Template generation failed for cronjob: $CRONJOB_NAME"
                 FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(template) "
                 VALIDATION_ERROR_FLAG=1
                 continue
               fi
 
               echo "Linting cronjob: $CRONJOB_NAME"
-              if ! kube-linter lint $TEMPLATE_OUTPUT_PATH; then
-                echo "::error::Linting failed for cronjob: $CRONJOB_NAME"
+              kube-linter lint $TEMPLATE_OUTPUT_PATH
+              
+              if [[ $? -ne 0 ]]; then
+                echo "Linting failed for cronjob: $CRONJOB_NAME"
                 FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
                 VALIDATION_ERROR_FLAG=1
               else
-                echo "::notice::Cronjob $CRONJOB_NAME passed all checks"
+                echo "Cronjob $CRONJOB_NAME passed all checks"
               fi
 
               echo "=== Completed processing cronjob: $CRONJOB_NAME ==="
@@ -234,10 +242,8 @@ jobs:
           fi
 
           if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
-            echo "::error::Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
-            echo "CRONJOBS_VALIDATION_FAILED=true" >> $GITHUB_ENV
-            echo "FAILED_CRONJOBS=$FAILED_CRONJOBS" >> $GITHUB_ENV
+            echo "Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
             exit 1
           else
-            echo "::notice::All cronjobs passed validation successfully"   
+            echo "All cronjobs passed validation successfully"   
           fi
