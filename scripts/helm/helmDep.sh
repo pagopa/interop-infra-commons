@@ -10,9 +10,9 @@ help()
     exit 2
 }
 
-
-SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
 ROOT_DIR=$PROJECT_DIR
+SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 args=$#
 untar=false
