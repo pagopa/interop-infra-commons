@@ -16,7 +16,7 @@ help()
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -v | --verbose ] Show debug messages
         [ -sd | --skip-dep ] Skip Helm dependencies setup
-        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
+        [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -28,7 +28,7 @@ enable_debug=false
 post_clean=false
 output_redirect=""
 skip_dep=false
-enable_templating_lookup=false
+disable_templating_lookup=false
 verbose=false
 images_file=""
 
@@ -88,8 +88,8 @@ do
           step=1
           shift 1
           ;;
-        -etl | --enable-templating-lookup)
-          enable_templating_lookup=true
+        -dtl | --disable-templating-lookup)
+          disable_templating_lookup=true
           step=1
           shift 1
           ;;
@@ -149,12 +149,12 @@ fi
 TEMPLATE_CMD="helm template "
 ADDITIONAL_VALUES=" "
 if [[ $enable_debug == true ]]; then
-    TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
+  TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
 fi
-if [[ $enable_templating_lookup == true ]]; then
-    TEMPLATE_CMD=$TEMPLATE_CMD"--dry-run=server "
-else
+if [[ $disable_templating_lookup == true ]]; then
   ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
+else
+  TEMPLATE_CMD=$TEMPLATE_CMD"--dry-run=server --set enableLookup=true"
 fi
 
 OUTPUT_FILE="\"$OUT_DIR/$microservice.out.yaml\""

@@ -19,7 +19,7 @@ help()
         [ -nw | --no-wait ] Do not wait for the release to be ready
         [ -t | --timeout ] Set the timeout for the upgrade operation (default is 5m0s)
         [ --force ] Force helm upgrade
-        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
+        [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when upgrading
         [ -h | --help ] This help"
     exit 2
 }
@@ -37,7 +37,7 @@ force=false
 history_max=3
 wait=true
 timeout="5m0s"
-enable_templating_lookup=false
+disable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -123,8 +123,8 @@ do
           step=2
           shift 2
           ;;
-        -etl | --enable-templating-lookup)
-          enable_templating_lookup=true
+        -dtl | --disable-templating-lookup)
+          disable_templating_lookup=true
           step=1
           shift 1
           ;;
@@ -174,11 +174,11 @@ if [[ $wait == true ]]; then
 fi
 
 ADDITIONAL_VALUES=" "
-if [[ $enable_templating_lookup == true ]]; then
+if [[ $disable_templating_lookup == true ]]; then
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
+else
   OPTIONS=$OPTIONS" --dry-run=server"
   ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=true"
-else
-  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
 fi
 
 OUTPUT_REDIRECT=" "
