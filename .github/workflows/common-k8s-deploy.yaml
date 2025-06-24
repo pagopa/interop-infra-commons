@@ -1,0 +1,131 @@
+name: "Deploy Kubernetes Workflow"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to run apply against'
+        required: true
+        type: string
+      timeout_seconds:
+        description: 'Kubectl apply wait timeout in seconds for Deployments'
+        required: false
+        type: number
+      infra_commons_tag:
+        description: 'Tag of the infra-commons repository to use'
+        required: false
+        type: string
+        default: ''
+      helm_upgrade_no_wait:
+        description: 'Do not wait for Helm upgrade to finish'
+        required: false
+        type: boolean
+        default: false
+      use_kubectl_diff:
+        description: 'Use kubectl diff instead of helm diff'
+        required: false
+        type: boolean
+        default: false
+      use_kubectl_apply:
+        description: 'Use kubectl apply instead of helm upgrade'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  id-token: write
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
+
+jobs:
+  workflow_setup:
+    name: Setup steps
+    runs-on: [ self-hosted, "run_id:${{ inputs.environment }}-${{ github.run_id }}" ]
+    environment: ${{ inputs.environment }}
+    env:
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+    outputs:
+      microservices: ${{ steps.set-outputs.outputs.microservices }}
+      cronjobs: ${{ steps.set-outputs.outputs.cronjobs }}
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - id: set-outputs
+        run: |
+          echo "microservices=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+          echo "cronjobs=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+  
+  deploy_common_configmaps:
+    name: Deploy Common Configmaps
+    needs: [ workflow_setup ]
+    runs-on: [ self-hosted, "run_id:${{ inputs.environment }}-${{ github.run_id }}" ]
+    environment: ${{ inputs.environment }}
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - name: Update Kubeconfig
+        id: update_kubeconfig
+        run: |
+          set -euo pipefail
+
+          aws eks update-kubeconfig --region ${{ secrets.AWS_REGION }} --name ${{ secrets.EKS_CLUSTER_NAME }}
+      - name: Apply commons configmaps
+        id: apply_commons_configmap
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          
+          commons_configmaps_path="commons/$ENVIRONMENT/configmaps"
+          
+          if [[ -n "$(ls -A $commons_configmaps_path)" ]]; then
+            for f in $commons_configmaps_path/*; do
+              kubectl apply -f $f
+            done;
+          fi
+
+  deploy_ms:
+    name: ${{ matrix.target }}
+    needs: [ workflow_setup, deploy_common_configmaps ]
+    if: ${{ ! contains(needs.workflow_setup.outputs.microservices, '[]') }}
+    secrets: inherit
+    strategy:
+      matrix:
+        target: ${{ fromJson(needs.workflow_setup.outputs.microservices) }}
+      fail-fast: false
+    uses: ./.github/workflows/common-k8s-deploy-sub.yaml
+    with:
+      environment: ${{ inputs.environment }}
+      timeout_seconds: ${{ inputs.timeout_seconds }}
+      kind: "microservice"
+      target: ${{ matrix.target }}
+      infra_commons_tag: ${{ inputs.infra_commons_tag }}
+      helm_upgrade_no_wait: ${{ inputs.helm_upgrade_no_wait }}
+      use_kubectl_diff: ${{ inputs.use_kubectl_diff }}
+      use_kubectl_apply: ${{ inputs.use_kubectl_apply }}
+  
+  deploy_cj:
+    name: ${{ matrix.target }}
+    needs: [ workflow_setup, deploy_common_configmaps ]
+    if: ${{ ! contains(needs.workflow_setup.outputs.cronjobs, '[]') }}
+    secrets: inherit
+    strategy:
+      matrix:
+        target: ${{ fromJson(needs.workflow_setup.outputs.cronjobs) }}
+      fail-fast: false
+    uses: ./.github/workflows/common-k8s-deploy-sub.yaml
+    with:
+      environment: ${{ inputs.environment }}
+      kind: "cronjob"
+      target: ${{ matrix.target }}
+      infra_commons_tag: ${{ inputs.infra_commons_tag }}
+      use_kubectl_diff: ${{ inputs.use_kubectl_diff }}
+      use_kubectl_apply: ${{ inputs.use_kubectl_apply }}
