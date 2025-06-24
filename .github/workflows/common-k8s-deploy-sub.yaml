@@ -57,7 +57,6 @@ env:
 jobs:
   deploy_workflow:
     runs-on: [ self-hosted, "run_id:${{ inputs.environment }}-${{ github.run_id }}" ]
-    needs: [ checks ]
     environment: ${{ inputs.environment }}
     steps:
       - name: Check inputs

@@ -1,7 +1,7 @@
 name: "Deploy Kubernetes Workflow"
 
 on:
-  workflow_dispatch:
+  workflow_call:
     inputs:
       environment:
         description: 'Environment to run apply against'
@@ -31,6 +31,11 @@ on:
         required: false
         type: boolean
         default: false
+    secrets:
+      AWS_REGION:
+        required: true
+      EKS_CLUSTER_NAME:
+        required: true
 
 permissions:
   id-token: write
