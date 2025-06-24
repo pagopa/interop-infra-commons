@@ -15,7 +15,7 @@ help()
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
-        [ -etl | --enable-templating-lookup ] Enable Helm to run with the --dry-run=server option in order to lookup configmaps and secrets when templating
+        [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -h | --help ] This help"
     exit 2
@@ -29,7 +29,7 @@ template_jobs=false
 post_clean=false
 skip_dep=false
 images_file=""
-enable_templating_lookup=false
+disable_templating_lookup=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -68,8 +68,8 @@ do
           step=1
           shift 1
           ;;
-        -etl | --enable-templating-lookup)
-          enable_templating_lookup=true
+        -dtl | --disable-templating-lookup)
+          disable_templating_lookup=true
           step=1
           shift 1
           ;;
@@ -112,7 +112,7 @@ fi
 OPTIONS=$OPTIONS" -sd"
 
 MICROSERVICE_OPTIONS=" "
-if [[ $enable_templating_lookup == true ]]; then
+if [[ $disable_templating_lookup != true ]]; then
   MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
 fi
 
