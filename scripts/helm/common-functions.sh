@@ -194,3 +194,102 @@ function getAllowedCronjobsForEnvironment()
     echo $ALLOWED_CRONJOBS
 }
       
+function getDependenciesDefaultConfigFile() {
+    local ENV=$1
+    if [[ -z $ENV || $ENV == "" ]]; then
+        echo "Environment cannot be null"
+        exit 1
+    fi
+
+    local defaultConfigFile="$ROOT_DIR/commons/$ENV/dependencies.yaml"
+
+    echo $defaultConfigFile
+}
+
+function getDependencyValuesFolder()
+{
+    local ENVIRONMENT=$1
+    
+    if [[ -z $ENVIRONMENT || $ENVIRONMENT == "" ]]; then
+        echo "Environment cannot be null"
+        exit 1
+    fi
+    local dependenciesValuesFolder="$ROOT_DIR/commons/$ENVIRONMENT/dependencies"
+
+    echo $dependenciesValuesFolder
+}
+
+function getComputedDependenciesFolder()
+{
+    local ENVIRONMENT=$1
+    local LABEL=$2
+    
+    if [[ -z $ENVIRONMENT || $ENVIRONMENT == "" ]]; then
+        echo "Environment cannot be null"
+        exit 1
+    fi
+    if [[ -z $LABEL || $LABEL == "" ]]; then
+        echo "Label cannot be null"
+        exit 1
+    fi
+    local TARGET_DEPENDENCIES_VALUES_FOLDER="$ROOT_DIR/computed-deps/$ENVIRONMENT/$LABEL"
+
+    mkdir -p "$TARGET_DEPENDENCIES_VALUES_FOLDER"
+
+    echo $TARGET_DEPENDENCIES_VALUES_FOLDER
+}
+
+function getComputedDependenciesFile() {
+    local ENVIRONMENT=$1
+    local LABEL=$2
+    local TARGET=$3
+
+    if [[ -z $TARGET || $TARGET == "" ]]; then
+        echo "Target cannot be null"
+        exit 1
+    fi
+
+    targetDependenciesValuesFolder=$(getComputedDependenciesFolder $ENVIRONMENT $LABEL)
+    if [[ -z $targetDependenciesValuesFolder || $targetDependenciesValuesFolder == "" ]]; then
+        echo "Target dependencies values folder cannot be null"
+        exit 1
+    fi
+    local targetDependenciesValuesFile="$targetDependenciesValuesFolder/$TARGET-dependencies.yaml"
+
+    echo $targetDependenciesValuesFile    
+}
+
+function getDependenciesListToHelm() {
+    local ENVIRONMENT=$1
+    local LABEL=$2
+    local TARGET=$3
+    
+    if [[ -z $ENVIRONMENT || $ENVIRONMENT == "" ]]; then
+        echo "Environment cannot be null"
+        exit 1
+    fi
+    if [[ -z $LABEL || $LABEL == "" ]]; then
+        echo "Label cannot be null"
+        exit 1
+    fi
+    if [[ -z $TARGET || $TARGET == "" ]]; then
+        echo "Target cannot be null"
+        exit 1
+    fi
+
+    local targetDependenciesValuesFile=$(getComputedDependenciesFile $ENVIRONMENT $LABEL $TARGET)
+    
+    if [[ ! -e "$targetDependenciesValuesFile" ]]; then
+        echo ""
+    else
+        local helmValues=""
+
+        while IFS= read -r line; do
+            if [[ -n $line && $line != "" ]]; then
+                helmValues+=" -f $line"
+            fi
+        done < $targetDependenciesValuesFile
+
+        echo $helmValues
+    fi
+}

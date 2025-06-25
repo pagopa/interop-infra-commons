@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Loading values dependencies"
+# "Loading values dependencies"
 
 PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
 ROOT_DIR=$PROJECT_DIR
@@ -105,16 +105,23 @@ else
   target=$job
 fi
 
-defaultConfigFile="$ROOT_DIR/commons/$ENV/dependencies.yaml"
-dependenciesValuesFolder="$ROOT_DIR/commons/$ENV/dependencies"
-targetDependenciesValuesFile="$dependenciesValuesFolder/$target-dependencies.yaml"
+label=""
+if [[ -n $microservice ]]; then
+  label="microservices"
+else 
+  label="jobs"
+fi
 
-touch $targetDependenciesValuesFile
+defaultConfigFile=$(getDependenciesDefaultConfigFile $ENV)
+dependenciesValuesFolder=$(getDependencyValuesFolder $ENV)
+targetDependenciesValuesFile=$(getComputedDependenciesFile $ENV $label $target)
+
+rm -f $targetDependenciesValuesFile && touch $targetDependenciesValuesFile
 
 if [[ -z $configFile || $configFile == "" ]]; then
   if [[ ! -e "$defaultConfigFile" ]]; then
-    echo "Default dependencies config file $defaultConfigFile does not exist."
-    exit 1
+    # "Default dependencies config file $defaultConfigFile does not exist."
+    return 0
   else
     configFile="$defaultConfigFile"
     if [[ ! -e "$configFile" ]]; then
@@ -125,16 +132,13 @@ if [[ -z $configFile || $configFile == "" ]]; then
 fi
 
 if [[ -n $configFile ]]; then
-  label=""
-
-  if [[ -n $microservice ]]; then
-    label="microservices"
-  else 
-    label="jobs"
-  fi
+  declare -a found_deps=("")  
+  found_deps+=( $(yq e -r ".dependencies.$label.$target // [] | .[]" "$configFile") )
   
-  found_deps=($(cat $configFile | yq e -r ".dependencies.$label.$target | .[]"))
-
+  if [[ -z $found_deps || ${#found_deps[@]} -eq 0 ]]; then
+    # "No dependencies found for $target in $configFile"
+    return 0
+  fi
   #echo "Found dependencies for $target: ${found_deps[*]}"
   for dep in "${found_deps[@]}"; do
     depFile="$dependenciesValuesFolder/values-$dep.yaml"
@@ -143,8 +147,6 @@ if [[ -n $configFile ]]; then
       exit 1
     fi
 
-    echo "Save dependency full path: $depFile"
-    #cat $depFile | yq -r
     echo "$depFile" >> "$targetDependenciesValuesFile"
   done
 fi
