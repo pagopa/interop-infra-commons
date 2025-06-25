@@ -17,6 +17,7 @@ help()
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -29,6 +30,7 @@ template_jobs=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+disable_templating_lookup=false
 images_file=""
 
 step=1
@@ -78,6 +80,11 @@ do
           step=1
           shift 1
           ;;
+        -dtl | --disable-templating-lookup)
+          disable_templating_lookup=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -119,6 +126,10 @@ fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line 
 OPTIONS=$OPTIONS" -sd"
 
+MICROSERVICE_OPTIONS=" "
+if [[ $disable_templating_lookup != true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
+fi
 
 if [[ $template_microservices == true ]]; then
   echo "Start microservices templates diff"
@@ -126,7 +137,7 @@ if [[ $template_microservices == true ]]; then
   do
     CURRENT_SVC=$(basename "$dir");
     echo "Diff $CURRENT_SVC"
-    "$SCRIPTS_FOLDER"/kubectlDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    "$SCRIPTS_FOLDER"/kubectlDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
