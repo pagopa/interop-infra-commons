@@ -25,23 +25,23 @@ for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
         -u| --untar )
-            untar=true
+          untar=true
           step=1
           shift 1
-            ;;
+          ;;
         -v| --verbose )
-            verbose=true
+          verbose=true
           step=1
           shift 1
-            ;;
+          ;;
         -h | --help )
-            help
-            ;;
+          help
+          ;;
         *)
-            echo "Unexpected option: $1"
-            help
+          echo "Unexpected option: $1"
+          help
 
-            ;;
+          ;;
     esac
 done
 
@@ -73,8 +73,8 @@ function setupHelmDeps()
     if [[ $verbose == true ]]; then
         echo "-- Search PagoPA charts in repo --"
     fi
-        helm search repo interop-eks-microservice-chart > /dev/null
-        helm search repo interop-eks-cronjob-chart > /dev/null
+    helm search repo interop-eks-microservice-chart > /dev/null
+    helm search repo interop-eks-cronjob-chart > /dev/null
 
     if [[ $verbose == true ]]; then
         echo "-- List chart dependencies --"
