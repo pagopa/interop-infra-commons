@@ -112,7 +112,7 @@ else
   label="jobs"
 fi
 
-defaultConfigFile=$(getDependenciesDefaultConfigFile $ENV)
+defaultConfigFile=$(getDependenciesDefaultConfigFile $ENV $label $target)
 dependenciesValuesFolder=$(getDependencyValuesFolder $ENV)
 targetDependenciesValuesFile=$(getComputedDependenciesFile $ENV $label $target)
 
@@ -132,8 +132,10 @@ if [[ -z $configFile || $configFile == "" ]]; then
 fi
 
 if [[ -n $configFile ]]; then
-  declare -a found_deps=("")  
-  found_deps+=( $(yq e -r ".dependencies.$label.$target // [] | .[]" "$configFile") )
+  computed_deps=$(yq e -r ".profiles | .[]" "$configFile" ) 
+  
+  declare -a found_deps=() 
+  found_deps+=($computed_deps)
   
   if [[ -z $found_deps || ${#found_deps[@]} -eq 0 ]]; then
     # "No dependencies found for $target in $configFile"
