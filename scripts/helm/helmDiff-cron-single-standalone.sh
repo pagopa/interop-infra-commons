@@ -118,10 +118,14 @@ fi
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
+. "$SCRIPTS_FOLDER"/load-values-dependencies.sh -e $environment -j $job
+DEPENDENCIES_LIST_TO_HELM=$(getDependenciesListToHelm $environment "jobs" $job)
+
 set +e
 helm diff upgrade --install  "$job"  "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
   --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
   -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" \
+  $DEPENDENCIES_LIST_TO_HELM \
   -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\"
 diff_result=$?
 set -e

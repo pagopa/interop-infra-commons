@@ -172,12 +172,16 @@ echo "[CRONOJB-UPGRADE] Computing image version and digest for cronjob '$job'."
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
+. "$SCRIPTS_FOLDER"/load-values-dependencies.sh -e $environment -j $job
+DEPENDENCIES_LIST_TO_HELM=$(getDependenciesListToHelm $environment "jobs" $job)
+
 UPGRADE_CMD="helm upgrade "
 UPGRADE_CMD="$UPGRADE_CMD --dependency-update --take-ownership --create-namespace --history-max $history_max "
 UPGRADE_CMD="$UPGRADE_CMD $OPTIONS "
 UPGRADE_CMD="$UPGRADE_CMD --namespace $ENV "
 UPGRADE_CMD="$UPGRADE_CMD --install $job \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" "
 UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" "
+UPGRADE_CMD="$UPGRADE_CMD $DEPENDENCIES_LIST_TO_HELM "
 UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" "
 UPGRADE_CMD="$UPGRADE_CMD $OUTPUT_REDIRECT"
 

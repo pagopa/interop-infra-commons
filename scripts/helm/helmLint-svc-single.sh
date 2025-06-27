@@ -131,6 +131,9 @@ fi
 # Find image version and digest
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 
+. "$SCRIPTS_FOLDER"/load-values-dependencies.sh -e $environment -m $microservice
+DEPENDENCIES_LIST_TO_HELM=$(getDependenciesListToHelm $environment "microservices" $microservice)
+
 LINT_CMD="helm lint "
 if [[ $enable_debug == true ]]; then
     LINT_CMD=$LINT_CMD"--debug "
@@ -142,7 +145,7 @@ if [[ $output_redirect == "console" ]]; then
 fi
 
 
-LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" --set enableLookup=false $OUTPUT_TO"
+LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" $DEPENDENCIES_LIST_TO_HELM -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" --set enableLookup=false $OUTPUT_TO"
 
 eval $LINT_CMD
 

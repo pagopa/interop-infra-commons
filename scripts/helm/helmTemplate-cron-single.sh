@@ -47,7 +47,7 @@ do
           job=$2
           jobAllowedRes=$(isAllowedCronjob $job)
           if [[ -z $jobAllowedRes || $jobAllowedRes == "" ]]; then
-              echo "$job is not allowed"
+              echo "$job is not allowedsss"
               echo "Allowed values: " $(getAllowedCronjobs)
               help
           fi
@@ -138,6 +138,9 @@ fi
 # Find image version and digest
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 
+. "$SCRIPTS_FOLDER"/load-values-dependencies.sh -e $environment -j $job
+DEPENDENCIES_LIST_TO_HELM=$(getDependenciesListToHelm $environment "jobs" $job)
+
 TEMPLATE_CMD="helm template "
 if [[ $enable_debug == true ]]; then
     TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
@@ -150,7 +153,7 @@ if [[ $output_redirect == "console" ]]; then
 fi
 
 #TEMPLATE_CMD=$TEMPLATE_CMD" $job interop-eks-cronjob-chart/interop-eks-cronjob-chart -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
-TEMPLATE_CMD=$TEMPLATE_CMD" $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
+TEMPLATE_CMD=$TEMPLATE_CMD" $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" $DEPENDENCIES_LIST_TO_HELM -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
 
 eval $TEMPLATE_CMD
 if [[ $verbose == true ]]; then
