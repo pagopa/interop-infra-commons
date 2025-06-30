@@ -73,6 +73,12 @@ variable "create_cloudwatch_alarm" {
   type        = bool
 }
 
+variable "create_cloudwatch_alarm_4xx" {
+  description = "If true, a CloudWatch alarm for the 4XXError metric is created for the current API Gateway"
+  type        = bool
+  default     = false
+}
+
 variable "create_cloudwatch_dashboard" {
   description = "If true, a CloudWatch dashboard is created for the current API Gateway"
   type        = bool
@@ -106,4 +112,46 @@ variable "alarm_5xx_datapoints" {
   description = "Number of breaching datapoints in the evaluation period to trigger the 5xx APIGW alarm"
   type        = number
   default     = 0
+}
+
+variable "alarm_4xx_threshold_percentage" {
+  description = "Threshold to trigger 4xx APIGW alarm"
+  type        = number
+  default     = 0
+}
+
+variable "alarm_4xx_period" {
+  description = "Period (in seconds) over which the 4xx APIGW alarm statistic is applied"
+  type        = number
+  default     = 0
+}
+
+variable "alarm_4xx_eval_periods" {
+  description = "Number of periods to evaluate for the 4xx APIGW alarm"
+  type        = number
+  default     = 0
+}
+
+variable "alarm_4xx_datapoints" {
+  description = "Number of breaching datapoints in the evaluation period to trigger the 4xx APIGW alarm"
+  type        = number
+  default     = 0
+}
+
+variable "openapi_s3_bucket_name" {
+  description = "Name of the S3 bucket to store the OpenAPI definition"
+  type        = string
+  default     = null
+}
+
+variable "openapi_s3_object_key" {
+  description = "Key of the S3 object used to store the OpenAPI definition"
+  type        = string
+  default     = null
+}
+
+variable "templating_map" {
+  description = "Map of strings for OpenAPI templating"
+  type        = map(string)
+  default     = {}
 }
