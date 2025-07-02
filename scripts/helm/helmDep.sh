@@ -20,7 +20,7 @@ args=$#
 untar=false
 step=1
 verbose=false
-
+# Check args
 for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
@@ -48,7 +48,7 @@ done
 function setupHelmDeps()
 {
     untar=$1
-
+    # Create charts directory and copy Chart.yaml into it
     cd "$ROOT_DIR"
 
     if [[ $verbose == true ]]; then
@@ -60,7 +60,7 @@ function setupHelmDeps()
         echo "Copying Chart.yaml to charts"
     fi
     cp Chart.yaml charts/
-
+    # Execute helm commands
     echo "# Helm dependencies setup #"
     echo "-- Add PagoPA eks repos --"
     helm repo add interop-eks-microservice-chart https://pagopa.github.io/interop-eks-microservice-chart > /dev/null
@@ -86,17 +86,16 @@ function setupHelmDeps()
     if [[ $verbose == true ]]; then
         echo "-- Build chart dependencies --"
     fi
-    # only first time
-    #helm dep build
+    # Execute helm dependency update command
     dep_up_result=$(helm dep up)
     if [[ $verbose == true ]]; then
         echo $dep_up_result
     fi
 
     cd "$ROOT_DIR"
-    mkdir -p charts
 
     if [[ $untar == true ]]; then
+    # Untar downloaded charts to the root charts directory
         for filename in charts/charts/*.tgz; do
             [ -e "$filename" ] || continue
             echo "Processing $filename"
@@ -110,35 +109,44 @@ function setupHelmDeps()
             rm -f "$filename"
         done
     else
+    #  Move downloaded charts not extracted to the root charts directory
         if find charts/charts -maxdepth 1 -name '*.tgz' | grep -q .; then
-            echo "Moving charts to root charts directory"
+            if [[ $verbose == true ]]; then
+                echo "Moving charts to root charts directory"
+            fi
             mv charts/charts/*.tgz charts/
         fi
     fi
-
+    # Remove empty temp charts directory if it exists and if it is empty
     if [[ -d charts/charts && -z "$(ls -A charts/charts)" ]]; then
-        echo "Removing empty charts directory"
+        if [[ $verbose == true ]]; then
+            echo "Removing empty temp charts directory"
+        fi
         rmdir charts/charts
+    else
+        if [[ $verbose == true ]]; then
+            echo "charts temp directory is not empty, not removing it"
+        fi
     fi
 
-
     set +e
-    # Install helm diff plugin
-     if ! helm plugin list | grep -q "diff"; then
+    # Install helm diff plugin, first check if it is already installed
+    if [[ $(helm plugin list | grep -c 'diff') -eq 0 ]]; then
+        if [[ $verbose == true ]]; then
+            echo "Installing helm-diff plugin"
+        fi
         helm plugin install https://github.com/databus23/helm-diff
         diff_plugin_result=$?
     else
+        if [[ $verbose == true ]]; then
+            echo "Helm-diff plugin already installed"
+        fi
         diff_plugin_result=0
-    fi
-    if [[ $verbose == true ]]; then
-        echo "Helm-Diff plugin install result: $diff_plugin_result"
     fi
     set -e
 
-    cd "$ROOT_DIR/charts"
     echo "-- Helm dependencies setup ended --"
     exit 0
 }
-
 
 setupHelmDeps $untar
