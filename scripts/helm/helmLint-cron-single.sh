@@ -131,6 +131,9 @@ fi
 # Find image version and digest
 bash "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 
+. "$SCRIPTS_FOLDER"/load-values-dependencies.sh -e $environment -j $job
+DEPENDENCIES_LIST_TO_HELM=$(getDependenciesListToHelm $environment "jobs" $job)
+
 LINT_CMD="helm lint "
 if [[ $enable_debug == true ]]; then
     LINT_CMD=$LINT_CMD"--debug "
@@ -141,7 +144,7 @@ if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
 fi
 
-LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
+LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" $DEPENDENCIES_LIST_TO_HELM -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
 
 eval $LINT_CMD
 

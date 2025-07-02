@@ -132,10 +132,14 @@ fi
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
+. "$SCRIPTS_FOLDER"/load-values-dependencies.sh -e $environment -m $microservice
+DEPENDENCIES_LIST_TO_HELM=$(getDependenciesListToHelm $environment "microservices" $microservice)
+
 set +e
 helm diff upgrade --install  "$microservice"  "$ROOT_DIR/charts/interop-eks-microservice-chart" \
   --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
   -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
+  $DEPENDENCIES_LIST_TO_HELM \
   -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" \
  $ADDITIONAL_VALUES
 diff_result=$?
