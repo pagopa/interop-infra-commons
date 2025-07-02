@@ -1,5 +1,6 @@
 locals {
   openapi_abs_path       = abspath(var.openapi_relative_path)
+
   type_options           = var.api_version != null ? ["-t", var.type] : []
   api_version_options    = var.api_version != null ? ["-v", var.api_version] : []
   service_prefix_options = var.service_prefix != null ? ["-p"] : []
@@ -8,9 +9,16 @@ locals {
   maintenance_options = (var.maintenance_mode && var.maintenance_openapi_path != null) ? ["-m", abspath(var.maintenance_openapi_path)] : []
 }
 
+resource "local_file" "templated_openapi" {
+  count    = var.templating_map != {} ? 1 : 0
+
+  content  = templatefile(local.openapi_abs_path, var.templating_map)
+  filename = replace(local.openapi_abs_path, ".yaml", "_templated.yaml")
+}
+
 data "external" "openapi_integration" {
   program = concat(["python3", "${path.module}/scripts/openapi_integration.py",
-    "-i", local.openapi_abs_path],
+    "-i", (var.templating_map != {} ? local_file.templated_openapi[0].filename : local.openapi_abs_path)],
   local.type_options, local.api_version_options, local.service_prefix_options, local.swagger_options, local.maintenance_options)
 }
 
@@ -24,7 +32,7 @@ resource "aws_api_gateway_rest_api" "this" {
 
   name = local.rest_apigw_name
 
-  body               = data.external.openapi_integration.result.integrated_openapi_yaml
+  body               = var.openapi_s3_bucket_name != null && var.openapi_s3_object_key != null ? aws_s3_object.openapi[0].content : data.external.openapi_integration.result.integrated_openapi_yaml
   put_rest_api_mode  = "overwrite"
   binary_media_types = ["multipart/form-data"]
 
