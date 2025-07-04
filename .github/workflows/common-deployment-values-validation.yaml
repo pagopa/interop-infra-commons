@@ -159,9 +159,11 @@ jobs:
             echo "No microservices found for environment ${{ inputs.environment }}"
           fi
 
-          if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
+          if [[ -n "$FAILED_MICROSERVICES" ]]; then
             echo "Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
-            exit 1
+            if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
+              exit 1
+            fi
           else
             echo "All microservices passed validation successfully"
           fi
@@ -242,7 +244,6 @@ jobs:
                 if [[ "${{ inputs.strict_kube_linter_checks }}" == "true" ]]; then
                   VALIDATION_ERROR_FLAG=1
                 fi
-                echo "Linting failed for cronjob: $CRONJOB_NAME"
               else
                 echo "Cronjob $CRONJOB_NAME passed all checks"
               fi
@@ -254,9 +255,11 @@ jobs:
             echo "No cronjobs found for environment ${{ inputs.environment }}"
           fi
 
-          if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
+          if [[ -n "$FAILED_CRONJOBS" ]]; then
             echo "Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
-            exit 1
+            if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
+              exit 1
+            fi
           else
             echo "All cronjobs passed validation successfully"
           fi
