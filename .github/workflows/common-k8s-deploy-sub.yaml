@@ -235,9 +235,6 @@ jobs:
             K8S_NAMESPACE=$(cat template.yaml | yq 'select(.kind == "Deployment") | .metadata.namespace')
             MICROSERVICE_FULLNAME=$(cat template.yaml | yq 'select(.kind == "Deployment") | .metadata.name')
 
-            CURRENT_RESOURCE_VERSION=$(kubectl get deployment "$MICROSERVICE_FULLNAME" \
-              -n "$K8S_NAMESPACE" -o jsonpath='{.metadata.resourceVersion}')
-
             echo "INFO - Apply changes for $MICROSERVICE_FULLNAME."
             if [[ "${{ inputs.use_kubectl_apply }}" == "true" ]]; then
               $SCRIPTS_FOLDER/kubectlApply-svc-single-standalone.sh \
@@ -260,29 +257,6 @@ jobs:
                 -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml
             fi
 
-            # TODO: rimuovere
-            # Deployment resourceVersion should be updated after the apply or upgrade if successfully executed (always updated when helm upgrade is forced)
-            POLL_INTERVAL=5
-            start_time=$(date +%s)
-            while true; do
-              UPDATED_RESOURCE_VERSION=$(kubectl get deploy "$MICROSERVICE_FULLNAME" \
-                -n "$K8S_NAMESPACE" -o jsonpath='{.metadata.resourceVersion}')
-              if [[ "$UPDATED_RESOURCE_VERSION" != "$CURRENT_RESOURCE_VERSION" ]]; then
-                echo "Resource version changed from $CURRENT_RESOURCE_VERSION to $UPDATED_RESOURCE_VERSION"
-                break
-              fi
-
-              echo "Resource version has not yet changed, waiting for $POLL_INTERVAL seconds before checking again..."
-
-              current_time=$(date +%s)
-              elapsed=$(( current_time - start_time ))
-              # Check if the elapsed time exceeds the timeout (prevent infinite loop if no diff is found but helm upgrade is executed)
-              if (( elapsed > "$TIMEOUT_SECONDS" )); then
-                echo "::error::Timeout after ${TIMEOUT_SECONDS}s waiting for $MICROSERVICE_FULLNAME resource version to change."
-                exit 1
-              fi
-              sleep $POLL_INTERVAL
-            done
             echo "Deploy for $MICROSERVICE_FULLNAME completed successfully."
 
           elif [[ "${{ env.cronjob_defined }}" == "true" ]]; then
