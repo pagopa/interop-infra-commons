@@ -108,16 +108,6 @@ function setupHelmDeps()
             tar -xzf "$filename" -C "$target_dir" --strip-components=1
             rm -f "$filename"
         done
-    else
-    #  Move downloaded charts not extracted to the root charts directory
-        if find charts/charts -maxdepth 1 -name '*.tgz' | grep -q .; then
-            if [[ $verbose == true ]]; then
-                echo "Moving charts to root charts directory"
-            fi
-            mv charts/charts/*.tgz charts/
-        fi
-    fi
-    # Remove temp charts directory
     if [[ $verbose == true ]]; then
         echo "Removing charts/charts directory"
     fi
