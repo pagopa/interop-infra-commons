@@ -213,7 +213,7 @@ jobs:
               TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
             else
               echo "::warning::INFO - No timeout specified for Helm upgrade, using dynamic timeout value."
-              BATCH_WAIT=30
+              BATCH_WAIT=30 # TODO ${vars.BATCH_WAIT_SECONDS:-300}
               TIMEOUT_SECONDS=$(./$SCRIPTS_FOLDER/get-rollout-dynamic-wait.sh --namespace $ENVIRONMENT --deployment $TARGET  --batch-wait $BATCH_WAIT)
 
               echo "Dynamic timeout calculated: $TIMEOUT_SECONDS seconds."
@@ -259,6 +259,7 @@ jobs:
                 -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml
             fi
 
+            # TODO: rimuovere
             # Deployment resourceVersion should be updated after the apply or upgrade if successfully executed (always updated when helm upgrade is forced)
             POLL_INTERVAL=5
             start_time=$(date +%s)
