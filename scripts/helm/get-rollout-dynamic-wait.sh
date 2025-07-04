@@ -12,7 +12,7 @@ Usage: $0 --deployment <deployment-name> --namespace <namespace> --batch-wait <s
 
   --deployment | -d <deployment-name>   Name of the Deployment to inspect
   --namespace | -n <namespace>          Namespace of the Deployment (optional, defaults to "default")
-  --batch-wait | -b <seconds>           Wait time for each rollout batch in seconds (default: 30s)
+  --batch-wait | -b <seconds>           Wait time for each rollout batch in seconds (default: 30s) -> TODO: obbligatorio
 
 Given a Deployment name, a namespace and a Helm template, extracts:
 
@@ -121,6 +121,7 @@ dynamic_wait() {
 
     # total wait = batches * wait per single batch in seconds
     echo $(( batches * waitPerBatch ))
+    # TODO bc binary calculator
 }
 
 computeDeploymentNameFromTemplate() {
@@ -157,42 +158,6 @@ computeDeploymentNameFromTemplate() {
     done
 
     echo ${deploymentName:-""}
-}
-
-extractMaxSurgeFromCluster() {
-    local deployment=$1
-    local namespace=$2
-    local maxSurge=""
-
-    if [[ -z "$deployment" ]]; then
-        echo "Error: deployment must be set and non-empty" >&2
-        exit 1
-    fi
-    if [[ -z "$namespace" ]]; then
-        echo "Error: namespace must be set and non-empty" >&2
-        exit 1
-    fi
-    
-    maxSurge=$(kubectl get deployment "$deployment" -n "$namespace" -o jsonpath='{.spec.strategy.rollingUpdate.maxSurge}')
-    echo $maxSurge
-}
-
-extractReplicasFromCluster() {
-    local deployment=$1
-    local namespace=$2
-    local replicas=""
-
-    if [[ -z "$deployment" ]]; then
-        echo "Error: deployment must be set and non-empty" >&2
-        exit 1
-    fi
-    if [[ -z "$namespace" ]]; then
-        echo "Error: namespace must be set and non-empty" >&2
-        exit 1
-    fi
-    
-    replicas=$(kubectl get deployment "$deployment" -n "$namespace" -o jsonpath='{.spec.replicas}')
-    echo $replicas
 }
 
 extractMaxSurgeFromTemplate() {
@@ -275,20 +240,12 @@ maxSurge=$(extractMaxSurgeFromTemplate "$helmTemplate")
 deploymentName=$(computeDeploymentNameFromTemplate "$helmTemplate")
 
 if [[ -z "$replicas" ]]; then
-    # Look for replicas in the cluster for deployment '$deploymentName' in namespace '$namespace'
-    replicas=$(extractReplicasFromCluster "$deploymentName" "$namespace")
-    if [[ -z "$replicas" ]]; then
-        echo "Error: Unable to extract replicas from template or cluster for deployment '$deployment' in namespace '$namespace'" >&2
-        exit 1
-    fi
+    echo "Error: Unable to extract replicas from template for deployment '$deployment' in namespace '$namespace'" >&2
+    exit 1
 fi
-if [[ -z "$maxSurge" ]]; then
-    # Look for maxSurge in the cluster for deployment '$deploymentName' in namespace '$namespace'
-    maxSurge=$(extractMaxSurgeFromCluster "$deploymentName" "$namespace")
-    if [[ -z "$maxSurge" ]]; then
-        echo "Error: Unable to extract maxSurge from template or cluster for deployment '$deployment' in namespace '$namespace'" >&2
-        exit 1
-    fi
+if [[ -z "$maxSurge" ]]; then # TODO: errore
+    echo "Error: Unable to extract maxSurge from template or cluster for deployment '$deployment' in namespace '$namespace'" >&2
+    exit 1
 fi
 
 #echo " Deployment: $deployment"
