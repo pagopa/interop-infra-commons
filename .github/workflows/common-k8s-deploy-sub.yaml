@@ -185,6 +185,9 @@ jobs:
 
       - name: Deploy
         id: deploy
+        env:
+          UPGRADE_NO_WAIT: ${{ inputs.helm_upgrade_no_wait }}
+          FORCE_UPGRADE: ${{ inputs.helm_force_upgrade }}
         run: |
           set -euo pipefail
 
@@ -198,7 +201,7 @@ jobs:
             fi
           fi
 
-          if [[ "${{ inputs.helm_upgrade_no_wait }}" == "true" ]]; then
+          if [[ "$UPGRADE_NO_WAIT" == "true" ]]; then
               echo "::warning::INFO - Helm upgrade will not wait for the deployment to finish."
               NOWAIT_OPT="--no-wait"
           else
@@ -242,7 +245,7 @@ jobs:
                 --output console
             else
               HELM_UPGRADE_OPTIONS="--debug --skip-dep $TIMEOUT_OPT $NOWAIT_OPT --output console"
-              if [[ "${{ inputs.helm_force_upgrade }}" == "true" ]]; then
+              if [[ "$FORCE_UPGRADE" == "true" ]]; then
                 echo "::warning::INFO - Helm force upgrade requested for $MICROSERVICE_FULLNAME."
                 HELM_UPGRADE_OPTIONS="$HELM_UPGRADE_OPTIONS --force"
               fi
@@ -299,7 +302,7 @@ jobs:
                 --output console
             else
               HELM_UPGRADE_OPTIONS="--debug --skip-dep --output console"
-              if [[ "${{ inputs.helm_force_upgrade }}" == "true" ]]; then
+              if [[ "$FORCE_UPGRADE" == "true" ]]; then
                 echo "::warning::INFO - Helm force upgrade requested for $CRONJOB_FULLNAME."
                 HELM_UPGRADE_OPTIONS="$HELM_UPGRADE_OPTIONS --force"
               fi
