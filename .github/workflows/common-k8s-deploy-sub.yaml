@@ -58,6 +58,7 @@ jobs:
   deploy_workflow:
     runs-on: [ self-hosted, "run_id:${{ inputs.environment }}-${{ github.run_id }}" ]
     environment: ${{ inputs.environment }}
+    name: "${{ inputs.target }}"
     steps:
       - name: Check inputs
         id: check_inputs
