@@ -121,53 +121,16 @@ dynamic_wait() {
     else
         surgeCount=$((maxSurge))
     fi
-
     # surgeCount between 1 and replicas
     (( surgeCount < 1 )) && surgeCount=1
     (( surgeCount > replicas )) && surgeCount=$replicas
-
+    
     # compute how many “batches” are needed to rollout all replicas (max #surgeCount pods per batch)
     local batches=$( ceil $((replicas + surgeCount)) $surgeCount)
 
     # total wait = batches * wait per single batch in seconds
     echo $(( batches * waitPerBatch ))
     # TODO bc binary calculator
-}
-
-computeDeploymentNameFromTemplate() {
-    local template=$1
-    if [[ -z "$template" ]]; then
-        echo "Error: template must be set and non-empty" >&2
-        exit 1
-    fi
-
-    local deploymentName=""
-    local block=""
-    local isDeployment=""
-
-    # remove leading '---' and any newline that follows it
-    template="${template#---$'\n'}"
-
-    while [[ -n "$template" ]]; do
-        # take everything up to the next '---' with leading newline (or the rest of the string)
-        block="${template%%$'\n---'*}"
-        isDeployment=$(echo "$block" | yq eval 'select(.kind == "Deployment")')
-
-        if [[ -n "$isDeployment" ]]; then
-            # Check name value in the Deployment metadata.
-            deploymentName=$(echo "$block" | yq eval '.metadata.name // ""')
-            break
-        fi
-
-        # if there's another separator, cut it (and the newline) off and repeat
-        if [[ "$template" == *$'\n---'* ]]; then
-            template="${template#*${block}$'\n---'}"
-        else
-            break
-        fi
-    done
-
-    echo ${deploymentName:-""}
 }
 
 extractMaxSurgeFromTemplate() {
@@ -177,31 +140,7 @@ extractMaxSurgeFromTemplate() {
         exit 1
     fi
 
-    local maxSurge=""
-    local block=""
-    local isDeployment=""
-
-    # remove leading '---' and any newline that follows it
-    template="${template#---$'\n'}"
-
-    while [[ -n "$template" ]]; do
-        # take everything up to the next '---' with leading newline (or the rest of the string)
-        block="${template%%$'\n---'*}"
-        isDeployment=$(echo "$block" | yq eval 'select(.kind == "Deployment")')
-
-        if [[ -n "$isDeployment" ]]; then
-            # Check maxSurge value in the Deployment spec.
-            maxSurge=$(echo "$block" | yq eval '.spec.strategy.rollingUpdate.maxSurge // ""')
-            break
-        fi
-
-        # if there's another separator, cut it (and the newline) off and repeat
-        if [[ "$template" == *$'\n---'* ]]; then
-            template="${template#*${block}$'\n---'}"
-        else
-            break
-        fi
-    done
+    local maxSurge=$(echo "$template" | yq ea 'select(.kind == "Deployment") | .spec.strategy.rollingUpdate.maxSurge // ""')
 
     echo ${maxSurge:-""}
 }
@@ -213,41 +152,14 @@ extractReplicasFromTemplate() {
         exit 1
     fi
 
-    local replicas=""
-    local block=""
-    local isDeployment=""
+    local replicas=$(echo "$template" | yq ea 'select(.kind == "Deployment") | .spec.replicas // ""')
 
-    # remove leading '---' and any newline that follows it
-    template="${template#---$'\n'}"
-
-    while [[ -n "$template" ]]; do
-        # take everything up to the next '---' with leading newline (or the rest of the string)
-        block="${template%%$'\n---'*}"
-        isDeployment=$(echo "$block" | yq eval 'select(.kind == "Deployment")')
-
-        if [[ -n "$isDeployment" ]]; then
-            # Check replicas value in the Deployment spec.
-            replicas=$(echo "$block" | yq eval '.spec.replicas // ""')
-            break
-        fi
-
-        # if there's another separator, cut it (and the newline) off and repeat
-        if [[ "$template" == *$'\n---'* ]]; then
-            template="${template#*${block}$'\n---'}"
-        else
-            break
-        fi
-    done
-
-    echo $replicas
+    echo ${replicas:-""}
 }
-
 
 helmTemplate=$(. "$SCRIPTS_FOLDER"/helmTemplate-svc-single.sh -e "$namespace" -dtl -sd -m "$deployment" -i "$ROOT_DIR/commons/$namespace/images.yaml" -o console)
 replicas=$(extractReplicasFromTemplate "$helmTemplate")
 maxSurge=$(extractMaxSurgeFromTemplate "$helmTemplate")
-
-deploymentName=$(computeDeploymentNameFromTemplate "$helmTemplate")
 
 if [[ -z "$replicas" ]]; then
     echo "Error: Unable to extract replicas from template for deployment '$deployment' in namespace '$namespace'" >&2
