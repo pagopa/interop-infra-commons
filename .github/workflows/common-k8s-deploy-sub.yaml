@@ -188,6 +188,9 @@ jobs:
         env:
           UPGRADE_NO_WAIT: ${{ inputs.helm_upgrade_no_wait }}
           FORCE_UPGRADE: ${{ inputs.helm_force_upgrade }}
+          ENVIRONMENT: ${{ inputs.environment }}
+          TARGET: ${{ inputs.target }}
+          TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
         run: |
           set -euo pipefail
 
@@ -196,7 +199,7 @@ jobs:
 
           helm_force_upgrade=false
           if [[ "${{ env.microservice_defined }}" == "true" ]]; then
-            if [[ "${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}" == "*" || ",${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}," == *",${{ inputs.target }},"* ]]; then
+            if [[ "${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}" == "*" || ",${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}," == *",$TARGET,"* ]]; then
               helm_force_upgrade=true
             fi
           fi
@@ -205,13 +208,13 @@ jobs:
               echo "::warning::INFO - Helm upgrade will not wait for the deployment to finish."
               NOWAIT_OPT="--no-wait"
           else
-            if [[ -n "${{ inputs.timeout_seconds }}" ]]; then
+            if [[ -n "$TIMEOUT_SECONDS" ]]; then
               echo "::warning::INFO - Helm upgrade will wait for the deployment to finish."
-              TIMEOUT_OPT="--timeout ${{ inputs.timeout_seconds }}s"
+              TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
             else
               echo "::warning::INFO - No timeout specified for Helm upgrade, using dynamic timeout value."
               BATCH_WAIT=30
-              TIMEOUT_SECONDS=$(./$SCRIPTS_FOLDER/get-rollout-dynamic-wait.sh --namespace ${{ inputs.environment }} --deployment ${{ inputs.target }}  --batch-wait $BATCH_WAIT)
+              TIMEOUT_SECONDS=$(./$SCRIPTS_FOLDER/get-rollout-dynamic-wait.sh --namespace $ENVIRONMENT --deployment $TARGET  --batch-wait $BATCH_WAIT)
 
               echo "Dynamic timeout calculated: $TIMEOUT_SECONDS seconds."
               TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
@@ -223,9 +226,9 @@ jobs:
           if [[ "${{ env.microservice_defined }}" == "true" ]]; then
             $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
               --debug \
-              --environment ${{ inputs.environment }} \
-              -m "${{ inputs.target }}" \
-              -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
+              --environment $ENVIRONMENT \
+              -m "$TARGET" \
+              -i $PROJECT_DIR/commons/$ENVIRONMENT/images.yaml \
               --output console > template.yaml
 
             K8S_NAMESPACE=$(cat template.yaml | yq 'select(.kind == "Deployment") | .metadata.namespace')
@@ -240,7 +243,7 @@ jobs:
                 --debug \
                 --skip-dep \
                 --environment "$K8S_NAMESPACE" \
-                -m "${{ inputs.target }}" \
+                -m "$TARGET" \
                 -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml \
                 --output console
             else
@@ -252,7 +255,7 @@ jobs:
               $SCRIPTS_FOLDER/helmUpgrade-svc-single-standalone.sh \
                 $HELM_UPGRADE_OPTIONS \
                 --environment "$K8S_NAMESPACE" \
-                -m "${{ inputs.target }}" \
+                -m "$TARGET" \
                 -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml
             fi
 
@@ -272,8 +275,8 @@ jobs:
               current_time=$(date +%s)
               elapsed=$(( current_time - start_time ))
               # Check if the elapsed time exceeds the timeout (prevent infinite loop if no diff is found but helm upgrade is executed)
-              if (( elapsed > "${{ inputs.timeout_seconds }}" )); then
-                echo "::error::Timeout after ${{ inputs.timeout_seconds }}s waiting for $MICROSERVICE_FULLNAME resource version to change."
+              if (( elapsed > "$TIMEOUT_SECONDS" )); then
+                echo "::error::Timeout after ${TIMEOUT_SECONDS}s waiting for $MICROSERVICE_FULLNAME resource version to change."
                 exit 1
               fi
               sleep $POLL_INTERVAL
@@ -283,9 +286,9 @@ jobs:
           elif [[ "${{ env.cronjob_defined }}" == "true" ]]; then
             $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
               --debug \
-              --environment ${{ inputs.environment }} \
-              --job "${{ inputs.target }}" \
-              -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
+              --environment $ENVIRONMENT \
+              --job "$TARGET" \
+              -i $PROJECT_DIR/commons/$ENVIRONMENT/images.yaml \
               --output console > template.yaml
 
             K8S_NAMESPACE=$(cat template.yaml | yq 'select(.kind == "CronJob") | .metadata.namespace')
@@ -297,7 +300,7 @@ jobs:
                 --debug \
                 --skip-dep \
                 --environment "$K8S_NAMESPACE" \
-                -j "${{ inputs.target }}" \
+                -j "$TARGET" \
                 -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml \
                 --output console
             else
@@ -309,7 +312,7 @@ jobs:
               $SCRIPTS_FOLDER/helmUpgrade-cron-single-standalone.sh \
                 $HELM_UPGRADE_OPTIONS \
                 --environment "$K8S_NAMESPACE" \
-                -j "${{ inputs.target }}" \
+                -j "$ENVIRONMENT" \
                 -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml
             fi
           fi
