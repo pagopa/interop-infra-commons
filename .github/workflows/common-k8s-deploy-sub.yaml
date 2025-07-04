@@ -198,13 +198,20 @@ jobs:
             fi
           fi
 
-          if [[ -n "${{ inputs.timeout_seconds }}" ]]; then
-            if [[ "${{ inputs.helm_upgrade_no_wait }}" == "true" ]]; then
+          if [[ "${{ inputs.helm_upgrade_no_wait }}" == "true" ]]; then
               echo "::warning::INFO - Helm upgrade will not wait for the deployment to finish."
               NOWAIT_OPT="--no-wait"
-            else
+          else
+            if [[ -n "${{ inputs.timeout_seconds }}" ]]; then
               echo "::warning::INFO - Helm upgrade will wait for the deployment to finish."
               TIMEOUT_OPT="--timeout ${{ inputs.timeout_seconds }}s"
+            else
+              echo "::warning::INFO - No timeout specified for Helm upgrade, using dynamic timeout value."
+              BATCH_WAIT=30
+              TIMEOUT_SECONDS=$(./$SCRIPTS_FOLDER/get-rollout-dynamic-wait.sh --namespace ${{ inputs.environment }} --deployment ${{ inputs.target }}  --batch-wait $BATCH_WAIT)
+
+              echo "Dynamic timeout calculated: $TIMEOUT_SECONDS seconds."
+              TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
             fi
           fi
 
