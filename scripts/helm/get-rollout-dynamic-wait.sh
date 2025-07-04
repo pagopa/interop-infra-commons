@@ -10,18 +10,16 @@ usage() {
   cat <<EOF
 Usage: $0 --deployment <deployment-name> --namespace <namespace> --batch-wait <seconds>
 
-  --deployment | -d <deployment-name>   Name of the Deployment to inspect
-  --namespace | -n <namespace>          Namespace of the Deployment (optional, defaults to "default")
-  --batch-wait | -b <seconds>           Wait time for each rollout batch in seconds (default: 30s) -> TODO: obbligatorio
+  --deployment | -d <deployment-name>   [required] Name of the Deployment to inspect
+  --namespace | -n <namespace>          [required] Namespace of the Deployment
+  --batch-wait | -b <seconds>           [required] Wait time for each rollout batch in seconds
 
-Given a Deployment name, a namespace and a Helm template, extracts:
+Given a Deployment name, a namespace and a batch wait in seconds, extracts:
 
   • spec.replicas  
   • spec.strategy.rollingUpdate.maxSurge  
 
-Then computes an **estimated** rollout wait time assuming each rollout batch
-takes \$BATCH_WAIT seconds (default 30s). You can override with the
-environment variable BATCH_WAIT.
+Then computes an **estimated** rollout wait time assuming each rollout batch takes <batch-wait> seconds.
 
 EOF
   exit 1
@@ -30,8 +28,7 @@ EOF
 
 deployment=""
 namespace=""
-template=""
-BATCH_WAIT="30"
+BATCH_WAIT=""
 
 while [[ $# -gt 0 ]];
 do
@@ -64,6 +61,19 @@ do
           ;;
     esac
 done
+
+if [[ -z "$deployment" ]]; then
+    echo "Error: --deployment is required and must be set" >&2
+    usage
+fi
+if [[ -z "$namespace" ]]; then
+    echo "Error: --namespace is required and must be set" >&2
+    usage
+fi
+if [[ -z "$BATCH_WAIT" ]]; then
+    echo "Error: --batch-wait is required and must be set" >&2
+    usage
+fi
 
 ceil() {
     local num=$1
@@ -243,7 +253,7 @@ if [[ -z "$replicas" ]]; then
     echo "Error: Unable to extract replicas from template for deployment '$deployment' in namespace '$namespace'" >&2
     exit 1
 fi
-if [[ -z "$maxSurge" ]]; then # TODO: errore
+if [[ -z "$maxSurge" ]]; then
     echo "Error: Unable to extract maxSurge from template or cluster for deployment '$deployment' in namespace '$namespace'" >&2
     exit 1
 fi
