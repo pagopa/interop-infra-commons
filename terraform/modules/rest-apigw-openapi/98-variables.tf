@@ -31,6 +31,7 @@ variable "openapi_relative_path" {
 variable "domain_name" {
   description = "Domain name to be assigned to the API Gateway"
   type        = string
+  default     = null
 }
 
 variable "vpc_link_id" {
