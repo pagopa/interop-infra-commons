@@ -92,6 +92,7 @@ ceil() {
         exit 1
     fi
 
+    # bash expression returns floor division, so we need to add 1 if there is a remainder: e.g. $(( 8/3 )) => 2, to get ceil $(( 8/3+1 )) => 3
     echo $((num%denom?num/denom+1:num/denom))
 }
 
