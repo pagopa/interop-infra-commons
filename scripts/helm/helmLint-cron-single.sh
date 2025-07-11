@@ -15,6 +15,7 @@ help()
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print linting output on terminal
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -cp | --chart-path ] Path to Chart.yaml (default: ./Chart.yaml)
         [ -h | --help ] This help"
     exit 2
 }
@@ -27,6 +28,7 @@ post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -55,7 +57,7 @@ do
           ;;
         -i | --image )
           images_file=$2
-          
+
           step=2
           shift 2
           ;;
@@ -84,6 +86,12 @@ do
           step=1
           shift 1
           ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || "When specified, chart path cannot be null" || help
+          chart_path=$2
+          step=2
+          shift 2
+          ;;
         -h | --help )
           help
           ;;
@@ -104,7 +112,7 @@ if [[ -z $job || $job == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --chart-path "$chart_path"
 fi
 
 VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)
@@ -131,9 +139,9 @@ fi
 # Find image version and digest
 bash "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 
-LINT_CMD="helm lint "
+LINT_CMD="helm lint"
 if [[ $enable_debug == true ]]; then
-    LINT_CMD=$LINT_CMD"--debug "
+  LINT_CMD+=" --debug"
 fi
 
 OUTPUT_TO="> \"$OUT_DIR/$job.out.yaml\""
@@ -141,7 +149,11 @@ if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
 fi
 
-LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
+LINT_CMD+=" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\""
+LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\""
+LINT_CMD+=" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\""
+LINT_CMD+=" --set enableLookup=false"
+LINT_CMD+=" $OUTPUT_TO"
 
 eval $LINT_CMD
 
