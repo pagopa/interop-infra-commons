@@ -173,7 +173,7 @@ echo "[CRONOJB-UPGRADE] Computing image version and digest for cronjob '$job'."
 # END - Find image version and digest
 
 UPGRADE_CMD="helm upgrade "
-UPGRADE_CMD="$UPGRADE_CMD --dependency-update --take-ownership --create-namespace --history-max $history_max "
+UPGRADE_CMD="$UPGRADE_CMD --dependency-update --take-ownership --history-max $history_max "
 UPGRADE_CMD="$UPGRADE_CMD $OPTIONS "
 UPGRADE_CMD="$UPGRADE_CMD --namespace $ENV "
 UPGRADE_CMD="$UPGRADE_CMD --install $job \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" "

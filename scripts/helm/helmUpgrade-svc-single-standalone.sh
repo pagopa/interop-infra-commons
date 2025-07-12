@@ -196,7 +196,7 @@ echo "[SVC-UPGRADE] Computing image version and digest for microservice '$micros
 # END - Find image version and digest
 
 UPGRADE_CMD="helm upgrade "
-UPGRADE_CMD=$UPGRADE_CMD"--dependency-update --take-ownership --create-namespace --history-max $history_max "
+UPGRADE_CMD=$UPGRADE_CMD"--dependency-update --take-ownership --history-max $history_max "
 UPGRADE_CMD=$UPGRADE_CMD"$OPTIONS "
 UPGRADE_CMD=$UPGRADE_CMD"--namespace $ENV "
 UPGRADE_CMD=$UPGRADE_CMD"--install $microservice \"$ROOT_DIR/charts/interop-eks-microservice-chart\" "
