@@ -16,11 +16,6 @@ on:
         required: false
         type: string
         default: ''
-      helm_upgrade_no_wait:
-        description: 'Do not wait for Helm upgrade to finish'
-        required: false
-        type: boolean
-        default: false
       use_kubectl_diff:
         description: 'Use kubectl diff instead of helm diff'
         required: false
@@ -113,7 +108,6 @@ jobs:
       kind: "microservice"
       target: ${{ matrix.target }}
       infra_commons_tag: ${{ inputs.infra_commons_tag }}
-      helm_upgrade_no_wait: ${{ inputs.helm_upgrade_no_wait }}
       use_kubectl_diff: ${{ inputs.use_kubectl_diff }}
       use_kubectl_apply: ${{ inputs.use_kubectl_apply }}
   
