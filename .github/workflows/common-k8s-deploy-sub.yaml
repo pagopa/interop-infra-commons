@@ -8,9 +8,10 @@ on:
         required: true
         type: string
       timeout_seconds:
-        description: 'Kubectl apply wait timeout in seconds for Deployments'
+        description: 'Kubectl apply wait timeout in seconds for Deployments, 0 means do not wait for Helm upgrade to finish'
         required: false
         type: number
+        default: -1
       kind:
         description: 'Kind of resource to deploy (microservice or cronjob)'
         required: true
@@ -24,11 +25,6 @@ on:
         required: false
         type: string
         default: ''
-      helm_upgrade_no_wait:
-        description: 'Do not wait for Helm upgrade to finish'
-        required: false
-        type: boolean
-        default: false
       use_kubectl_diff:
         description: 'Use kubectl diff instead of helm diff'
         required: false
@@ -187,7 +183,6 @@ jobs:
       - name: Deploy
         id: deploy
         env:
-          UPGRADE_NO_WAIT: ${{ inputs.helm_upgrade_no_wait }}
           ENVIRONMENT: ${{ inputs.environment }}
           TARGET: ${{ inputs.target }}
           TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
@@ -204,27 +199,27 @@ jobs:
             FORCE_UPGRADE_CJ='${{ vars.HELM_FORCE_UPGRADE_CRONJOBS_CSV == '*' || contains(vars.HELM_FORCE_UPGRADE_CRONJOBS_CSV, matrix.microservice) }}'
           fi
 
-          if [[ "$UPGRADE_NO_WAIT" == "true" ]]; then
-              echo "::warning::INFO - Helm upgrade will not wait for the deployment to finish."
-              NOWAIT_OPT="--no-wait"
-          else
-            if [[ -n "$TIMEOUT_SECONDS" ]]; then
-              echo "INFO - Helm upgrade will wait for the deployment to finish."
-              TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
-            else
-              echo "INFO - No timeout specified for Helm upgrade, using dynamic timeout value."
-              if [[ -z "${BATCH_WAIT_SECONDS:-}" ]]; then
+          if [[ "$TIMEOUT_SECONDS" -eq 0 ]]; then
+            echo "::warning::INFO - Helm upgrade will not wait for the deployment to finish."
+            NOWAIT_OPT="--no-wait"
+
+          elif [[ "$TIMEOUT_SECONDS" -lt 0 ]]; then
+            echo "INFO - No timeout specified for Helm upgrade, using dynamic timeout value."
+            if [[ -z "${BATCH_WAIT_SECONDS:-}" ]]; then
                 # Default batch wait time if not set
                 BATCH_WAIT_SECONDS=300
-              fi
-
-              TIMEOUT_SECONDS=$(./$SCRIPTS_FOLDER/get-rollout-dynamic-wait.sh --namespace $ENVIRONMENT --deployment $TARGET  --batch-wait $BATCH_WAIT_SECONDS)
-
-              echo "Dynamic timeout calculated: $TIMEOUT_SECONDS seconds."
-              TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
             fi
-          fi
 
+            TIMEOUT_SECONDS=$(./$SCRIPTS_FOLDER/get-rollout-dynamic-wait.sh --namespace $ENVIRONMENT --deployment $TARGET  --batch-wait $BATCH_WAIT_SECONDS)
+
+            echo "Dynamic timeout calculated: $TIMEOUT_SECONDS seconds."
+            TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
+
+          else
+            echo "INFO - Helm upgrade will wait for the deployment to finish."
+            TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
+          fi
+          
           export PROJECT_DIR=$(pwd)
 
           if [[ "${{ env.microservice_defined }}" == "true" ]]; then
