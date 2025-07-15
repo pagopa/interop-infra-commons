@@ -37,6 +37,7 @@ resource "terraform_data" "manage_role" {
       ADMIN_PASSWORD=$(echo $secret_json | jq -r '.password')
 
       export PGPASSWORD=$ADMIN_PASSWORD
+      export UUID=$(uuidgen | tr '-' '_')
 
       envsubst < ${local.path_to_scripts}/manage_role.sql | \
       psql --host "$HOST" --username "$ADMIN_USERNAME" --port "$DATABASE_PORT" --dbname "$DATABASE"
@@ -128,6 +129,7 @@ resource "terraform_data" "delete_previous_role" {
 
         export PGPASSWORD=$ADMIN_PASSWORD
         export ADMIN_USERNAME=$ADMIN_USERNAME
+        export UUID=$(uuidgen | tr '-' '_')
         
         echo "Deleting old role $USERNAME from database $DATABASE"
         envsubst < ${self.input.path_to_scripts}/delete_role.sql | \
@@ -181,6 +183,7 @@ resource "terraform_data" "delete_role" {
 
       export PGPASSWORD=$ADMIN_PASSWORD
       export ADMIN_USERNAME=$ADMIN_USERNAME
+      export UUID=$(uuidgen | tr '-' '_')
       
       echo "Deleting role $USERNAME from database $DATABASE"
       envsubst < ${self.input.path_to_scripts}/delete_role.sql | \

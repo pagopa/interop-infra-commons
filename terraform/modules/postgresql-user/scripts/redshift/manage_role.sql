@@ -1,6 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS ${SCHEMA_NAME};
 
-CREATE OR REPLACE PROCEDURE ${SCHEMA_NAME}.create_user(user_name VARCHAR, user_password VARCHAR, groups VARCHAR) 
+CREATE OR REPLACE PROCEDURE ${SCHEMA_NAME}.create_user_${UUID}(user_name VARCHAR, user_password VARCHAR, groups VARCHAR) 
 AS $$
 DECLARE 
   create_sql TEXT;
@@ -59,4 +59,8 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql;
 
-CALL ${SCHEMA_NAME}.create_user('${USERNAME}', '${PASSWORD}', '${GRANT_GROUPS}');
+-- Execute the procedure
+CALL ${SCHEMA_NAME}.create_user_${UUID}('${USERNAME}', '${PASSWORD}', '${GRANT_GROUPS}');
+
+-- Drop the procedure
+DROP PROCEDURE ${SCHEMA_NAME}.create_user_${UUID};
