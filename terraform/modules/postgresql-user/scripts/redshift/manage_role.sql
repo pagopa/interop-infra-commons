@@ -63,4 +63,4 @@ $$ LANGUAGE plpgsql;
 CALL ${SCHEMA_NAME}.create_user_${UUID}('${USERNAME}', '${PASSWORD}', '${GRANT_GROUPS}');
 
 -- Drop the procedure
-DROP PROCEDURE ${SCHEMA_NAME}.create_user_${UUID}(user_name VARCHAR, user_password VARCHAR, groups VARCHAR);
+DROP PROCEDURE ${SCHEMA_NAME}.create_user_${UUID}(VARCHAR, VARCHAR, VARCHAR);
