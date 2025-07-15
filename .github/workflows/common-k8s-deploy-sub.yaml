@@ -135,7 +135,7 @@ jobs:
           export PROJECT_DIR=$(pwd)
           DIFF_EXIT_CODE=1
 
-         
+
           if [[ "${{ env.microservice_defined }}" == "true" ]]; then
             set +e
             if [[ "${{ inputs.use_kubectl_diff }}" == "true" ]]; then
@@ -188,7 +188,6 @@ jobs:
         id: deploy
         env:
           UPGRADE_NO_WAIT: ${{ inputs.helm_upgrade_no_wait }}
-          FORCE_UPGRADE: ${{ inputs.helm_force_upgrade }}
           ENVIRONMENT: ${{ inputs.environment }}
           TARGET: ${{ inputs.target }}
           TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
@@ -199,11 +198,10 @@ jobs:
           TIMEOUT_OPT=""
           NOWAIT_OPT=""
 
-          helm_force_upgrade=false
           if [[ "${{ env.microservice_defined }}" == "true" ]]; then
-            if [[ "${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}" == "*" || ",${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}," == *",$TARGET,"* ]]; then
-              helm_force_upgrade=true
-            fi
+            FORCE_UPGRADE_MS='${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV == '*' || contains(vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV, matrix.microservice) }}'
+          else
+            FORCE_UPGRADE_CJ='${{ vars.HELM_FORCE_UPGRADE_CRONJOBS_CSV == '*' || contains(vars.HELM_FORCE_UPGRADE_CRONJOBS_CSV, matrix.microservice) }}'
           fi
 
           if [[ "$UPGRADE_NO_WAIT" == "true" ]]; then
@@ -211,10 +209,10 @@ jobs:
               NOWAIT_OPT="--no-wait"
           else
             if [[ -n "$TIMEOUT_SECONDS" ]]; then
-              echo "::warning::INFO - Helm upgrade will wait for the deployment to finish."
+              echo "INFO - Helm upgrade will wait for the deployment to finish."
               TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
             else
-              echo "::warning::INFO - No timeout specified for Helm upgrade, using dynamic timeout value."
+              echo "INFO - No timeout specified for Helm upgrade, using dynamic timeout value."
               if [[ -z "${BATCH_WAIT_SECONDS:-}" ]]; then
                 # Default batch wait time if not set
                 BATCH_WAIT_SECONDS=300
@@ -251,7 +249,7 @@ jobs:
                 --output console
             else
               HELM_UPGRADE_OPTIONS="--debug --skip-dep $TIMEOUT_OPT $NOWAIT_OPT --output console"
-              if [[ "$FORCE_UPGRADE" == "true" ]]; then
+              if [[ "$FORCE_UPGRADE_MS" == "true" ]]; then
                 echo "::warning::INFO - Helm force upgrade requested for $MICROSERVICE_FULLNAME."
                 HELM_UPGRADE_OPTIONS="$HELM_UPGRADE_OPTIONS --force"
               fi
@@ -286,14 +284,14 @@ jobs:
                 --output console
             else
               HELM_UPGRADE_OPTIONS="--debug --skip-dep --output console"
-              if [[ "$FORCE_UPGRADE" == "true" ]]; then
+              if [[ "$FORCE_UPGRADE_CJ" == "true" ]]; then
                 echo "::warning::INFO - Helm force upgrade requested for $CRONJOB_FULLNAME."
                 HELM_UPGRADE_OPTIONS="$HELM_UPGRADE_OPTIONS --force"
               fi
               $SCRIPTS_FOLDER/helmUpgrade-cron-single-standalone.sh \
                 $HELM_UPGRADE_OPTIONS \
                 --environment "$K8S_NAMESPACE" \
-                -j "$ENVIRONMENT" \
+                -j "$TARGET" \
                 -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml
             fi
           fi
