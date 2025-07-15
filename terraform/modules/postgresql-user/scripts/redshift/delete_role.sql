@@ -40,4 +40,4 @@ END $$;
 CALL ${SCHEMA_NAME}.drop_user_with_revoke_${UUID}('${USERNAME}');
 
 -- Drop the procedure
-DROP PROCEDURE ${SCHEMA_NAME}.drop_user_with_revoke_${UUID};
+DROP PROCEDURE ${SCHEMA_NAME}.drop_user_with_revoke_${UUID}(target_user VARCHAR);
