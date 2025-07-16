@@ -14,6 +14,7 @@ help()
         [ -i | --image ] File with microservice image tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -26,6 +27,7 @@ post_clean=false
 skip_dep=false
 images_file=""
 disable_templating_lookup=false
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -59,7 +61,7 @@ do
           ;;
         -i | --image )
           images_file=$2
-          
+
           step=2
           shift 2
           ;;
@@ -72,6 +74,12 @@ do
           disable_templating_lookup=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -h | --help )
           help
@@ -93,7 +101,7 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --chart-path "$chart_path" --environment "$environment"
   skip_dep=true
 fi
 

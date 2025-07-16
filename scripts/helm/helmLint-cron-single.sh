@@ -15,7 +15,7 @@ help()
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print linting output on terminal
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
-        [ -cp | --chart-path ] Path to Chart.yaml (default: ./Chart.yaml)
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -57,7 +57,6 @@ do
           ;;
         -i | --image )
           images_file=$2
-
           step=2
           shift 2
           ;;
@@ -72,7 +71,6 @@ do
           if [[ $output_redirect != "console" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -87,7 +85,7 @@ do
           shift 1
           ;;
         -cp | --chart-path )
-          [[ "${2:-}" ]] || "When specified, chart path cannot be null" || help
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
           chart_path=$2
           step=2
           shift 2
@@ -112,7 +110,7 @@ if [[ -z $job || $job == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --chart-path "$chart_path"
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --chart-path "$resolved_chart_path" --environment "$environment"
 fi
 
 VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)

@@ -18,7 +18,7 @@ help()
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print linting output on terminal
         [ -c | --clean ] Clean files and directories after scripts successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
-        [ -cp | --chart-path ] Path to Chart.yaml (default: ./Chart.yaml)
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -41,86 +41,71 @@ do
         -e| --environment )
             [[ "${2:-}" ]] || "Environment cannot be null" || help
 
-          environment=$2
-          step=2
-          shift 2
-          ;;
+            environment=$2
+            step=2
+            shift 2
+            ;;
         -m | --microservices )
-          lint_microservices=true
-          step=1
-          shift 1
-          ;;
+            lint_microservices=true
+            step=1
+            shift 1
+            ;;
         -j | --jobs )
-          lint_jobs=true
-          step=1
-          shift 1
-          ;;
+            lint_jobs=true
+            step=1
+            shift 1
+            ;;
         -i | --image )
-          images_file=$2
+            images_file=$2
 
-          step=2
-          shift 2
-          ;;
+            step=2
+            shift 2
+            ;;
         -d | --debug)
-          enable_debug=true
-          step=1
-          shift 1
-          ;;
+            enable_debug=true
+            step=1
+            shift 1
+            ;;
         -o | --output)
-          [[ "${2:-}" ]] || "When specified, output cannot be null" || help
-          output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
-            help
-          fi
+            [[ "${2:-}" ]] || "When specified, output cannot be null" || help
+            output_redirect=$2
+            if [[ $output_redirect != "console" ]]; then
+                help
+            fi
 
-          step=2
-          shift 2
-          ;;
+            step=2
+            shift 2
+            ;;
         -c | --clean)
-          post_clean=true
-          step=1
-          shift 1
-          ;;
+            post_clean=true
+            step=1
+            shift 1
+            ;;
         -sd | --skip-dep)
-          skip_dep=true
-          step=1
-          shift 1
-          ;;
+            skip_dep=true
+            step=1
+            shift 1
+            ;;
         -cp | --chart-path )
-          chart_path=$2
-          step=2
-          shift 2
-          ;;
+            [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+            chart_path=$2
+            step=2
+            shift 2
+            ;;
         -h | --help )
-          help
-          ;;
+            help
+            ;;
         *)
-          echo "Unexpected option: $1"
-          help
-          ;;
+            echo "Unexpected option: $1"
+            help
+            ;;
     esac
 done
 echo "Arguments: $@"
 
-# Uses default Chart.yaml path if not specified
-chart_path="${chart_path:-$PROJECT_DIR/Chart.yaml}"
-
-# If chart_path is a valid directory, try to use Chart.yaml inside it
-if [[ -d "$chart_path" ]]; then
-  if [[ -f "$chart_path/Chart.yaml" ]]; then
-    chart_path="$chart_path/Chart.yaml"
-  else
-    echo "Error: Chart.yaml not found in directory '$chart_path'"
-    exit 1
-  fi
-elif [[ ! -f "$chart_path" ]]; then
-  echo "Error: Specified chart_path '$chart_path' does not exist"
-  exit 1
-fi
-
 if [[ -z $environment || $environment == "" ]]; then
-  echo "Environment cannot be null"
-  help
+    echo "Environment cannot be null"
+    help
 fi
 echo "Environment: $environment"
 
@@ -143,57 +128,57 @@ if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
 
-if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --chart-path "$chart_path"
-fi
-
 if [[ -n $chart_path ]]; then
-  OPTIONS=$OPTIONS" -cp $chart_path"
+    OPTIONS=$OPTIONS" -cp $chart_path"
+fi
+if [[ $skip_dep == false ]]; then
+  echo "executing helm dependencies setup"
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --chart-path "$chart_path" --environment "$ENV"
 fi
 
 # Skip further execution of helm deps build and update since we have already done it in the previous line
 OPTIONS=$OPTIONS" -sd"
 
 if [[ $lint_microservices == true ]]; then
-  echo "Start linting microservices"
-  ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
+    echo "Start linting microservices"
+    ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
 
-  if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    echo "No microservices found for environment '$ENV'. Skipping microservices linting."
-  fi
-
-  for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
-  do
-    echo "Linting $CURRENT_SVC"
-    VALID_CONFIG=$(isMicroserviceEnvConfigValid $CURRENT_SVC $ENV)
-    if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-      echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
-    else
-      "$SCRIPTS_FOLDER"/helmLint-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
+        echo "No microservices found for environment '$ENV'. Skipping microservices linting."
     fi
-  done
+
+    for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
+    do
+        echo "Linting $CURRENT_SVC"
+        VALID_CONFIG=$(isMicroserviceEnvConfigValid $CURRENT_SVC $ENV)
+        if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
+            echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
+        else
+            "$SCRIPTS_FOLDER"/helmLint-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+        fi
+    done
 fi
 
 if [[ $lint_jobs == true ]]; then
-  echo "Start linting cronjobs"
-  ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
+    echo "Start linting cronjobs"
+    ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
 
-  if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs linting."
-  fi
-
-  for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
-  do
-    echo "Linting $CURRENT_JOB"
-    VALID_CONFIG=$(isCronjobEnvConfigValid $CURRENT_JOB $ENV)
-    if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-      echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
-    else
-      "$SCRIPTS_FOLDER"/helmLint-cron-single.sh -e $ENV -j $CURRENT_JOB $OPTIONS
+    if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
+        echo "No cronjobs found for environment '$ENV'. Skipping cronjobs linting."
     fi
-  done
+
+    for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
+    do
+        echo "Linting $CURRENT_JOB"
+        VALID_CONFIG=$(isCronjobEnvConfigValid $CURRENT_JOB $ENV)
+        if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
+            echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
+        else
+      "$SCRIPTS_FOLDER"/helmLint-cron-single.sh -e $ENV -j $CURRENT_JOB $OPTIONS
+        fi
+    done
 fi
 
 if [[ $post_clean == true ]]; then
-  rm -rf "$ROOT_DIR/out/lint"
+    rm -rf "$ROOT_DIR/out/lint"
 fi

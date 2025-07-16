@@ -18,6 +18,7 @@ help()
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -c | --clean ] Clean files and directories after scripts successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
@@ -33,6 +34,7 @@ output_redirect=""
 skip_dep=false
 disable_templating_lookup=false
 images_file=""
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -57,7 +59,7 @@ do
           ;;
         -i | --image )
           images_file=$2
-          
+
           step=2
           shift 2
           ;;
@@ -90,6 +92,12 @@ do
           disable_templating_lookup=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -h | --help )
           help
@@ -125,25 +133,30 @@ fi
 if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
+
+if [[ -n $chart_path ]]; then
+  OPTIONS=$OPTIONS" -cp $chart_path"
+fi
+
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --chart-path "$chart_path" --environment "$ENV"
 fi
 
 MICROSERVICE_OPTIONS=" "
 if [[ $disable_templating_lookup != true ]]; then
   MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
 fi
-# Skip further execution of helm deps build and update since we have already done it in the previous line 
+# Skip further execution of helm deps build and update since we have already done it in the previous line
 OPTIONS=$OPTIONS" -sd"
 
 if [[ $template_microservices == true ]]; then
   echo "Start microservices templates generation"
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
-  
+
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
     echo "No microservices found for environment '$ENV'. Skipping microservices templates generation."
   fi
-  
+
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
     echo "Templating $CURRENT_SVC"
@@ -160,11 +173,11 @@ fi
 if [[ $template_jobs == true ]]; then
   echo "Start cronjobs templates generation"
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
-  
+
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
     echo "No cronjobs found for environment '$ENV'. Skipping cronjobs templates generation."
   fi
-  
+
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
     echo "Templating $CURRENT_JOB"

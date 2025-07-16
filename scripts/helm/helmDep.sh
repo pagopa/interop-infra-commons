@@ -3,9 +3,10 @@ set -euo pipefail
 
 help() {
     echo "Usage:
+        [ -e | --environment ] Environment used to detect values.yaml for linting
         [ -u | --untar ] Untar downloaded charts
         [ -v | --verbose ] Show debug messages
-        [ -cp | --chart-path ] Path to Chart.yaml (default: ./Chart.yaml)
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -14,18 +15,26 @@ PROJECT_DIR="${PROJECT_DIR:-$(pwd)}"
 ROOT_DIR="$PROJECT_DIR"
 
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CHART_PATH="${CHART_PATH:-Chart.yaml}"
 
 
 args=$#
 untar=false
+environment=""
 step=1
 verbose=false
+chart_path=""
+
 
 # Check args
 for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
+        -e| --environment )
+          [[ "${2:-}" ]] || "Environment cannot be null" || help
+          environment=$2
+          step=2
+          shift 2
+          ;;
         -u| --untar )
           untar=true
           step=1
@@ -40,7 +49,7 @@ do
           help
           ;;
         -cp | --chart-path )
-          CHART_PATH="$2"
+          chart_path="$2"
           step=2
           shift 2
           ;;
@@ -52,11 +61,33 @@ do
     esac
 done
 
+
+if [[ -n "$chart_path" ]]; then
+    resolved_chart_path="$chart_path"
+else
+    resolved_chart_path="$ROOT_DIR/commons/$environment/Chart.yaml"
+fi
+
+if [[ ! -e "$resolved_chart_path" ]]; then
+    echo "ERROR: Directory or file not found: '$resolved_chart_path'" >&2
+    exit 1
+fi
+
+if [[ "$(basename "$resolved_chart_path")" != "Chart.yaml" ]]; then
+    echo "ERROR: Chart path must be a file named 'Chart.yaml' (got: $(basename "$resolved_chart_path"))" >&2
+    exit 1
+fi
+
+echo "Resolved chart path: $resolved_chart_path"
+
+
 function setupHelmDeps()
 {
     untar=$1
     # Create charts directory and copy Chart.yaml into it
     cd "$ROOT_DIR"
+
+    rm -rf charts
 
     if [[ $verbose == true ]]; then
         echo "Creating directory charts"
@@ -66,7 +97,7 @@ function setupHelmDeps()
     if [[ $verbose == true ]]; then
         echo "Copying Chart.yaml to charts"
     fi
-    cp "$CHART_PATH" charts/Chart.yaml
+    cp "$resolved_chart_path" charts/Chart.yaml
     # Execute helm commands
     echo "# Helm dependencies setup #"
     echo "-- Add PagoPA eks repos --"
@@ -100,7 +131,6 @@ function setupHelmDeps()
     fi
 
     cd "$ROOT_DIR"
-
     if [[ $untar == true ]]; then
     # Untar downloaded charts to the root charts directory
         for filename in charts/charts/*.tgz; do
@@ -142,4 +172,4 @@ function setupHelmDeps()
     exit 0
 }
 
-setupHelmDeps $untar
+setupHelmDeps $untar "$verbose"
