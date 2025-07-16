@@ -72,7 +72,7 @@ jobs:
           fi
 
           export PROJECT_DIR=$(pwd)
-          CHART_PATH="./commons/${{ inputs.environment }}"
+          CHART_PATH="./commons/${{ inputs.environment }}/Chart.yaml"
 
           $SCRIPTS_FOLDER/helmLint-main.sh \
           --debug \
