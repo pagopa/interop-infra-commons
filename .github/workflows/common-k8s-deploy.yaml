@@ -11,6 +11,7 @@ on:
         description: 'Kubectl apply wait timeout in seconds for Deployments'
         required: false
         type: number
+        default: -1
       infra_commons_tag:
         description: 'Tag of the infra-commons repository to use'
         required: false
@@ -61,7 +62,7 @@ jobs:
         run: |
           echo "microservices=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
           echo "cronjobs=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
-  
+
   deploy_common_configmaps:
     name: Deploy Common Configmaps
     needs: [ workflow_setup ]
@@ -83,9 +84,9 @@ jobs:
           ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
-          
+
           commons_configmaps_path="commons/$ENVIRONMENT/configmaps"
-          
+
           if [[ -n "$(ls -A $commons_configmaps_path)" ]]; then
             for f in $commons_configmaps_path/*; do
               kubectl apply -f $f
@@ -110,7 +111,7 @@ jobs:
       infra_commons_tag: ${{ inputs.infra_commons_tag }}
       use_kubectl_diff: ${{ inputs.use_kubectl_diff }}
       use_kubectl_apply: ${{ inputs.use_kubectl_apply }}
-  
+
   deploy_cj:
     name: ${{ matrix.target }}
     needs: [ workflow_setup, deploy_common_configmaps ]
@@ -123,6 +124,7 @@ jobs:
     uses: ./.github/workflows/common-k8s-deploy-sub.yaml
     with:
       environment: ${{ inputs.environment }}
+      timeout_seconds: ${{ inputs.timeout_seconds }}
       kind: "cronjob"
       target: ${{ matrix.target }}
       infra_commons_tag: ${{ inputs.infra_commons_tag }}
