@@ -39,7 +39,6 @@ do
     case "$1" in
         -e| --environment )
             [[ "${2:-}" ]] || "Environment cannot be null" || help
-
           environment=$2
           step=2
           shift 2
@@ -61,7 +60,6 @@ do
           ;;
         -i | --image )
           images_file=$2
-
           step=2
           shift 2
           ;;
