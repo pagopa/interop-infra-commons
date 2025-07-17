@@ -39,66 +39,63 @@ for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
         -e| --environment )
-            [[ "${2:-}" ]] || "Environment cannot be null" || help
-
-            environment=$2
-            step=2
-            shift 2
-            ;;
+          [[ "${2:-}" ]] || "Environment cannot be null" || help
+          environment=$2
+          step=2
+          shift 2
+          ;;
         -m | --microservices )
-            lint_microservices=true
-            step=1
-            shift 1
-            ;;
+          lint_microservices=true
+          step=1
+          shift 1
+          ;;
         -j | --jobs )
-            lint_jobs=true
-            step=1
-            shift 1
-            ;;
+          lint_jobs=true
+          step=1
+          shift 1
+          ;;
         -i | --image )
-            images_file=$2
-
-            step=2
-            shift 2
-            ;;
+          images_file=$2
+          step=2
+          shift 2
+          ;;
         -d | --debug)
-            enable_debug=true
-            step=1
-            shift 1
-            ;;
+          enable_debug=true
+          step=1
+          shift 1
+          ;;
         -o | --output)
-            [[ "${2:-}" ]] || "When specified, output cannot be null" || help
-            output_redirect=$2
-            if [[ $output_redirect != "console" ]]; then
-                help
-            fi
-
-            step=2
-            shift 2
-            ;;
+          [[ "${2:-}" ]] || "When specified, output cannot be null" || help
+          output_redirect=$2
+          if [[ $output_redirect != "console" ]]; then
+             help
+          fi
+          step=2
+          shift 2
+          ;;
         -c | --clean)
-            post_clean=true
-            step=1
-            shift 1
-            ;;
+          post_clean=true
+          step=1
+          shift 1
+          ;;
         -sd | --skip-dep)
-            skip_dep=true
-            step=1
-            shift 1
-            ;;
+          skip_dep=true
+          step=1
+          shift 1
+          ;;
         -cp | --chart-path )
-            [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
-            chart_path=$2
-            step=2
-            shift 2
-            ;;
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
+          ;;
         -h | --help )
-            help
-            ;;
+          help
+          ;;
         *)
-            echo "Unexpected option: $1"
-            help
-            ;;
+          echo "Unexpected option: $1"
+          help
+          ;;
     esac
 done
 echo "Arguments: $@"

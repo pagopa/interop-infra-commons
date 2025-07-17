@@ -36,14 +36,12 @@ do
     case "$1" in
         -e| --environment )
           [[ "${2:-}" ]] || "Environment cannot be null" || help
-
           environment=$2
           step=2
           shift 2
           ;;
         -m | --microservice )
           [[ "${2:-}" ]] || "Microservice cannot be null" || help
-
           microservice=$2
           serviceAllowedRes=$(isAllowedMicroservice $microservice)
           if [[ -z $serviceAllowedRes || $serviceAllowedRes == "" ]]; then
@@ -51,13 +49,11 @@ do
             echo "Allowed values: " $(getAllowedMicroservices)
             help
           fi
-
           step=2
           shift 2
           ;;
         -i | --image )
           images_file=$2
-
           step=2
           shift 2
           ;;
@@ -72,7 +68,6 @@ do
           if [[ $output_redirect != "console" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -98,7 +93,6 @@ do
         *)
           echo "Unexpected option: $1"
           help
-
           ;;
     esac
 done
@@ -148,7 +142,7 @@ OUTPUT_TO="> \"$OUT_DIR/$microservice.out.yaml\""
 if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
 fi
-
+#LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" --set enableLookup=false $OUTPUT_TO"
 LINT_CMD+=" \"$ROOT_DIR/charts/interop-eks-microservice-chart\""
 LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\""

@@ -146,11 +146,12 @@ OUTPUT_TO="> \"$OUT_DIR/$job.out.yaml\""
 if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
 fi
+#LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
 
 LINT_CMD+=" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\""
+LINT_CMD+=" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\""
-LINT_CMD+=" --set enableLookup=false"
 LINT_CMD+=" $OUTPUT_TO"
 
 eval $LINT_CMD
