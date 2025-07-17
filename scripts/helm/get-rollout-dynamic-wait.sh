@@ -122,9 +122,9 @@ dynamic_wait() {
     else
         surgeCount=$((maxSurge))
     fi
-    # surgeCount between 1 and replicas
-    (( surgeCount < 1 )) && surgeCount=1
+    # surgeCount between 1 and replicas, if replicas is 0, set surgeCount to 1
     (( surgeCount > replicas )) && surgeCount=$replicas
+    (( surgeCount < 1 )) && surgeCount=1
     
     # compute how many “batches” are needed to rollout all replicas (max #surgeCount pods per batch)
     local batches=$( ceil $((replicas + surgeCount)) $surgeCount)
