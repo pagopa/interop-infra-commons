@@ -61,7 +61,7 @@ do
     esac
 done
 
-
+# Validate path to Chart.yaml
 if [[ -n "$chart_path" ]]; then
     resolved_chart_path="$chart_path"
 else
@@ -172,4 +172,4 @@ function setupHelmDeps()
     exit 0
 }
 
-setupHelmDeps $untar "$verbose"
+setupHelmDeps $untar
