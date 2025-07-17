@@ -11,6 +11,7 @@ help()
     echo "Usage:  [ -e | --environment ] Cluster environment used to execute kubectl diff
         [ -m | --microservice ] Microservice defined in microservices folder
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -20,6 +21,7 @@ environment=""
 microservice=""
 enable_debug=false
 post_clean=false
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -51,6 +53,12 @@ do
           step=1
           shift 1
           ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
+          ;;
         -h | --help )
           help
           ;;
@@ -71,7 +79,7 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --verbose --chart-path "$chart_path" --environment "$environment"
   skip_dep=true
 fi
 
@@ -98,4 +106,3 @@ eval $DIFF_CMD
 #if [[ $post_clean == true ]]; then
 #  rm -rf $OUT_DIR
 #fi
-
