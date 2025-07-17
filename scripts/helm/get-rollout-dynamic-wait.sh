@@ -127,7 +127,7 @@ dynamic_wait() {
     (( surgeCount < 1 )) && surgeCount=1
     
     # compute how many “batches” are needed to rollout all replicas (max #surgeCount pods per batch)
-    local batches=$( ceil $((replicas + surgeCount)) $surgeCount)
+    local batches=$( ceil $replicas $surgeCount)
 
     # total wait = batches * wait per single batch in seconds
     echo $(( batches * waitPerBatch ))
