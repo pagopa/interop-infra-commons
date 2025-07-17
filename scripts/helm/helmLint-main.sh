@@ -68,7 +68,7 @@ do
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
           if [[ $output_redirect != "console" ]]; then
-             help
+            help
           fi
           step=2
           shift 2
@@ -98,11 +98,10 @@ do
           ;;
     esac
 done
-echo "Arguments: $@"
 
 if [[ -z $environment || $environment == "" ]]; then
-    echo "Environment cannot be null"
-    help
+  echo "Environment cannot be null"
+  help
 fi
 echo "Environment: $environment"
 
@@ -129,7 +128,6 @@ if [[ -n $chart_path ]]; then
     OPTIONS=$OPTIONS" -cp $chart_path"
 fi
 if [[ $skip_dep == false ]]; then
-  echo "executing helm dependencies setup"
   bash "$SCRIPTS_FOLDER"/helmDep.sh --untar --chart-path "$chart_path" --environment "$ENV"
 fi
 
@@ -137,43 +135,39 @@ fi
 OPTIONS=$OPTIONS" -sd"
 
 if [[ $lint_microservices == true ]]; then
-    echo "Start linting microservices"
-    ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
-
-    if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-        echo "No microservices found for environment '$ENV'. Skipping microservices linting."
-    fi
-
-    for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
-    do
-        echo "Linting $CURRENT_SVC"
-        VALID_CONFIG=$(isMicroserviceEnvConfigValid $CURRENT_SVC $ENV)
-        if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-            echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
-        else
-            "$SCRIPTS_FOLDER"/helmLint-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS
-        fi
-    done
+  echo "Start linting microservices"
+  ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
+  if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
+      echo "No microservices found for environment '$ENV'. Skipping microservices linting."
+  fi
+  for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
+  do
+      echo "Linting $CURRENT_SVC"
+      VALID_CONFIG=$(isMicroserviceEnvConfigValid $CURRENT_SVC $ENV)
+      if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
+          echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
+      else
+          "$SCRIPTS_FOLDER"/helmLint-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+      fi
+  done
 fi
 
 if [[ $lint_jobs == true ]]; then
-    echo "Start linting cronjobs"
-    ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
-
-    if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-        echo "No cronjobs found for environment '$ENV'. Skipping cronjobs linting."
-    fi
-
-    for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
-    do
-        echo "Linting $CURRENT_JOB"
-        VALID_CONFIG=$(isCronjobEnvConfigValid $CURRENT_JOB $ENV)
-        if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-            echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
-        else
-      "$SCRIPTS_FOLDER"/helmLint-cron-single.sh -e $ENV -j $CURRENT_JOB $OPTIONS
-        fi
-    done
+  echo "Start linting cronjobs"
+  ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
+  if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
+      echo "No cronjobs found for environment '$ENV'. Skipping cronjobs linting."
+  fi
+  for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
+  do
+      echo "Linting $CURRENT_JOB"
+      VALID_CONFIG=$(isCronjobEnvConfigValid $CURRENT_JOB $ENV)
+      if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
+          echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
+      else
+    "$SCRIPTS_FOLDER"/helmLint-cron-single.sh -e $ENV -j $CURRENT_JOB $OPTIONS
+      fi
+  done
 fi
 
 if [[ $post_clean == true ]]; then
