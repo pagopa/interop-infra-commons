@@ -187,6 +187,8 @@ jobs:
           TARGET: ${{ inputs.target }}
           TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
           BATCH_WAIT_SECONDS: ${{ vars.BATCH_WAIT_SECONDS }}
+          HELM_FORCE_UPGRADE_MS_CSV: ${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV }}
+          HELM_FORCE_UPGRADE_CJ_CSV: ${{ vars.HELM_FORCE_UPGRADE_CRONJOBS_CSV }}
         run: |
           set -euo pipefail
 
@@ -194,7 +196,11 @@ jobs:
           NOWAIT_OPT=""
 
           if [[ "${{ env.microservice_defined }}" == "true" ]]; then
-            FORCE_UPGRADE_MS='${{ vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV == '*' || contains(vars.HELM_FORCE_UPGRADE_MICROSERVICES_CSV, matrix.microservice) }}'
+            if [[ "$HELM_FORCE_UPGRADE_MS_CSV" == "*" || ",$HELM_FORCE_UPGRADE_MS_CSV," == *",$TARGET,"* ]]; then
+              FORCE_UPGRADE_MS=true
+            else
+              FORCE_UPGRADE_MS=false
+            fi
 
             if [[ "$TIMEOUT_SECONDS" -eq 0 ]]; then
               echo "::warning::INFO - Helm upgrade will not wait for the deployment to finish."
@@ -214,7 +220,11 @@ jobs:
             fi
 
           else
-            FORCE_UPGRADE_CJ='${{ vars.HELM_FORCE_UPGRADE_CRONJOBS_CSV == '*' || contains(vars.HELM_FORCE_UPGRADE_CRONJOBS_CSV, matrix.microservice) }}'
+            if [[ "$HELM_FORCE_UPGRADE_CJ_CSV" == '*' ]] || [[ ",$HELM_FORCE_UPGRADE_CJ_CSV," == *",$TARGET,"* ]]; then
+              FORCE_UPGRADE_CJ=true
+            else
+              FORCE_UPGRADE_CJ=false
+            fi
           fi
 
           export PROJECT_DIR=$(pwd)
