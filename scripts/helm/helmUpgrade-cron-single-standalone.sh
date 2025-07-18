@@ -135,10 +135,13 @@ if [[ -z $job || $job == "" ]]; then
 fi
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
+
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
+
   HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --environment "$environment""
+
   bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
   skip_dep=true
 fi
