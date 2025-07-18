@@ -42,7 +42,7 @@ jobs:
         run: |
           echo "Using infra_commons_tag: $INFRA_COMMONS_TAG"
           echo "Using strict_kube_linter_checks: ${{ inputs.strict_kube_linter_checks }}"
-          echo "Using environment: ${{ inputs.environment }}"
+          echo "Using environment: $ENVIRONMENT"
 
       - name: Checkout scripts repository
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
@@ -57,6 +57,7 @@ jobs:
         id: helm_lint
         env:
           CHART_TYPE: ${{ matrix.chartType }}
+          ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
 
@@ -72,15 +73,15 @@ jobs:
           fi
 
           export PROJECT_DIR=$(pwd)
-          CHART_PATH="./commons/${{ inputs.environment }}/Chart.yaml"
+          CHART_PATH="./commons/$ENVIRONMENT/Chart.yaml"
 
           $SCRIPTS_FOLDER/helmLint-main.sh \
           --debug \
-          --environment ${{ inputs.environment }} \
+          --environment $ENVIRONMENT \
           --output console \
           $OPTIONS \
           --chart-path $CHART_PATH \
-          -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml
+          -i $PROJECT_DIR/commons/$ENVIRONMENT/images.yaml
 
   microservices_validation:
     name: Microservices - Template & Lint
