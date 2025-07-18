@@ -1,6 +1,6 @@
-resource "random_password" "this" {
-  length  = var.generated_password_length
-  special = var.generated_password_use_special_characters
+resource "aws_secretsmanager_random_password" "this" {
+  password_length            = var.generated_password_length
+  require_each_included_type = var.generated_password_use_special_characters
 }
 
 resource "aws_secretsmanager_secret" "this" {
@@ -16,6 +16,6 @@ resource "aws_secretsmanager_secret_version" "this" {
   secret_string = jsonencode({
     database = var.db_name
     username = var.username
-    password = random_password.this.result
+    password = aws_secretsmanager_random_password.this.password
   })
 }
