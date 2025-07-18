@@ -11,13 +11,14 @@ help()
     echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm upgrade
         [ -dr | --dry-run ] Enable dry-run mode
         [ -d | --debug ] Enable debug
-        [ -a | --atomic ] Enable helm install atomic option 
+        [ -a | --atomic ] Enable helm install atomic option
         [ -j | --job ] Cronjob defined in jobs folder
         [ -i | --image ] File with cronjob image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or "null" to redirect output to /dev/null
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -hm | --history-max ] Set the maximum number of revisions saved per release
         [ --force ] Force helm upgrade
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -34,14 +35,14 @@ skip_dep=false
 images_file=""
 force=false
 history_max=3
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
         -e| --environment )
-            [[ "${2:-}" ]] || "Environment cannot be null" || help
-
+          [[ "${2:-}" ]] || "Environment cannot be null" || help
           environment=$2
           step=2
           shift 2
@@ -63,7 +64,6 @@ do
           ;;
         -j | --job )
           [[ "${2:-}" ]] || "Job cannot be null" || help
-          
           job=$2
           jobAllowedRes=$(isAllowedCronjob $job)
           if [[ -z $jobAllowedRes || $jobAllowedRes == "" ]]; then
@@ -71,13 +71,11 @@ do
               echo "Allowed values: " $(getAllowedCronjobs)
               help
           fi
-
           step=2
           shift 2
           ;;
         -i | --image )
           images_file=$2
-          
           step=2
           shift 2
           ;;
@@ -87,7 +85,6 @@ do
           if [[ $output_redirect != "console" && $output_redirect != "null" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -103,7 +100,6 @@ do
             echo "History-max must be equal or greater than 0"
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -111,6 +107,12 @@ do
           force=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -h | --help )
           help
@@ -132,7 +134,12 @@ if [[ -z $job || $job == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  HELMDEP_OPTIONS="--untar"
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+  HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --environment "$environment""
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
   skip_dep=true
 fi
 

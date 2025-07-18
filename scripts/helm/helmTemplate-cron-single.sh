@@ -16,6 +16,7 @@ help()
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -v | --verbose ] Show debug messages
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -29,35 +30,32 @@ output_redirect=""
 skip_dep=false
 verbose=false
 images_file=""
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
         -e| --environment )
-            [[ "${2:-}" ]] || "Environment cannot be null" || help
-
+          [[ "${2:-}" ]] || "Environment cannot be null" || help
           environment=$2
           step=2
           shift 2
           ;;
         -j | --job )
           [[ "${2:-}" ]] || "Job cannot be null" || help
-          
           job=$2
           jobAllowedRes=$(isAllowedCronjob $job)
           if [[ -z $jobAllowedRes || $jobAllowedRes == "" ]]; then
-              echo "$job is not allowed"
-              echo "Allowed values: " $(getAllowedCronjobs)
-              help
+            echo "$job is not allowed"
+            echo "Allowed values: " $(getAllowedCronjobs)
+            help
           fi
-
           step=2
           shift 2
           ;;
         -i | --image )
           images_file=$2
-          
           step=2
           shift 2
           ;;
@@ -72,7 +70,6 @@ do
           if [[ $output_redirect != "console" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -91,6 +88,12 @@ do
           step=1
           shift 1
           ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
+          ;;
         -h | --help )
           help
           ;;
@@ -102,6 +105,8 @@ do
     esac
 done
 
+ENV=$environment
+
 if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help
@@ -110,8 +115,15 @@ if [[ -z $job || $job == "" ]]; then
   echo "Job cannot null"
   help
 fi
+
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  HELMDEP_OPTIONS="--untar"
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+  HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --environment "$environment""
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
+  skip_dep=true
 fi
 
 VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)
@@ -120,7 +132,6 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
   help
 fi
 
-ENV=$environment
 JOB_DIR=$( echo $job | sed  's/-/_/g' )
 OUT_DIR="$ROOT_DIR/out/templates/$ENV/job_$JOB_DIR"
 if [[ $output_redirect != "console" ]]; then

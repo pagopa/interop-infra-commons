@@ -11,6 +11,7 @@ help()
     echo "Usage:  [ -e | --environment ] Cluster environment used to execute kubectl diff
         [ -m | --microservice ] Microservice defined in microservices folder
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -20,6 +21,7 @@ environment=""
 microservice=""
 enable_debug=false
 post_clean=false
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -27,14 +29,12 @@ do
     case "$1" in
         -e| --environment )
             [[ "${2:-}" ]] || "Environment cannot be null" || help
-
           environment=$2
           step=2
           shift 2
           ;;
         -m | --microservice )
           [[ "${2:-}" ]] || "Microservice cannot be null" || help
-
           microservice=$2
           serviceAllowedRes=$(isAllowedMicroservice $microservice)
           if [[ -z $serviceAllowedRes || $serviceAllowedRes == "" ]]; then
@@ -42,7 +42,6 @@ do
             echo "Allowed values: " $(getAllowedMicroservices)
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -51,13 +50,18 @@ do
           step=1
           shift 1
           ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
+          ;;
         -h | --help )
           help
           ;;
         *)
           echo "Unexpected option: $1"
           help
-
           ;;
     esac
 done
@@ -71,7 +75,12 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  HELMDEP_OPTIONS="--untar"
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+  HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --environment "$environment""
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
   skip_dep=true
 fi
 
@@ -98,4 +107,3 @@ eval $DIFF_CMD
 #if [[ $post_clean == true ]]; then
 #  rm -rf $OUT_DIR
 #fi
-

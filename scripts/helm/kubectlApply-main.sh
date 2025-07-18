@@ -17,6 +17,7 @@ help()
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -30,6 +31,7 @@ post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -37,7 +39,6 @@ do
     case "$1" in
         -e| --environment )
             [[ "${2:-}" ]] || "Environment cannot be null" || help
-
           environment=$2
           step=2
           shift 2
@@ -59,7 +60,6 @@ do
           ;;
         -i | --image )
           images_file=$2
-          
           step=2
           shift 2
           ;;
@@ -69,7 +69,6 @@ do
           if [[ $output_redirect != "console" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -77,6 +76,12 @@ do
           skip_dep=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -h | --help )
           help
@@ -112,11 +117,19 @@ fi
 if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
+if [[ -n $chart_path ]]; then
+  OPTIONS=$OPTIONS" -cp $chart_path"
+fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  HELMDEP_OPTIONS="--untar"
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+  HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --environment "$environment""
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
   skip_dep=true
 fi
-# Skip further execution of helm deps build and update since we have already done it in the previous line 
+# Skip further execution of helm deps build and update since we have already done it in the previous line
 OPTIONS=$OPTIONS" -sd"
 
 if [[ $template_microservices == true ]]; then

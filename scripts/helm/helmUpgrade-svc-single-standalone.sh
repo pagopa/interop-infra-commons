@@ -10,7 +10,7 @@ help()
 {
     echo "Usage:  [ -e | --environment ] Cluster environment used to execute helm upgrade
         [ -d | --debug ] Enable debug
-        [ -a | --atomic ] Enable helm install atomic option 
+        [ -a | --atomic ] Enable helm install atomic option
         [ -m | --microservice ] Microservice defined in microservices folder
         [ -i | --image ] File with microservice image tag and digest
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or "null" to redirect output to /dev/null
@@ -19,6 +19,7 @@ help()
         [ -nw | --no-wait ] Do not wait for the release to be ready
         [ -t | --timeout ] Set the timeout for the upgrade operation (default is 5m0s)
         [ --force ] Force helm upgrade
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when upgrading
         [ -h | --help ] This help"
     exit 2
@@ -38,14 +39,14 @@ history_max=3
 wait=true
 timeout="5m0s"
 disable_templating_lookup=false
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
         -e| --environment )
-            [[ "${2:-}" ]] || "Environment cannot be null" || help
-
+          [[ "${2:-}" ]] || "Environment cannot be null" || help
           environment=$2
           step=2
           shift 2
@@ -62,7 +63,6 @@ do
           ;;
         -m | --microservice )
           [[ "${2:-}" ]] || "Microservice cannot be null" || help
-
           microservice=$2
           serviceAllowedRes=$(isAllowedMicroservice $microservice)
           if [[ -z $serviceAllowedRes || $serviceAllowedRes == "" ]]; then
@@ -70,13 +70,11 @@ do
             echo "Allowed values: " $(getAllowedMicroservices)
             help
           fi
-
           step=2
           shift 2
           ;;
         -i | --image )
           images_file=$2
-          
           step=2
           shift 2
           ;;
@@ -86,7 +84,6 @@ do
           if [[ $output_redirect != "console" && $output_redirect != "null" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -102,7 +99,6 @@ do
             echo "History-max must be equal or greater than 0"
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -119,7 +115,6 @@ do
         -t | --timeout)
           [[ "${2:-}" ]] || "When specified, timeout cannot be null" || help
           timeout=$2
-          
           step=2
           shift 2
           ;;
@@ -127,6 +122,12 @@ do
           disable_templating_lookup=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -h | --help )
           help
@@ -148,7 +149,12 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  HELMDEP_OPTIONS="--untar"
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+  HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --environment "$environment""
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
   skip_dep=true
 fi
 

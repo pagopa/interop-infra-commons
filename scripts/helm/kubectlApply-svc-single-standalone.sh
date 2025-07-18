@@ -15,6 +15,7 @@ help()
         [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -28,14 +29,14 @@ output_redirect=""
 skip_dep=false
 disable_templating_lookup=false
 images_file=""
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
         -e| --environment )
-            [[ "${2:-}" ]] || "Environment cannot be null" || help
-
+          [[ "${2:-}" ]] || "Environment cannot be null" || help
           environment=$2
           step=2
           shift 2
@@ -47,7 +48,6 @@ do
           ;;
         -m | --microservice )
           [[ "${2:-}" ]] || "Microservice cannot be null" || help
-
           microservice=$2
           serviceAllowedRes=$(isAllowedMicroservice $microservice)
           if [[ -z $serviceAllowedRes || $serviceAllowedRes == "" ]]; then
@@ -55,13 +55,11 @@ do
             echo "Allowed values: " $(getAllowedMicroservices)
             help
           fi
-
           step=2
           shift 2
           ;;
         -i | --image )
           images_file=$2
-          
           step=2
           shift 2
           ;;
@@ -71,7 +69,6 @@ do
           if [[ $output_redirect != "console" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -84,6 +81,12 @@ do
           disable_templating_lookup=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -h | --help )
           help
@@ -105,7 +108,12 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  HELMDEP_OPTIONS="--untar"
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+  HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --environment "$environment""
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
   skip_dep=true
 fi
 
