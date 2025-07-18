@@ -17,7 +17,7 @@ resource "terraform_data" "manage_role" {
 
   provisioner "local-exec" {
     environment = {
-      PASSWORD                     = random_password.this.result
+      PASSWORD                     = aws_secretsmanager_random_password.this.password
       USERNAME                     = var.username
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
@@ -60,7 +60,7 @@ resource "terraform_data" "additional_script" {
 
   provisioner "local-exec" {
     environment = {
-      PASSWORD                     = random_password.this.result
+      PASSWORD                     = aws_secretsmanager_random_password.this.password
       USERNAME                     = var.username
       DATABASE                     = var.db_name
       DATABASE_PORT                = var.db_port
