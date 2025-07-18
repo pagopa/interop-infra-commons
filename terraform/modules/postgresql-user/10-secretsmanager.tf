@@ -16,6 +16,10 @@ resource "aws_secretsmanager_secret_version" "this" {
   secret_string = jsonencode({
     database = var.db_name
     username = var.username
-    password = data.aws_secretsmanager_random_password.this.password
+    password = data.aws_secretsmanager_random_password.this.random_password
   })
+
+  lifecycle {
+    ignore_changes = [secret_string]
+  }
 }
