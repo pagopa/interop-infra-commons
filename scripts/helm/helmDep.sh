@@ -49,6 +49,7 @@ do
           help
           ;;
         -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
           chart_path="$2"
           step=2
           shift 2
