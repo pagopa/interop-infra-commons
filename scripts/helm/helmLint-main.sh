@@ -15,7 +15,7 @@ help()
         [ -m | --microservices ] Lint all microservices
         [ -j | --jobs ] Lint all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or set to a file path to redirect output
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print linting output on terminal or set to a file path to redirect output
         [ -c | --clean ] Clean files and directories after scripts successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
