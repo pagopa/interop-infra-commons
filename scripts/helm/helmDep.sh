@@ -81,7 +81,6 @@ fi
 
 echo "Resolved chart path: $resolved_chart_path"
 
-
 function setupHelmDeps()
 {
     untar=$1
@@ -136,12 +135,15 @@ function setupHelmDeps()
     # Untar downloaded charts to the root charts directory
         for filename in charts/charts/*.tgz; do
             [ -e "$filename" ] || continue
+            
             echo "Processing $filename"
+            
             basename_file=$(basename "$filename" .tgz)
             chart_name="${basename_file%-*}"
             target_dir="charts/$chart_name"
 
             echo "→ Extracting to $target_dir"
+            
             mkdir -p "$target_dir"
             tar -xzf "$filename" -C "$target_dir" --strip-components=1
             rm -f "$filename"
