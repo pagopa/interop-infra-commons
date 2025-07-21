@@ -40,7 +40,7 @@ jobs:
         env:
           INFRA_COMMONS_TAG: ${{ inputs.infra_commons_tag }}
         run: |
-          echo "Using infra_commons_tag: $INFRA_COMMONS_TAG"
+          echo "Using infra_commons_tag: ${{ inputs.infra_commons_tag }}
           echo "Using strict_kube_linter_checks: ${{ inputs.strict_kube_linter_checks }}"
           echo "Using environment: $ENVIRONMENT"
 
@@ -51,7 +51,7 @@ jobs:
           path: interop-infra-commons
           fetch-depth: 0
           sparse-checkout: 'scripts/helm'
-          ref: $INFRA_COMMONS_TAG
+          ref: ${{ inputs.infra_commons_tag }}
 
       - name: Helm Chart Linting
         id: helm_lint
