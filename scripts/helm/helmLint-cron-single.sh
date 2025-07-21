@@ -12,7 +12,7 @@ help()
         [ -d | --debug ] Enable Helm template debug
         [ -j | --job ] Cronjob defined in jobs folder
         [ -i | --image ] File with cronjob image tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print linting output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or set to a file path to redirect output
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
@@ -68,7 +68,7 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]]; then
             help
           fi
           step=2
@@ -130,7 +130,7 @@ fi
 ENV=$environment
 JOB_DIR=$( echo $job | sed  's/-/_/g' )
 OUT_DIR="$ROOT_DIR/out/lint/$ENV/job_$JOB_DIR"
-if [[ $output_redirect != "console" ]]; then
+if [[ "$output_redirect" != "console" ]] && [[ -z "$output_redirect" ]]; then
   rm -rf "$OUT_DIR"
   mkdir  -p "$OUT_DIR"
 else
@@ -153,6 +153,8 @@ fi
 OUTPUT_TO="> \"$OUT_DIR/$job.out.yaml\""
 if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
+elif [[ -n "$output_redirect" ]]; then
+  OUTPUT_TO="> \"$output_redirect\""
 fi
 #LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
 
@@ -164,6 +166,6 @@ LINT_CMD+=" $OUTPUT_TO"
 
 eval $LINT_CMD
 
-if [[ $output_redirect != "console" && $post_clean == true ]]; then
+if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]] && [[ $post_clean == true ]]; then
   rm -rf $OUT_DIR
 fi

@@ -14,7 +14,7 @@ help()
         [ -a | --atomic ] Enable helm install atomic option
         [ -j | --job ] Cronjob defined in jobs folder
         [ -i | --image ] File with cronjob image tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or "null" to redirect output to /dev/null
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal, "null" to redirect output to /dev/null or set to a file path to redirect output
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -hm | --history-max ] Set the maximum number of revisions saved per release
         [ --force ] Force helm upgrade
@@ -82,7 +82,7 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" && $output_redirect != "null" ]]; then
+          if [[ "$output_redirect" != "console" && "$output_redirect" != "null" && -z "$output_redirect" ]]; then
             help
           fi
           step=2
@@ -168,8 +168,12 @@ if [[ $force == true ]]; then
 fi
 
 OUTPUT_REDIRECT=" "
-if [[ -n $output_redirect && $output_redirect == "null" ]]; then
-  OUTPUT_REDIRECT=$OUTPUT_REDIRECT" >/dev/null"
+if [[ -n "$output_redirect" ]]; then
+  if [[ "$output_redirect" == "null" ]]; then
+    OUTPUT_REDIRECT=$OUTPUT_REDIRECT" >/dev/null"
+  else
+    OUTPUT_REDIRECT=$OUTPUT_REDIRECT" > \"$output_redirect\""
+  fi
 fi
 
 # START - Find image version and digest

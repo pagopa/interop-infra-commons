@@ -12,7 +12,7 @@ help()
         [ -d | --debug ] Enable debug
         [ -j | --job ] Cronjob defined in jobs folder
         [ -i | --image ] File with cronjob image tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or set to a file path to redirect output
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
@@ -64,7 +64,7 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]]; then
             help
           fi
           step=2
@@ -123,7 +123,7 @@ OPTIONS=" "
 if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" -d"
 fi
-if [[ -n $output_redirect ]]; then
+if [[ -n "$output_redirect" ]]; then
   OPTIONS=$OPTIONS" -o $output_redirect"
 else
   OPTIONS=$OPTIONS" -o console "

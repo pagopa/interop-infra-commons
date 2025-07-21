@@ -12,7 +12,7 @@ help()
 {
     echo "Usage:  [ -e | --environment ] Environment used to execute kubectl diff
         [ -d | --debug ] Enable debug
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or set to a file path to redirect output
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
@@ -66,7 +66,7 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]]; then
             help
           fi
           step=2
