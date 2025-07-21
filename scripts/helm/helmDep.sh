@@ -79,8 +79,9 @@ if [[ "$(basename "$resolved_chart_path")" != "Chart.yaml" ]]; then
     exit 1
 fi
 
-echo "Resolved chart path: $resolved_chart_path"
-
+if [[ $verbose == true ]]; then
+    echo "Resolved chart path: $resolved_chart_path"
+fi
 
 function setupHelmDeps()
 {
@@ -136,12 +137,19 @@ function setupHelmDeps()
     # Untar downloaded charts to the root charts directory
         for filename in charts/charts/*.tgz; do
             [ -e "$filename" ] || continue
-            echo "Processing $filename"
+            
+            if [[ $verbose == true ]]; then
+                echo "Processing $filename"
+            fi
+
             basename_file=$(basename "$filename" .tgz)
             chart_name="${basename_file%-*}"
             target_dir="charts/$chart_name"
 
-            echo "→ Extracting to $target_dir"
+            if [[ $verbose == true ]]; then
+                echo "→ Extracting to $target_dir"
+            fi
+            
             mkdir -p "$target_dir"
             tar -xzf "$filename" -C "$target_dir" --strip-components=1
             rm -f "$filename"
