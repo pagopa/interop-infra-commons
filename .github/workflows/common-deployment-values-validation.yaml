@@ -133,7 +133,7 @@ jobs:
             set +e
             for MICROSERVICE_NAME in $MICROSERVICES; do
               echo "=== Processing microservice: $MICROSERVICE_NAME ==="
-              TEMPLATE_OUTPUT_PATH="/tmp/helm-template-${MICROSERVICE_NAME}.yaml"
+              TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.yaml"
 
               echo "Templating microservice: $MICROSERVICE_NAME"
               $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
@@ -141,7 +141,7 @@ jobs:
                 --environment ${{ inputs.environment }} \
                 --microservice $MICROSERVICE_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output console > $TEMPLATE_OUTPUT_PATH
+                --output $TEMPLATE_OUTPUT_PATH
 
               if [[ $? -ne 0 ]]; then
                 echo "Template generation failed for microservice: $MICROSERVICE_NAME"
@@ -229,7 +229,7 @@ jobs:
             set +e
             for CRONJOB_NAME in $CRONJOBS; do
               echo "=== Processing cronjob: $CRONJOB_NAME ==="
-              TEMPLATE_OUTPUT_PATH="/tmp/helm-template-cronjob-${CRONJOB_NAME}.yaml"
+              TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-cronjob-${CRONJOB_NAME}.yaml"
 
               echo "Templating cronjob: $CRONJOB_NAME"
               $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
@@ -237,7 +237,7 @@ jobs:
                 --environment ${{ inputs.environment }} \
                 --job $CRONJOB_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output console > $TEMPLATE_OUTPUT_PATH
+                --output $TEMPLATE_OUTPUT_PATH
 
               if [[ $? -ne 0 ]]; then
                 echo "Template generation failed for cronjob: $CRONJOB_NAME"
