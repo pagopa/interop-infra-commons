@@ -40,7 +40,7 @@ jobs:
         env:
           INFRA_COMMONS_TAG: ${{ inputs.infra_commons_tag }}
         run: |
-          echo "Using infra_commons_tag: $INFRA_COMMONS_TAG"
+          echo "Using infra_commons_tag: ${{ inputs.infra_commons_tag }}
           echo "Using strict_kube_linter_checks: ${{ inputs.strict_kube_linter_checks }}"
           echo "Using environment: $ENVIRONMENT"
 
@@ -51,7 +51,7 @@ jobs:
           path: interop-infra-commons
           fetch-depth: 0
           sparse-checkout: 'scripts/helm'
-          ref: $INFRA_COMMONS_TAG
+          ref: ${{ inputs.infra_commons_tag }}
 
       - name: Helm Chart Linting
         id: helm_lint
@@ -133,7 +133,7 @@ jobs:
             set +e
             for MICROSERVICE_NAME in $MICROSERVICES; do
               echo "=== Processing microservice: $MICROSERVICE_NAME ==="
-              TEMPLATE_OUTPUT_PATH="/tmp/helm-template-${MICROSERVICE_NAME}.yaml"
+              TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.yaml"
 
               echo "Templating microservice: $MICROSERVICE_NAME"
               $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
@@ -141,7 +141,7 @@ jobs:
                 --environment ${{ inputs.environment }} \
                 --microservice $MICROSERVICE_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output console > $TEMPLATE_OUTPUT_PATH
+                --output $TEMPLATE_OUTPUT_PATH
 
               if [[ $? -ne 0 ]]; then
                 echo "Template generation failed for microservice: $MICROSERVICE_NAME"
@@ -229,7 +229,7 @@ jobs:
             set +e
             for CRONJOB_NAME in $CRONJOBS; do
               echo "=== Processing cronjob: $CRONJOB_NAME ==="
-              TEMPLATE_OUTPUT_PATH="/tmp/helm-template-cronjob-${CRONJOB_NAME}.yaml"
+              TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-cronjob-${CRONJOB_NAME}.yaml"
 
               echo "Templating cronjob: $CRONJOB_NAME"
               $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
@@ -237,7 +237,7 @@ jobs:
                 --environment ${{ inputs.environment }} \
                 --job $CRONJOB_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output console > $TEMPLATE_OUTPUT_PATH
+                --output $TEMPLATE_OUTPUT_PATH
 
               if [[ $? -ne 0 ]]; then
                 echo "Template generation failed for cronjob: $CRONJOB_NAME"
