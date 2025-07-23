@@ -40,7 +40,7 @@ jobs:
         env:
           INFRA_COMMONS_TAG: ${{ inputs.infra_commons_tag }}
         run: |
-          echo "Using infra_commons_tag: ${{ inputs.infra_commons_tag }}
+          echo "Using infra_commons_tag: ${{ inputs.infra_commons_tag }}"
           echo "Using strict_kube_linter_checks: ${{ inputs.strict_kube_linter_checks }}"
           echo "Using environment: $ENVIRONMENT"
 
