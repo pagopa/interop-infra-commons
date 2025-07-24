@@ -24,64 +24,6 @@ env:
   SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
 
 jobs:
-  chart_validation:
-    name: Helm Chart validation
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        chartType: ["microservice", "cronjob"]
-      fail-fast: false
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-
-      - name: Print inputs passed in
-        env:
-          INFRA_COMMONS_TAG: ${{ inputs.infra_commons_tag }}
-        run: |
-          echo "Using infra_commons_tag: ${{ inputs.infra_commons_tag }}"
-          echo "Using strict_kube_linter_checks: ${{ inputs.strict_kube_linter_checks }}"
-          echo "Using environment: $ENVIRONMENT"
-
-      - name: Checkout scripts repository
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-        with:
-          repository: pagopa/interop-infra-commons
-          path: interop-infra-commons
-          fetch-depth: 0
-          sparse-checkout: 'scripts/helm'
-          ref: ${{ inputs.infra_commons_tag }}
-
-      - name: Helm Chart Linting
-        id: helm_lint
-        env:
-          CHART_TYPE: ${{ matrix.chartType }}
-          ENVIRONMENT: ${{ inputs.environment }}
-        run: |
-          set -euo pipefail
-
-          OPTIONS=""
-
-          if [[ $CHART_TYPE == "microservice" ]]; then
-            OPTIONS=" --microservices "
-          elif [[ $CHART_TYPE == "cronjob" ]]; then
-            OPTIONS=" --jobs "
-          else
-            echo "Workflow cannot be run on selected chart $CHART_TYPE"
-            exit 1
-          fi
-
-          export PROJECT_DIR=$(pwd)
-          CHART_PATH="./commons/$ENVIRONMENT/Chart.yaml"
-
-          $SCRIPTS_FOLDER/helmLint-main.sh \
-          --debug \
-          --environment $ENVIRONMENT \
-          --output console \
-          $OPTIONS \
-          --chart-path $CHART_PATH \
-          -i $PROJECT_DIR/commons/$ENVIRONMENT/images.yaml
 
   microservices_validation:
     name: Microservices - Template & Lint
