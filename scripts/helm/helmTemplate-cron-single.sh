@@ -17,6 +17,7 @@ help()
         [ -v | --verbose ] Show debug messages
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
+        [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
 }
@@ -28,6 +29,7 @@ enable_debug=false
 post_clean=false
 output_redirect=""
 skip_dep=false
+disable_templating_lookup=false
 verbose=false
 images_file=""
 chart_path=""
@@ -94,6 +96,11 @@ do
           step=2
           shift 2
           ;;
+        -dtl | --disable-templating-lookup)
+          disable_templating_lookup=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -155,6 +162,12 @@ fi
 TEMPLATE_CMD="helm template "
 if [[ $enable_debug == true ]]; then
     TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
+fi
+
+if [[ $disable_templating_lookup == true ]]; then
+  ADDITIONAL_VALUES=$ADDITIONAL_VALUES" --set enableLookup=false"
+else
+  TEMPLATE_CMD=$TEMPLATE_CMD"--dry-run=server --set enableLookup=true"
 fi
 
 OUTPUT_FILE="\"$OUT_DIR/$job.out.yaml\""

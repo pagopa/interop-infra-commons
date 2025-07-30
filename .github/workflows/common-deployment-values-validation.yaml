@@ -80,6 +80,7 @@ jobs:
               echo "Templating microservice: $MICROSERVICE_NAME"
               $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
                 --debug \
+                --disable-templating-lookup \
                 --environment ${{ inputs.environment }} \
                 --microservice $MICROSERVICE_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
@@ -176,6 +177,7 @@ jobs:
               echo "Templating cronjob: $CRONJOB_NAME"
               $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
                 --debug \
+                --disable-templating-lookup \
                 --environment ${{ inputs.environment }} \
                 --job $CRONJOB_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
