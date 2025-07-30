@@ -1,6 +1,6 @@
 data "aws_secretsmanager_random_password" "this" {
   password_length            = var.generated_password_length
-  require_each_included_type = var.generated_password_use_special_characters
+  exclude_punctuation = !var.generated_password_use_special_characters
 }
 
 resource "aws_secretsmanager_secret" "this" {
