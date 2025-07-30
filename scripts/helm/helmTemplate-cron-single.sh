@@ -160,6 +160,8 @@ fi
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 
 TEMPLATE_CMD="helm template "
+ADDITIONAL_VALUES=" "
+
 if [[ $enable_debug == true ]]; then
     TEMPLATE_CMD=$TEMPLATE_CMD"--debug "
 fi
