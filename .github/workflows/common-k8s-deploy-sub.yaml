@@ -235,10 +235,10 @@ jobs:
               --environment $ENVIRONMENT \
               -m "$TARGET" \
               -i $PROJECT_DIR/commons/$ENVIRONMENT/images.yaml \
-              --output console > template.yaml
+              --output "$(pwd)/template.yaml"
 
-            K8S_NAMESPACE=$(cat template.yaml | yq 'select(.kind == "Deployment") | .metadata.namespace')
-            MICROSERVICE_FULLNAME=$(cat template.yaml | yq 'select(.kind == "Deployment") | .metadata.name')
+            K8S_NAMESPACE=$(cat "$(pwd)/template.yaml" | yq 'select(.kind == "Deployment") | .metadata.namespace')
+            MICROSERVICE_FULLNAME=$(cat "$(pwd)/template.yaml" | yq 'select(.kind == "Deployment") | .metadata.name')
 
             echo "INFO - Apply changes for $MICROSERVICE_FULLNAME."
             if [[ "${{ inputs.use_kubectl_apply }}" == "true" ]]; then
@@ -270,10 +270,10 @@ jobs:
               --environment $ENVIRONMENT \
               --job "$TARGET" \
               -i $PROJECT_DIR/commons/$ENVIRONMENT/images.yaml \
-              --output console > template.yaml
+              --output "$(pwd)/template.yaml"
 
-            K8S_NAMESPACE=$(cat template.yaml | yq 'select(.kind == "CronJob") | .metadata.namespace')
-            CRONJOB_FULLNAME=$(cat template.yaml | yq 'select(.kind == "CronJob") | .metadata.name')
+            K8S_NAMESPACE=$(cat "$(pwd)/template.yaml" | yq 'select(.kind == "CronJob") | .metadata.namespace')
+            CRONJOB_FULLNAME=$(cat "$(pwd)/template.yaml" | yq 'select(.kind == "CronJob") | .metadata.name')
 
             echo "Apply changes for $CRONJOB_FULLNAME."
             if [[ "${{ inputs.use_kubectl_apply }}" == "true" ]]; then

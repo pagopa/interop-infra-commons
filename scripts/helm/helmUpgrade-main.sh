@@ -12,8 +12,8 @@ help()
 {
     echo "Usage:  [ -e | --environment ] Environment used to execute helm upgrade
         [ -d | --debug ] Enable debug
-        [ -a | --atomic ] Enable helm install atomic option 
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or "null" to redirect output to /dev/null
+        [ -a | --atomic ] Enable helm install atomic option
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal, "null" to redirect output to /dev/null or set to a file path to redirect output
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
@@ -22,6 +22,7 @@ help()
         [ -nw | --no-wait ] Do not wait for the release to be ready
         [ -t | --timeout ] Set the timeout for the upgrade operation (default is 5m0s)
         [ --force ] Force helm upgrade
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when upgrading
         [ -h | --help ] This help"
     exit 2
@@ -42,14 +43,14 @@ history_max=3
 wait=true
 timeout="5m0s"
 disable_templating_lookup=false
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
         -e| --environment )
-            [[ "${2:-}" ]] || "Environment cannot be null" || help
-
+          [[ "${2:-}" ]] || "Environment cannot be null" || help
           environment=$2
           step=2
           shift 2
@@ -76,17 +77,15 @@ do
           ;;
         -i | --image )
           images_file=$2
-          
           step=2
           shift 2
           ;;
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" && $output_redirect != "null" ]]; then
+          if [[ "$output_redirect" != "console" && "$output_redirect" != "null" && -z "$output_redirect" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -102,7 +101,6 @@ do
             echo "History-max must be equal or greater than 0"
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -119,7 +117,6 @@ do
         -t | --timeout)
           [[ "${2:-}" ]] || "When specified, timeout cannot be null" || help
           timeout=$2
-          
           step=2
           shift 2
           ;;
@@ -127,6 +124,12 @@ do
           disable_templating_lookup=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -h | --help )
           help
@@ -168,18 +171,29 @@ fi
 if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
-if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
-  skip_dep=true
+if [[ -n $chart_path ]]; then
+  OPTIONS=$OPTIONS" -cp $chart_path"
 fi
-# Skip further execution of helm deps build and update since we have already done it in the previous line 
+
+if [[ $skip_dep == false ]]; then
+  HELMDEP_OPTIONS="--untar"
+
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+
+  HELMDEP_OPTIONS="$HELMDEP_OPTIONS --environment "$environment""
+
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
+fi
+# Skip further execution of helm deps build and update since we have already done it in the previous line
 OPTIONS=$OPTIONS" -sd -hm $history_max"
 
 MICROSERVICE_OPTIONS=" "
 if [[ $wait == true ]]; then
   MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --timeout $timeout"
 else
-  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --no-wait" 
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --no-wait"
 fi
 if [[ $disable_templating_lookup == true ]]; then
   MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --disable-templating-lookup"
@@ -188,11 +202,11 @@ fi
 if [[ $template_microservices == true ]]; then
   echo "[MAIN-UPGRADE] Start microservices helm install"
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
-  
+
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
     echo "[MAIN-UPGRADE] No microservices found for environment '$ENV'. Skipping microservices upgrade."
   fi
-  
+
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
     echo "[MAIN-UPGRADE] Upgrade $CURRENT_SVC"
@@ -203,11 +217,11 @@ fi
 if [[ $template_jobs == true ]]; then
   echo "[MAIN-UPGRADE] Start cronjobs helm install"
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
-  
+
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
     echo "[MAIN-UPGRADE] No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
   fi
-  
+
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
     echo "[MAIN-UPGRADE] Upgrade $CURRENT_JOB"

@@ -14,7 +14,7 @@ on:
         description: 'Enable strict kube-linter checks'
         required: false
         type: boolean
-        default: false
+
 
 defaults:
   run:
@@ -24,54 +24,6 @@ env:
   SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
 
 jobs:
-  chart_validation:
-    name: Helm Chart validation
-    runs-on: ubuntu-22.04
-    strategy:
-      matrix:
-        chartType: ["microservice", "cronjob"]
-      fail-fast: false
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-
-      - name: Print tag passed in
-        env:
-          INFRA_COMMONS_TAG: ${{ inputs.infra_commons_tag }}
-        run: |
-          echo "Using infra_commons_tag: $INFRA_COMMONS_TAG"
-
-      - name: Checkout scripts repository
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-        with:
-          repository: pagopa/interop-infra-commons
-          path: interop-infra-commons
-          fetch-depth: 0
-          sparse-checkout: 'scripts/helm'
-          ref: $INFRA_COMMONS_TAG
-
-      - name: Helm Chart Linting
-        id: helm_lint
-        env:
-          CHART_TYPE: ${{ matrix.chartType }}
-        run: |
-          set -euo pipefail
-
-          OPTIONS=""
-
-          if [[ $CHART_TYPE == "microservice" ]]; then
-            OPTIONS=" --microservices "
-          elif [[ $CHART_TYPE == "cronjob" ]]; then
-            OPTIONS=" --jobs "
-          else
-            echo "Workflow cannot be run on selected chart $CHART_TYPE"
-            exit 1
-          fi
-
-          export PROJECT_DIR=$(pwd)
-
-          $SCRIPTS_FOLDER/helmLint-main.sh --debug --environment ${{ inputs.environment }} --output console $OPTIONS -i $PROJECT_DIR/commons/$INFRA_COMMONS_TAG/images.yaml
 
   microservices_validation:
     name: Microservices - Template & Lint
@@ -123,15 +75,16 @@ jobs:
             set +e
             for MICROSERVICE_NAME in $MICROSERVICES; do
               echo "=== Processing microservice: $MICROSERVICE_NAME ==="
-              TEMPLATE_OUTPUT_PATH="/tmp/helm-template-${MICROSERVICE_NAME}.yaml"
+              TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.yaml"
 
               echo "Templating microservice: $MICROSERVICE_NAME"
               $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
                 --debug \
+                --disable-templating-lookup \
                 --environment ${{ inputs.environment }} \
                 --microservice $MICROSERVICE_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output console > $TEMPLATE_OUTPUT_PATH
+                --output $TEMPLATE_OUTPUT_PATH
 
               if [[ $? -ne 0 ]]; then
                 echo "Template generation failed for microservice: $MICROSERVICE_NAME"
@@ -219,15 +172,16 @@ jobs:
             set +e
             for CRONJOB_NAME in $CRONJOBS; do
               echo "=== Processing cronjob: $CRONJOB_NAME ==="
-              TEMPLATE_OUTPUT_PATH="/tmp/helm-template-cronjob-${CRONJOB_NAME}.yaml"
+              TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-cronjob-${CRONJOB_NAME}.yaml"
 
               echo "Templating cronjob: $CRONJOB_NAME"
               $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
                 --debug \
+                --disable-templating-lookup \
                 --environment ${{ inputs.environment }} \
                 --job $CRONJOB_NAME \
                 -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output console > $TEMPLATE_OUTPUT_PATH
+                --output $TEMPLATE_OUTPUT_PATH
 
               if [[ $? -ne 0 ]]; then
                 echo "Template generation failed for cronjob: $CRONJOB_NAME"

@@ -12,12 +12,13 @@ help()
 {
     echo "Usage:  [ -e | --environment ] Environment used to execute kubectl diff
         [ -d | --debug ] Enable debug
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or set to a file path to redirect output
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
         [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help"
     exit 2
 }
@@ -32,6 +33,7 @@ output_redirect=""
 skip_dep=false
 disable_templating_lookup=false
 images_file=""
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -39,7 +41,6 @@ do
     case "$1" in
         -e| --environment )
             [[ "${2:-}" ]] || "Environment cannot be null" || help
-
           environment=$2
           step=2
           shift 2
@@ -61,17 +62,15 @@ do
           ;;
         -i | --image )
           images_file=$2
-          
           step=2
           shift 2
           ;;
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -84,6 +83,12 @@ do
           disable_templating_lookup=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -h | --help )
           help
@@ -119,11 +124,23 @@ fi
 if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
+if [[ -n $chart_path ]]; then
+  OPTIONS=$OPTIONS" -cp $chart_path"
+fi
+
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  HELMDEP_OPTIONS="--untar"
+
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+
+  HELMDEP_OPTIONS="$HELMDEP_OPTIONS --environment "$environment""
+
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
   skip_dep=true
 fi
-# Skip further execution of helm deps build and update since we have already done it in the previous line 
+# Skip further execution of helm deps build and update since we have already done it in the previous line
 OPTIONS=$OPTIONS" -sd"
 
 MICROSERVICE_OPTIONS=" "

@@ -12,10 +12,11 @@ help()
         [ -d | --debug ] Enable Helm template debug
         [ -m | --microservice ] Microservice defined in microservices folder
         [ -i | --image ] File with microservice image tag and digest
-        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal
+        [ -o | --output ] Default output to predefined dir. Otherwise set to "console" to print template output on terminal or set to a file path to redirect output
         [ -c | --clean ] Clean files and directories after script successfull execution
         [ -v | --verbose ] Show debug messages
         [ -sd | --skip-dep ] Skip Helm dependencies setup
+        [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -h | --help ] This help"
     exit 2
@@ -31,21 +32,20 @@ skip_dep=false
 disable_templating_lookup=false
 verbose=false
 images_file=""
+chart_path=""
 
 step=1
 for (( i=0; i<$args; i+=$step ))
 do
     case "$1" in
         -e| --environment )
-            [[ "${2:-}" ]] || "Environment cannot be null" || help
-
+          [[ "${2:-}" ]] || "Environment cannot be null" || help
           environment=$2
           step=2
           shift 2
           ;;
         -m | --microservice )
           [[ "${2:-}" ]] || "Microservice cannot be null" || help
-
           microservice=$2
           serviceAllowedRes=$(isAllowedMicroservice $microservice)
           if [[ -z $serviceAllowedRes || $serviceAllowedRes == "" ]]; then
@@ -53,13 +53,11 @@ do
             echo "Allowed values: " $(getAllowedMicroservices)
             help
           fi
-          
           step=2
           shift 2
           ;;
         -i | --image )
           images_file=$2
-          
           step=2
           shift 2
           ;;
@@ -71,10 +69,9 @@ do
         -o | --output)
           [[ "${2:-}" ]] || "When specified, output cannot be null" || help
           output_redirect=$2
-          if [[ $output_redirect != "console" ]]; then
+          if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]]; then
             help
           fi
-
           step=2
           shift 2
           ;;
@@ -87,6 +84,12 @@ do
           skip_dep=true
           step=1
           shift 1
+          ;;
+        -cp | --chart-path )
+          [[ "${2:-}" ]] || { echo "Error: The chart path (-cp/--chart-path) cannot be null or empty."; help; }
+          chart_path=$2
+          step=2
+          shift 2
           ;;
         -dtl | --disable-templating-lookup)
           disable_templating_lookup=true
@@ -104,7 +107,6 @@ do
         *)
           echo "Unexpected option: $1"
           help
-
           ;;
     esac
 done
@@ -118,7 +120,15 @@ if [[ -z $microservice || $microservice == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  bash "$SCRIPTS_FOLDER"/helmDep.sh --untar
+  HELMDEP_OPTIONS="--untar"
+
+  if [[ -n "$chart_path" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
+  fi
+
+  HELMDEP_OPTIONS="$HELMDEP_OPTIONS --environment "$environment""
+
+  bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
 fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
@@ -131,7 +141,7 @@ ENV=$environment
 MICROSERVICE_DIR=$( echo $microservice | sed  's/-/_/g' )
 
 OUT_DIR="$ROOT_DIR/out/templates/$ENV/microservice_$MICROSERVICE_DIR"
-if [[ $output_redirect != "console" ]]; then
+if [[ "$output_redirect" != "console" ]] && [[ -z "$output_redirect" ]]; then
   rm -rf "$OUT_DIR"
   mkdir  -p "$OUT_DIR"
 else
@@ -161,6 +171,8 @@ OUTPUT_FILE="\"$OUT_DIR/$microservice.out.yaml\""
 OUTPUT_TO="> $OUTPUT_FILE"
 if [[ $output_redirect == "console" ]]; then
   OUTPUT_TO=""
+elif [[ -n "$output_redirect" ]]; then
+  OUTPUT_TO="> \"$output_redirect\""
 fi
 
 #TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
@@ -171,6 +183,6 @@ if [[ $verbose == true ]]; then
   echo "Successfully created Helm Template for microservice $microservice at $OUTPUT_FILE"
 fi
 
-if [[ $output_redirect != "console" && $post_clean == true ]]; then
+if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]] && [[ $post_clean == true ]]; then
   rm -rf $OUT_DIR
 fi
