@@ -2,7 +2,8 @@ CREATE SCHEMA IF NOT EXISTS ${SCHEMA_NAME};
 
 -- Execute external file to create or update a view containing revoke commands for the users
 \set schema_name ${SCHEMA_NAME}
-\i ./v_generate_user_grant_revoke_ddl.sql
+\set uuid ${UUID}
+\i '${PATH_TO_SCRIPTS}/v_generate_user_grant_revoke_ddl.sql'
 
 -- Create a procedure to revoke all the privileges of the target_user and, then, to drop it 
 CREATE OR REPLACE PROCEDURE ${SCHEMA_NAME}.drop_user_with_revoke_${UUID}(target_user VARCHAR)
@@ -18,7 +19,7 @@ BEGIN
 -- Revokes privileges of the target_user
       FOR rec IN 
           SELECT ddl 
-          FROM ${SCHEMA_NAME}.v_generate_user_grant_revoke_ddl
+          FROM ${SCHEMA_NAME}.v_generate_user_grant_revoke_ddl_${UUID}
           WHERE grantee = target_user 
           AND ddltype = 'revoke'
           ORDER BY grantseq ASC
@@ -41,3 +42,6 @@ CALL ${SCHEMA_NAME}.drop_user_with_revoke_${UUID}('${USERNAME}');
 
 -- Drop the procedure
 DROP PROCEDURE ${SCHEMA_NAME}.drop_user_with_revoke_${UUID}(VARCHAR);
+
+-- Drop the view
+DROP VIEW IF EXISTS ${SCHEMA_NAME}.v_generate_user_grant_revoke_ddl_${UUID};

@@ -115,6 +115,7 @@ resource "terraform_data" "delete_previous_role" {
       ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
       USERNAME                     = self.triggers_replace[0]
       CURRENT_USERNAME             = self.input.username
+      PATH_TO_SCRIPTS              = self.input.path_to_scripts
     }
 
     command = <<EOT
@@ -170,6 +171,7 @@ resource "terraform_data" "delete_role" {
       HOST                         = self.input.db_host
       SCHEMA_NAME                  = self.input.redshift_schema_name
       ADMIN_CREDENTIALS_SECRET_ARN = self.input.db_admin_credentials_secret_arn
+      PATH_TO_SCRIPTS              = self.input.path_to_scripts
     }
 
     command = <<EOT

@@ -1,7 +1,7 @@
 -- Reference: https://github.com/awslabs/amazon-redshift-utils/blob/master/src/AdminViews/v_generate_user_grant_revoke_ddl.sql
 -- A fix has been applied to row 184: function replace() helps in removing double quotes from the object name, otherwise there will be a syntax error.
 
-CREATE OR REPLACE VIEW :schema_name.v_generate_user_grant_revoke_ddl AS
+CREATE OR REPLACE VIEW :schema_name.v_generate_user_grant_revoke_ddl_:uuid AS
 WITH objprivs AS ( 
 SELECT objowner, 
       schemaname, 
