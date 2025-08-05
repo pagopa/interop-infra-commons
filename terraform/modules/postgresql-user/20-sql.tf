@@ -73,7 +73,7 @@ resource "terraform_data" "additional_script" {
       #!/bin/bash
       set -euo pipefail
 
-      LOCK_FILE="/tmp/redshift_postgresql_user_module_additional_statements_sql_lock"
+      LOCK_FILE="/tmp/redshift_postgresql_user_module_additional_sql_statements_lock"
 
       (
         flock -x 200
