@@ -72,15 +72,22 @@ resource "terraform_data" "additional_script" {
     command = <<EOT
       #!/bin/bash
       set -euo pipefail
-      
-      secret_json=$(aws secretsmanager get-secret-value --secret-id $ADMIN_CREDENTIALS_SECRET_ARN --query SecretString --output text)
 
-      ADMIN_USERNAME=$(echo $secret_json | jq -r '.username')
-      ADMIN_PASSWORD=$(echo $secret_json | jq -r '.password')
+      LOCK_FILE="/tmp/redshift_postgresql_user_module_additional_sql_statements_lock"
 
-      export PGPASSWORD=$ADMIN_PASSWORD
+      (
+        flock -x 200
+          
+        secret_json=$(aws secretsmanager get-secret-value --secret-id $ADMIN_CREDENTIALS_SECRET_ARN --query SecretString --output text)
 
-      psql -h "$HOST" -U "$ADMIN_USERNAME" -d "$DATABASE" -p "$DATABASE_PORT" -c "${var.additional_sql_statements}"
+        ADMIN_USERNAME=$(echo $secret_json | jq -r '.username')
+        ADMIN_PASSWORD=$(echo $secret_json | jq -r '.password')
+
+        export PGPASSWORD=$ADMIN_PASSWORD
+
+        psql -h "$HOST" -U "$ADMIN_USERNAME" -d "$DATABASE" -p "$DATABASE_PORT" -c "${var.additional_sql_statements}"
+
+      ) 200>"$LOCK_FILE"
     EOT
   }
 }
