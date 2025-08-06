@@ -212,7 +212,9 @@ jobs:
               TIMEOUT_SECONDS=$(. $SCRIPTS_FOLDER/get-rollout-dynamic-wait.sh --namespace $ENVIRONMENT --deployment $TARGET  --batch-wait ${BATCH_WAIT_SECONDS:-300})
 
               echo "Dynamic timeout calculated: $TIMEOUT_SECONDS seconds."
-              TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
+              if [[ "$TIMEOUT_SECONDS" -ne "0" ]]; then
+                TIMEOUT_OPT="--timeout ${TIMEOUT_SECONDS}s"
+              fi
 
             else
               echo "INFO - Helm upgrade will wait for the deployment to finish."
