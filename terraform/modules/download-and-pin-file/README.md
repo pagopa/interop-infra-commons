@@ -2,6 +2,26 @@ This module use curl to download a file from an url (`file_url` parameter),
 save it in a `destination_path` and check if the sha256 of the file is 
 equal to the value given in the `file_sha256_hex` parameter.
 
+Usage Example
+```
+module "lambda_code_archive" {
+  source = "./modules/download-and-pin-file"
+
+  file_url        = "https://github.com/pagopa/interop-infra-lambdas/releases/download/v0.0.1/analytics-refresh-mv.zip"
+  file_sha256_hex = "5563cd26321e27d4eb8a2a5ebdde0a4576610de2f0095132b72808ba476c0848"
+  file_cache_key  = "analytics-refresh-mv.zip"
+}
+
+resource "aws_lambda_function" "refresh_redshift_materialized_views" {
+
+  filename         = module.lambda_code_archive[0].downloaded_file_location
+  source_code_hash = module.lambda_code_archive[0].file_sha256_base64
+  ...
+  ...
+}
+
+```
+
 <!-- BEGIN_TF_DOCS -->
 ## Requirements
 
