@@ -5,5 +5,5 @@ output "downloaded_file_location" {
 
 output "file_sha256_base64" {
   description = ""
-  value       = data.external.refresh_mv_lambda_zip.result.file_sha256_base64
+  value       = data.external.curl_wrapper.result.file_sha256_base64
 }

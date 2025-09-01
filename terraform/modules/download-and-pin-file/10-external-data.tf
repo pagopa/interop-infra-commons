@@ -7,9 +7,9 @@ locals {
   )
 }
 
-data "external" "refresh_mv_lambda_zip" {
+data "external" "curl_wrapper" {
 
-  program = ["bash", "${path.module}/scripts/download_and_check_lambda_archive.sh"]
+  program = ["bash", "${path.module}/scripts/download_and_check_archive.sh"]
 
   query = {
     url              = var.file_url
