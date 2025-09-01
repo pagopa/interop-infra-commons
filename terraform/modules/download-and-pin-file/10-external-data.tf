@@ -9,7 +9,7 @@ locals {
 
 data "external" "curl_wrapper" {
 
-  program = ["bash", "${path.module}/scripts/download_and_check_archive.sh"]
+  program = ["bash", "${path.module}/scripts/download_and_check_file.sh"]
 
   query = {
     url              = var.file_url

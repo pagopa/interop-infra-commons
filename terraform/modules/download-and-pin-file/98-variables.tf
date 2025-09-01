@@ -1,5 +1,5 @@
 variable "file_url" {
-  description = "The url to be downloaded. The module use curl."
+  description = "The url to be downloaded. Everithing supported by curl."
   nullable    = false
   type        = string
 
