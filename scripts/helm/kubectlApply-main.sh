@@ -121,7 +121,7 @@ if [[ -n $chart_path ]]; then
   OPTIONS=$OPTIONS" -cp $chart_path"
 fi
 if [[ $skip_dep == false ]]; then
-  HELMDEP_OPTIONS="--untar --install-diff-plugin"
+  HELMDEP_OPTIONS="--untar"
 
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
