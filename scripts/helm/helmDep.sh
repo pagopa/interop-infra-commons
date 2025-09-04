@@ -7,14 +7,15 @@ help() {
         [ -u | --untar ] Untar downloaded charts
         [ -v | --verbose ] Show debug messages
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
-        [ -h | --help ] This help"
+        [ -h | --help ] This help
+        [ -idp | --install-diff-plugin ] Install helm diff plugin if not already installed (default: false)"
     exit 2
 }
 
 PROJECT_DIR="${PROJECT_DIR:-$(pwd)}"
 ROOT_DIR="$PROJECT_DIR"
 
-SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+#SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 
 args=$#
@@ -23,7 +24,7 @@ environment=""
 step=1
 verbose=false
 chart_path=""
-
+install_diff_plugin=false
 
 # Check args
 for (( i=0; i<$args; i+=$step ))
@@ -53,6 +54,11 @@ do
           chart_path="$2"
           step=2
           shift 2
+          ;;
+        -idp | --install-diff-plugin )
+            install_diff_plugin=true
+            step=1
+            shift 1
           ;;
         *)
           echo "Unexpected option: $1"
@@ -155,21 +161,24 @@ function setupHelmDeps()
     fi
     rm -rf charts/charts
 
-    set +e
-    # Install helm diff plugin, first check if it is already installed
-    if [[ $(helm plugin list | grep -c 'diff') -eq 0 ]]; then
-        if [[ $verbose == true ]]; then
-            echo "Installing helm-diff plugin"
+    if [[ $install_diff_plugin == true ]]; then
+        echo "-- Setting up helm diff plugin --"
+        set +e
+        # Install helm diff plugin, first check if it is already installed
+        if [[ $(helm plugin list | grep -c 'diff') -eq 0 ]]; then
+            if [[ $verbose == true ]]; then
+                echo "Installing helm-diff plugin"
+            fi
+            helm plugin install https://github.com/databus23/helm-diff
+            diff_plugin_result=$?
+        else
+            if [[ $verbose == true ]]; then
+                echo "Helm-diff plugin already installed"
+            fi
+            diff_plugin_result=0
         fi
-        helm plugin install https://github.com/databus23/helm-diff
-        diff_plugin_result=$?
-    else
-        if [[ $verbose == true ]]; then
-            echo "Helm-diff plugin already installed"
-        fi
-        diff_plugin_result=0
+        set -e
     fi
-    set -e
 
     echo "-- Helm dependencies setup ended --"
     exit 0

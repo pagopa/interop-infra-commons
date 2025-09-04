@@ -134,7 +134,7 @@ if [[ -z $job || $job == "" ]]; then
   help
 fi
 if [[ $skip_dep == false ]]; then
-  HELMDEP_OPTIONS="--untar"
+  HELMDEP_OPTIONS="--untar --install-diff-plugin"
 
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
