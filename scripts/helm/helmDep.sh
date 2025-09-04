@@ -8,7 +8,7 @@ help() {
         [ -v | --verbose ] Show debug messages
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help
-        [ -idp | --install-diff-plugin ] Install helm diff plugin if not already installed (default: false)"
+        [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)"
     exit 2
 }
 
@@ -24,7 +24,7 @@ environment=""
 step=1
 verbose=false
 chart_path=""
-install_diff_plugin=false
+disable_plugins_install=false
 
 # Check args
 for (( i=0; i<$args; i+=$step ))
@@ -55,10 +55,10 @@ do
           step=2
           shift 2
           ;;
-        -idp | --install-diff-plugin )
-            install_diff_plugin=true
-            step=1
-            shift 1
+        -dpi | --disable-plugins-install )
+          disable_plugins_install=true
+          step=1
+          shift 1
           ;;
         *)
           echo "Unexpected option: $1"
@@ -161,7 +161,7 @@ function setupHelmDeps()
     fi
     rm -rf charts/charts
 
-    if [[ $install_diff_plugin == true ]]; then
+    if [[ "$disable_plugins_install" == "false" ]]; then
         echo "-- Setting up helm diff plugin --"
         set +e
         # Install helm diff plugin, first check if it is already installed
