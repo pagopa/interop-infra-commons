@@ -19,6 +19,7 @@ help()
         [ -c | --clean ] Clean files and directories after scripts successfull execution
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
+        [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -33,6 +34,7 @@ output_redirect=""
 skip_dep=false
 images_file=""
 chart_path=""
+disable_plugins_install=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -89,6 +91,11 @@ do
           step=2
           shift 2
           ;;
+        -dpi | --disable-plugins-install )
+          disable_plugins_install=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -129,6 +136,10 @@ if [[ -n $chart_path ]]; then
 fi
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
+
+  if [[ "$disable_plugins_install" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
+  fi
 
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
