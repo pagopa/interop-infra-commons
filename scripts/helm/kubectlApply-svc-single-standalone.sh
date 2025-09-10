@@ -17,6 +17,7 @@ help()
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -25,7 +26,6 @@ args=$#
 environment=""
 microservice=""
 enable_debug=false
-post_clean=false
 output_redirect=""
 skip_dep=false
 disable_templating_lookup=false
@@ -95,6 +95,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -120,7 +125,9 @@ if [[ $skip_dep == false ]]; then
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -133,7 +140,9 @@ fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  echo "Environment configuration '$environment' not found for microservice '$microservice'"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "Environment configuration '$environment' not found for microservice '$microservice'"
+  fi
   help
 fi
 
@@ -155,6 +164,9 @@ if [[ $skip_dep == true ]]; then
 fi
 if [[ $disable_templating_lookup != true ]]; then
   OPTIONS=$OPTIONS" --enable-templating-lookup "
+fi
+if [[ "$argocd_plugin" == "true" ]]; then
+  OPTIONS="$OPTIONS --argocd-plugin "
 fi
 
 #HELM_TEMPLATE_CMD="$SCRIPTS_FOLDER/helmTemplate-svc-single.sh -e $ENV -m $microservice $OPTIONS"

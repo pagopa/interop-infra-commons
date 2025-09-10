@@ -20,6 +20,7 @@ help()
         [ --force ] Force helm upgrade
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -38,6 +39,7 @@ force=false
 history_max=3
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -121,6 +123,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -146,7 +153,9 @@ if [[ $skip_dep == false ]]; then
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -159,7 +168,9 @@ fi
 
 VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  echo "[CRONJOB-UPGRADE] Environment configuration '$environment' not found for cronjob '$job'"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "[CRONJOB-UPGRADE] Environment configuration '$environment' not found for cronjob '$job'"
+  fi
   help
 fi
 
@@ -193,7 +204,9 @@ if [[ -n $images_file ]]; then
   IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
 fi
 
-echo "[CRONOJB-UPGRADE] Computing image version and digest for cronjob '$job'."
+if [[ "$argocd_plugin" != "true" ]]; then
+  echo "[CRONOJB-UPGRADE] Computing image version and digest for cronjob '$job'."
+fi
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
@@ -206,5 +219,8 @@ UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.ya
 UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" "
 UPGRADE_CMD="$UPGRADE_CMD $OUTPUT_REDIRECT"
 
-echo "[CRONJOB-UPGRADE] Executing $job upgrade command."
+if [[ "$argocd_plugin" != "true" ]]; then
+  echo "[CRONJOB-UPGRADE] Executing $job upgrade command."
+fi
+
 eval $UPGRADE_CMD

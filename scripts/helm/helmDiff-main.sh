@@ -19,6 +19,7 @@ help()
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -34,6 +35,7 @@ images_file=""
 disable_templating_lookup=false
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -86,6 +88,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -100,12 +107,12 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help
 fi
-echo "Environment: $environment"
+
+if [[ "$argocd_plugin" != "true" ]]; then
+  echo "Environment: $environment"
+fi
 
 ENV=$environment
-DELIMITER=";"
-MICROSERVICES_DIR=$(getMicroservicesDir)
-CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then
@@ -126,7 +133,9 @@ if [[ $skip_dep == false ]]; then
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -139,6 +148,9 @@ fi
 
 # Skip further execution of helm deps build and update since we have already done it in the previous line
 OPTIONS=$OPTIONS" -sd"
+if [[ "$argocd_plugin" == "true" ]]; then
+  OPTIONS=$OPTIONS" --argocd-plugin"
+fi
 
 MICROSERVICE_OPTIONS=" "
 if [[ $disable_templating_lookup != true ]]; then
@@ -146,31 +158,44 @@ if [[ $disable_templating_lookup != true ]]; then
 fi
 
 if [[ $template_microservices == true ]]; then
-  echo "Start microservices templates diff"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "Start microservices templates diff"
+  fi
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    echo "No microservices found for environment '$ENV'. Skipping microservices diff."
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "No microservices found for environment '$ENV'. Skipping microservices diff."
+    fi
   fi
 
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    echo "Diff $CURRENT_SVC"
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "Diff $CURRENT_SVC"
+    fi
+
     "$SCRIPTS_FOLDER"/helmDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  echo "Start cronjobs templates diff"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "Start cronjobs templates diff"
+  fi
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs diff."
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "No cronjobs found for environment '$ENV'. Skipping cronjobs diff."
+    fi
   fi
 
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    echo "Diff $CURRENT_JOB"
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "Diff $CURRENT_JOB"
+    fi
     "$SCRIPTS_FOLDER"/helmDiff-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi

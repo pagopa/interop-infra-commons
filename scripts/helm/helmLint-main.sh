@@ -20,6 +20,7 @@ help()
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -35,6 +36,7 @@ skip_dep=false
 images_file=""
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -96,6 +98,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -110,12 +117,11 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help
 fi
-echo "Environment: $environment"
+if [[ "$argocd_plugin" != "true" ]]; then
+  echo "Environment: $environment"
+fi
 
 ENV=$environment
-DELIMITER=";"
-MICROSERVICES_DIR=$(getMicroservicesDir)
-CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then
@@ -130,17 +136,22 @@ fi
 if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
-
 if [[ -n $chart_path ]]; then
     OPTIONS=$OPTIONS" -cp $chart_path"
 fi
+if [[ "$argocd_plugin" == "true" ]]; then
+  OPTIONS="$OPTIONS --argocd-plugin"
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -154,18 +165,30 @@ fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line
 OPTIONS=$OPTIONS" -sd"
 
+
 if [[ $lint_microservices == true ]]; then
-  echo "Start linting microservices"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "Start linting microservices"
+  fi
+
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    echo "No microservices found for environment '$ENV'. Skipping microservices linting."
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "No microservices found for environment '$ENV'. Skipping microservices linting."
+    fi
   fi
+  
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    echo "Linting $CURRENT_SVC"
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "Linting $CURRENT_SVC"
+    fi
+
     VALID_CONFIG=$(isMicroserviceEnvConfigValid $CURRENT_SVC $ENV)
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-      echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
+      if [[ "$argocd_plugin" != "true" ]]; then
+        echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
+      fi
     else
       "$SCRIPTS_FOLDER"/helmLint-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS
     fi
@@ -173,17 +196,27 @@ if [[ $lint_microservices == true ]]; then
 fi
 
 if [[ $lint_jobs == true ]]; then
-  echo "Start linting cronjobs"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "Start linting cronjobs"
+  fi
+
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs linting."
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "No cronjobs found for environment '$ENV'. Skipping cronjobs linting."
+    fi
   fi
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    echo "Linting $CURRENT_JOB"
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "Linting $CURRENT_JOB" 
+    fi
+
     VALID_CONFIG=$(isCronjobEnvConfigValid $CURRENT_JOB $ENV)
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-      echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
+      if [[ "$argocd_plugin" != "true" ]]; then
+        echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
+      fi
     else
       "$SCRIPTS_FOLDER"/helmLint-cron-single.sh -e $ENV -j $CURRENT_JOB $OPTIONS
     fi

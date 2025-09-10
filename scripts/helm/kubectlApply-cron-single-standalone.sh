@@ -16,6 +16,7 @@ help()
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -24,12 +25,12 @@ args=$#
 environment=""
 job=""
 enable_debug=false
-post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -88,6 +89,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -112,7 +118,9 @@ if [[ $skip_dep == false ]]; then
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -125,7 +133,9 @@ fi
 
 VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  echo "Environment configuration '$environment' not found for cronjob '$job'"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "Environment configuration '$environment' not found for cronjob '$job'"
+  fi
   help
 fi
 
@@ -144,6 +154,9 @@ if [[ -n $images_file ]]; then
 fi
 if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
+fi
+if [[ "$argocd_plugin" == "true" ]]; then
+  OPTIONS="$OPTIONS --argocd-plugin "
 fi
 
 #HELM_TEMPLATE_CMD="$SCRIPTS_FOLDER/helmTemplate-cron-single.sh -e $ENV -j $job $OPTIONS"

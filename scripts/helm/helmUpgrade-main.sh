@@ -25,6 +25,7 @@ help()
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when upgrading
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -46,6 +47,7 @@ timeout="5m0s"
 disable_templating_lookup=false
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -138,6 +140,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -152,12 +159,11 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "[MAIN-UPGRADE] Environment cannot be null"
   help
 fi
-echo "[MAIN-UPGRADE] Selected Environment: $environment"
+if [[ "$argocd_plugin" != "true" ]]; then
+  echo "[MAIN-UPGRADE] Selected Environment: $environment"
+fi
 
 ENV=$environment
-DELIMITER=";"
-MICROSERVICES_DIR=$(getMicroservicesDir)
-CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
 if [[ $enable_atomic == true ]]; then
@@ -181,6 +187,9 @@ fi
 if [[ -n $chart_path ]]; then
   OPTIONS=$OPTIONS" -cp $chart_path"
 fi
+if [[ "$argocd_plugin" == "true" ]]; then
+  OPTIONS="$OPTIONS --argocd-plugin"
+fi
 
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
@@ -188,7 +197,9 @@ if [[ $skip_dep == false ]]; then
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -211,31 +222,43 @@ if [[ $disable_templating_lookup == true ]]; then
 fi
 
 if [[ $template_microservices == true ]]; then
-  echo "[MAIN-UPGRADE] Start microservices helm install"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "[MAIN-UPGRADE] Start microservices helm install"
+  fi
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    echo "[MAIN-UPGRADE] No microservices found for environment '$ENV'. Skipping microservices upgrade."
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "[MAIN-UPGRADE] No microservices found for environment '$ENV'. Skipping microservices upgrade."
+    fi
   fi
 
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    echo "[MAIN-UPGRADE] Upgrade $CURRENT_SVC"
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "[MAIN-UPGRADE] Upgrade $CURRENT_SVC"
+    fi
     sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  echo "[MAIN-UPGRADE] Start cronjobs helm install"
+  if [[ "$argocd_plugin" != "true" ]]; then
+    echo "[MAIN-UPGRADE] Start cronjobs helm install"
+  fi
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    echo "[MAIN-UPGRADE] No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "[MAIN-UPGRADE] No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
+    fi
   fi
 
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    echo "[MAIN-UPGRADE] Upgrade $CURRENT_JOB"
+    if [[ "$argocd_plugin" != "true" ]]; then
+      echo "[MAIN-UPGRADE] Upgrade $CURRENT_JOB"
+    fi
     sh "$SCRIPTS_FOLDER"/helmUpgrade-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi
