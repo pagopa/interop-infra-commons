@@ -114,6 +114,11 @@ if [[ -z $job || $job == "" ]]; then
   echo "Job cannot null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
@@ -135,9 +140,7 @@ fi
 
 VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Environment configuration '$environment' not found for cronjob '$job'"
-  fi
+  echo "Environment configuration '$environment' not found for cronjob '$job'"
   help
 fi
 
@@ -170,3 +173,7 @@ DIFF_SCRIPT="$SCRIPTS_FOLDER/diff.sh"
 
 "$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS | \
  KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi

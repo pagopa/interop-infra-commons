@@ -128,6 +128,10 @@ if [[ "$argocd_plugin" != "true" ]]; then
   echo "Environment: $environment"
 fi
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 ENV=$environment
 
 OPTIONS=" "
@@ -176,28 +180,20 @@ fi
 OPTIONS=$OPTIONS" -sd"
 
 if [[ $template_microservices == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start microservices templates generation"
-  fi
+  echo "Start microservices templates generation"
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "No microservices found for environment '$ENV'. Skipping microservices templates generation."
-    fi
+    echo "No microservices found for environment '$ENV'. Skipping microservices templates generation."
   fi
 
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Templating $CURRENT_SVC"
-    fi
-
+    echo "Templating $CURRENT_SVC"
+    
     VALID_CONFIG=$(isMicroserviceEnvConfigValid $CURRENT_SVC $ENV)
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-      if [[ "$argocd_plugin" != "true" ]]; then
-        echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
-      fi
+      echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
     else
       "$SCRIPTS_FOLDER"/helmTemplate-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
     fi
@@ -206,27 +202,19 @@ if [[ $template_microservices == true ]]; then
 fi
 
 if [[ $template_jobs == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start cronjobs templates generation"
-  fi
+  echo "Start cronjobs templates generation"
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "No cronjobs found for environment '$ENV'. Skipping cronjobs templates generation."
-    fi
+    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs templates generation."
   fi
 
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Templating $CURRENT_JOB"
-    fi
+    echo "Templating $CURRENT_JOB"
     VALID_CONFIG=$(isCronjobEnvConfigValid $CURRENT_JOB $ENV)
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-      if [[ "$argocd_plugin" != "true" ]]; then
-        echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
-      fi
+      echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
     else
       "$SCRIPTS_FOLDER"/helmTemplate-cron-single.sh -e $ENV -j $CURRENT_JOB $OPTIONS
     fi
@@ -235,4 +223,8 @@ fi
 
 if [[ $post_clean == true ]]; then
   rm -rf "$ROOT_DIR/out/templates"
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi

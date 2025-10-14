@@ -75,6 +75,10 @@ do
     esac
 done
 
+if [[ "$argocd_plugin" == "true" ]]; then
+    suppressOutput
+fi
+
 # Validate path to Chart.yaml
 if [[ -n "$chart_path" ]]; then
     resolved_chart_path="$chart_path"
@@ -92,9 +96,7 @@ if [[ "$(basename "$resolved_chart_path")" != "Chart.yaml" ]]; then
     exit 1
 fi
 
-if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Resolved chart path: $resolved_chart_path"
-fi
+echo "Resolved chart path: $resolved_chart_path"
 
 function setupHelmDeps()
 {
@@ -105,62 +107,49 @@ function setupHelmDeps()
     rm -rf charts
 
     if [[ $verbose == true ]]; then
-        if [[ "$argocd_plugin" != "true" ]]; then
-            echo "Creating directory charts"
-        fi
+        echo "Creating directory charts"
     fi
     mkdir -p charts
 
     if [[ $verbose == true ]]; then
-        if [[ "$argocd_plugin" != "true" ]]; then
-            echo "Copying Chart.yaml to charts"
-        fi
+        echo "Copying Chart.yaml to charts"
     fi
     cp "$resolved_chart_path" charts/Chart.yaml
+    
     # Execute helm commands
-    if [[ "$argocd_plugin" != "true" ]]; then
-        echo "# Helm dependencies setup #"
-        echo "-- Add PagoPA eks repos --"
-    fi
+    echo "# Helm dependencies setup #"
+    echo "-- Add PagoPA eks repos --"
+    
     helm repo add interop-eks-microservice-chart https://pagopa.github.io/interop-eks-microservice-chart > /dev/null
     helm repo add interop-eks-cronjob-chart https://pagopa.github.io/interop-eks-cronjob-chart > /dev/null
 
-    if [[ "$argocd_plugin" != "true" ]]; then
-        echo "-- Update PagoPA eks repo --"
-    fi
+    echo "-- Update PagoPA eks repo --"
+    
     helm repo update interop-eks-microservice-chart > /dev/null
     helm repo update interop-eks-cronjob-chart > /dev/null
 
     if [[ $verbose == true ]]; then
-        if [[ "$argocd_plugin" != "true" ]]; then
-            echo "-- Search PagoPA charts in repo --"
-        fi
+        echo "-- Search PagoPA charts in repo --"
     fi
     helm search repo interop-eks-microservice-chart > /dev/null
     helm search repo interop-eks-cronjob-chart > /dev/null
 
     if [[ $verbose == true ]]; then
-        if [[ "$argocd_plugin" != "true" ]]; then
-            echo "-- List chart dependencies --"
-        fi
+        echo "-- List chart dependencies --"
     fi
-    if [[ "$argocd_plugin" != "true" ]]; then
-        helm dep list charts | awk '{printf "%-35s %-15s %-20s\n", $1, $2, $3}'
-    fi
-
+    
+    helm dep list charts | awk '{printf "%-35s %-15s %-20s\n", $1, $2, $3}'
+    
     cd charts
 
     if [[ $verbose == true ]]; then
-        if [[ "$argocd_plugin" != "true" ]]; then
-            echo "-- Build chart dependencies --"
-        fi
+        echo "-- Build chart dependencies --"
     fi
+    
     # Execute helm dependency update command
     dep_up_result=$(helm dep up)
     if [[ $verbose == true ]]; then
-        if [[ "$argocd_plugin" != "true" ]]; then
-            echo $dep_up_result
-        fi
+        echo $dep_up_result
     fi
 
     cd "$ROOT_DIR"
@@ -169,17 +158,13 @@ function setupHelmDeps()
         for filename in charts/charts/*.tgz; do
             [ -e "$filename" ] || continue
             
-            if [[ "$argocd_plugin" != "true" ]]; then
-                echo "Processing $filename"
-            fi
+            echo "Processing $filename"
             
             basename_file=$(basename "$filename" .tgz)
             chart_name="${basename_file%-*}"
             target_dir="charts/$chart_name"
 
-            if [[ "$argocd_plugin" != "true" ]]; then
-                echo "→ Extracting to $target_dir"
-            fi
+            echo "→ Extracting to $target_dir"
             
             mkdir -p "$target_dir"
             tar -xzf "$filename" -C "$target_dir" --strip-components=1
@@ -188,42 +173,37 @@ function setupHelmDeps()
     fi
     # Remove temp charts directory
     if [[ $verbose == true ]]; then
-        if [[ "$argocd_plugin" != "true" ]]; then
-            echo "Removing charts/charts directory"
-        fi
+        echo "Removing charts/charts directory"
     fi
     rm -rf charts/charts
 
     if [[ "$disable_plugins_install" == "false" ]]; then
-        if [[ "$argocd_plugin" != "true" ]]; then
-            echo "-- Setting up helm diff plugin --"
-        fi
-
+        echo "-- Setting up helm diff plugin --"
+        
         set +e
         # Install helm diff plugin, first check if it is already installed
         if [[ $(helm plugin list | grep -c 'diff') -eq 0 ]]; then
             if [[ $verbose == true ]]; then
-                if [[ "$argocd_plugin" != "true" ]]; then
-                    echo "Installing helm-diff plugin"
-                fi
+                echo "Installing helm-diff plugin"
             fi
             helm plugin install https://github.com/databus23/helm-diff
             diff_plugin_result=$?
         else
             if [[ $verbose == true ]]; then
-                if [[ "$argocd_plugin" != "true" ]]; then
-                    echo "Helm-diff plugin already installed"
-                fi
+                echo "Helm-diff plugin already installed"
             fi
             diff_plugin_result=0
         fi
         set -e
     fi
 
-    if [[ "$argocd_plugin" != "true" ]]; then
-        echo "-- Helm dependencies setup ended --"
-    fi
-    exit 0
+    echo "-- Helm dependencies setup ended --"
 }
 
 setupHelmDeps $untar
+
+if [[ "$argocd_plugin" == "true" ]]; then
+    restoreOutput
+fi
+
+exit 0

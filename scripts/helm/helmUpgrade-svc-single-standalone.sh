@@ -161,6 +161,11 @@ if [[ -z $microservice || $microservice == "" ]]; then
   echo "[SVC-UPGRADE] Microservice cannot be null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
@@ -182,9 +187,7 @@ fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "[SVC-UPGRADE] Environment configuration '$environment' not found for microservice '$microservice'"
-  fi
+  echo "[SVC-UPGRADE] Environment configuration '$environment' not found for microservice '$microservice'"
   help
 fi
 
@@ -225,9 +228,7 @@ if [[ -n $images_file ]]; then
   IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
 fi
 
-if [[ "$argocd_plugin" != "true" ]]; then
-  echo "[SVC-UPGRADE] Computing image version and digest for microservice '$microservice'."
-fi
+echo "[SVC-UPGRADE] Computing image version and digest for microservice '$microservice'."
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -m $microservice $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
@@ -240,7 +241,9 @@ UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/commons/$ENV/values-microservice.compile
 UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" "
 UPGRADE_CMD=$UPGRADE_CMD"$ADDITIONAL_VALUES $OUTPUT_REDIRECT"
 
-if [[ "$argocd_plugin" != "true" ]]; then
-  echo "[SVC-UPGRADE] Executing $microservice upgrade command."
-fi
+echo "[SVC-UPGRADE] Executing $microservice upgrade command."
 eval $UPGRADE_CMD
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi

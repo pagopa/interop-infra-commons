@@ -111,6 +111,11 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 echo "Environment: $environment"
 
 ENV=$environment
@@ -159,29 +164,25 @@ fi
 OPTIONS=$OPTIONS" -sd"
 
 if [[ $template_microservices == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start microservices kubectl apply"
-  fi
+  echo "Start microservices kubectl apply"  
   for dir in "$MICROSERVICES_DIR"/*;
   do
     CURRENT_SVC=$(basename "$dir");
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Diff $CURRENT_SVC"
-    fi
+    echo "Diff $CURRENT_SVC"
     sh "$SCRIPTS_FOLDER"/kubectlApply-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start cronjobs kubectl apply"
-  fi
+  echo "Start cronjobs kubectl apply"
   for dir in "$CRONJOBS_DIR"/*;
   do
     CURRENT_JOB=$(basename "$dir");
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Diff $CURRENT_JOB"
-    fi
+    echo "Diff $CURRENT_JOB"
     sh "$SCRIPTS_FOLDER"/kubectlApply-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi

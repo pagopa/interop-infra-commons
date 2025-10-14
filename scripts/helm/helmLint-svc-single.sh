@@ -119,6 +119,11 @@ if [[ -z $microservice || $microservice == "" ]]; then
   echo "Microservice cannot be null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
@@ -140,9 +145,7 @@ fi
 
 VALID_CONFIG=$(isMicroserviceEnvConfigValid $microservice $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Environment configuration '$environment' not found for microservice '$microservice'"
-  fi
+  echo "Environment configuration '$environment' not found for microservice '$microservice'"
   help
 fi
 
@@ -186,4 +189,8 @@ eval $LINT_CMD
 
 if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]] && [[ $post_clean == true ]]; then
   rm -rf $OUT_DIR
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi

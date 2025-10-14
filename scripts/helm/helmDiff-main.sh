@@ -108,8 +108,8 @@ if [[ -z $environment || $environment == "" ]]; then
   help
 fi
 
-if [[ "$argocd_plugin" != "true" ]]; then
-  echo "Environment: $environment"
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
 fi
 
 ENV=$environment
@@ -158,44 +158,38 @@ if [[ $disable_templating_lookup != true ]]; then
 fi
 
 if [[ $template_microservices == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start microservices templates diff"
-  fi
+  echo "Start microservices templates diff"
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "No microservices found for environment '$ENV'. Skipping microservices diff."
-    fi
+    echo "No microservices found for environment '$ENV'. Skipping microservices diff."
   fi
 
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Diff $CURRENT_SVC"
-    fi
-
+    echo "Diff $CURRENT_SVC"
+    
     "$SCRIPTS_FOLDER"/helmDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start cronjobs templates diff"
-  fi
+  echo "Start cronjobs templates diff"
+  
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "No cronjobs found for environment '$ENV'. Skipping cronjobs diff."
-    fi
+    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs diff."
   fi
 
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Diff $CURRENT_JOB"
-    fi
+    echo "Diff $CURRENT_JOB"
     "$SCRIPTS_FOLDER"/helmDiff-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi
+

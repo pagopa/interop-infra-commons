@@ -159,9 +159,12 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "[MAIN-UPGRADE] Environment cannot be null"
   help
 fi
-if [[ "$argocd_plugin" != "true" ]]; then
-  echo "[MAIN-UPGRADE] Selected Environment: $environment"
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
 fi
+
+echo "[MAIN-UPGRADE] Selected Environment: $environment"
 
 ENV=$environment
 
@@ -222,43 +225,35 @@ if [[ $disable_templating_lookup == true ]]; then
 fi
 
 if [[ $template_microservices == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "[MAIN-UPGRADE] Start microservices helm install"
-  fi
+  echo "[MAIN-UPGRADE] Start microservices helm install"
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "[MAIN-UPGRADE] No microservices found for environment '$ENV'. Skipping microservices upgrade."
-    fi
+    echo "[MAIN-UPGRADE] No microservices found for environment '$ENV'. Skipping microservices upgrade."
   fi
 
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "[MAIN-UPGRADE] Upgrade $CURRENT_SVC"
-    fi
+    echo "[MAIN-UPGRADE] Upgrade $CURRENT_SVC"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "[MAIN-UPGRADE] Start cronjobs helm install"
-  fi
+  echo "[MAIN-UPGRADE] Start cronjobs helm install"
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
 
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "[MAIN-UPGRADE] No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
-    fi
+    echo "[MAIN-UPGRADE] No cronjobs found for environment '$ENV'. Skipping cronjobs upgrade."
   fi
 
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "[MAIN-UPGRADE] Upgrade $CURRENT_JOB"
-    fi
+    echo "[MAIN-UPGRADE] Upgrade $CURRENT_JOB"
     sh "$SCRIPTS_FOLDER"/helmUpgrade-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi

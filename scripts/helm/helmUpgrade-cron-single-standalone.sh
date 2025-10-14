@@ -147,6 +147,11 @@ if [[ -z $job || $job == "" ]]; then
   echo "[CRONJOB-UPGRADE] Job cannot null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
@@ -168,9 +173,7 @@ fi
 
 VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "[CRONJOB-UPGRADE] Environment configuration '$environment' not found for cronjob '$job'"
-  fi
+  echo "[CRONJOB-UPGRADE] Environment configuration '$environment' not found for cronjob '$job'"
   help
 fi
 
@@ -204,9 +207,8 @@ if [[ -n $images_file ]]; then
   IMAGE_VERSION_READER_OPTIONS=" -f $images_file"
 fi
 
-if [[ "$argocd_plugin" != "true" ]]; then
-  echo "[CRONOJB-UPGRADE] Computing image version and digest for cronjob '$job'."
-fi
+echo "[CRONOJB-UPGRADE] Computing image version and digest for cronjob '$job'."
+
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
@@ -219,8 +221,9 @@ UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.ya
 UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" "
 UPGRADE_CMD="$UPGRADE_CMD $OUTPUT_REDIRECT"
 
-if [[ "$argocd_plugin" != "true" ]]; then
-  echo "[CRONJOB-UPGRADE] Executing $job upgrade command."
-fi
-
+echo "[CRONJOB-UPGRADE] Executing $job upgrade command."
 eval $UPGRADE_CMD
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi

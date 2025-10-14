@@ -121,6 +121,10 @@ if [[ "$argocd_plugin" != "true" ]]; then
   echo "Environment: $environment"
 fi
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 ENV=$environment
 
 OPTIONS=" "
@@ -167,28 +171,20 @@ OPTIONS=$OPTIONS" -sd"
 
 
 if [[ $lint_microservices == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start linting microservices"
-  fi
+  echo "Start linting microservices"
 
   ALLOWED_MICROSERVICES=$(getAllowedMicroservicesForEnvironment "$ENV")
   if [[ -z $ALLOWED_MICROSERVICES || $ALLOWED_MICROSERVICES == "" ]]; then
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "No microservices found for environment '$ENV'. Skipping microservices linting."
-    fi
+    echo "No microservices found for environment '$ENV'. Skipping microservices linting."
   fi
   
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Linting $CURRENT_SVC"
-    fi
-
+    echo "Linting $CURRENT_SVC"
+    
     VALID_CONFIG=$(isMicroserviceEnvConfigValid $CURRENT_SVC $ENV)
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-      if [[ "$argocd_plugin" != "true" ]]; then
-        echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
-      fi
+      echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
     else
       "$SCRIPTS_FOLDER"/helmLint-svc-single.sh -e $ENV -m $CURRENT_SVC $OPTIONS
     fi
@@ -196,27 +192,19 @@ if [[ $lint_microservices == true ]]; then
 fi
 
 if [[ $lint_jobs == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start linting cronjobs"
-  fi
-
+  echo "Start linting cronjobs"
+  
   ALLOWED_CRONJOBS=$(getAllowedCronjobsForEnvironment "$ENV")
   if [[ -z $ALLOWED_CRONJOBS || $ALLOWED_CRONJOBS == "" ]]; then
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "No cronjobs found for environment '$ENV'. Skipping cronjobs linting."
-    fi
+    echo "No cronjobs found for environment '$ENV'. Skipping cronjobs linting."
   fi
   for CURRENT_JOB in ${ALLOWED_CRONJOBS//;/ }
   do
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Linting $CURRENT_JOB" 
-    fi
-
+    echo "Linting $CURRENT_JOB" 
+  
     VALID_CONFIG=$(isCronjobEnvConfigValid $CURRENT_JOB $ENV)
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-      if [[ "$argocd_plugin" != "true" ]]; then
-        echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
-      fi
+      echo "Environment configuration '$ENV' not found for cronjob '$CURRENT_JOB'"
     else
       "$SCRIPTS_FOLDER"/helmLint-cron-single.sh -e $ENV -j $CURRENT_JOB $OPTIONS
     fi
@@ -225,4 +213,8 @@ fi
 
 if [[ $post_clean == true ]]; then
   rm -rf "$ROOT_DIR/out/lint"
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi

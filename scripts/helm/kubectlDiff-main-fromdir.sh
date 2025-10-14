@@ -98,6 +98,10 @@ if [[ "$argocd_plugin" != "true" ]]; then
   echo "Environment: $environment"
 fi
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 ENV=$environment
 MICROSERVICES_DIR=$(getMicroservicesDir)
 CRONJOBS_DIR=$(getCronjobsDir)
@@ -139,29 +143,21 @@ fi
 OPTIONS=$OPTIONS" -sd"
 
 if [[ $template_microservices == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start microservices templates diff"
-  fi
+  echo "Start microservices templates diff"
   for dir in "$MICROSERVICES_DIR"/*;
   do
     CURRENT_SVC=$(basename "$dir");
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Diff $CURRENT_SVC"
-    fi
+    echo "Diff $CURRENT_SVC"
     "$SCRIPTS_FOLDER"/kubectlDiff-svc-single-fromdir.sh -e $ENV -m $CURRENT_SVC $OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
     echo "Start cronjobs templates diff"
-  fi
   for dir in "$CRONJOBS_DIR"/*;
   do
     CURRENT_JOB=$(basename "$dir");
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Diff $CURRENT_JOB"
-    fi
+    echo "Diff $CURRENT_JOB"
     "$SCRIPTS_FOLDER"/kubectlDiff-cron-single-fromdir.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
 fi
@@ -169,3 +165,7 @@ fi
 #if [[ $post_clean == true ]]; then
 #  rm -rf ./out/templates
 #fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi

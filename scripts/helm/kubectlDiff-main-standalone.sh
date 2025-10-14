@@ -118,9 +118,12 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help
 fi
-if [[ "$argocd_plugin" != "true" ]]; then
-  echo "Environment: $environment"
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
 fi
+
+echo "Environment: $environment"
 
 ENV=$environment
 MICROSERVICES_DIR=$(getMicroservicesDir)
@@ -173,29 +176,25 @@ if [[ $disable_templating_lookup != true ]]; then
 fi
 
 if [[ $template_microservices == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start microservices templates diff"
-  fi
+  echo "Start microservices templates diff"
   for dir in "$MICROSERVICES_DIR"/*;
   do
     CURRENT_SVC=$(basename "$dir");
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Diff $CURRENT_SVC"
-    fi
+    echo "Diff $CURRENT_SVC"
     "$SCRIPTS_FOLDER"/kubectlDiff-svc-single-standalone.sh -e $ENV -m $CURRENT_SVC $OPTIONS $MICROSERVICE_OPTIONS
   done
 fi
 
 if [[ $template_jobs == true ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Start cronjobs templates diff"
-  fi
+  echo "Start cronjobs templates diff"
   for dir in "$CRONJOBS_DIR"/*;
   do
     CURRENT_JOB=$(basename "$dir");
-    if [[ "$argocd_plugin" != "true" ]]; then
-      echo "Diff $CURRENT_JOB"
-    fi
+    echo "Diff $CURRENT_JOB"
     "$SCRIPTS_FOLDER"/kubectlDiff-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi

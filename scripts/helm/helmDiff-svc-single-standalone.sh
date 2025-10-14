@@ -109,6 +109,11 @@ if [[ -z $microservice || $microservice == "" ]]; then
   echo "Microservice cannot be null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
@@ -179,5 +184,9 @@ set -e
 #else
 #  echo "Unexpected error"
 #fi
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi
+
 
 exit $diff_result

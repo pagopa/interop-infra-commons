@@ -89,6 +89,11 @@ if [[ -z $job || $job == "" ]]; then
   echo "Job cannot null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
@@ -109,9 +114,7 @@ fi
 
 VALID_CONFIG=$(isCronjobEnvConfigValid $job $environment)
 if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
-  if [[ "$argocd_plugin" != "true" ]]; then
-    echo "Environment configuration '$environment' not found for cronjob '$job'"
-  fi
+  echo "Environment configuration '$environment' not found for cronjob '$job'"
   help
 fi
 
@@ -132,3 +135,8 @@ eval $DIFF_CMD
 #if [[ $post_clean == true ]]; then
 #  rm -rf $OUT_DIR
 #fi
+
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi
