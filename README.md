@@ -1,10 +1,16 @@
-# interop-infra-commons
-This repository includes common scripts and modules that are referenced by external repositories. 
+# PDND Interoperability
+# Infrastructure common resources
+
+This repository includes common scripts and modules that are referenced by infrastructure repositories for PDND Interoperability.
+
+About the project:
+
+[PDND Interoperability landing page](https://interop.pagopa.it)
+
+[Operating Manual](https://developer.pagopa.it/pdnd-interoperabilita/guides/PDND-Interoperability-Operating-Manual)
 
 ## Terraform modules
-To use a Terraform module from the current repository, an external repository must have access to it.
-
-Once access is established, the external repository can reference a specific Terraform module from the current repo by defining the _source_ field as follows:
+Common Terraform modules can be referenced by defining the _source_ field as follows:
 
 ```
 module "example" {
