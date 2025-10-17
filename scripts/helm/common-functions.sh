@@ -194,3 +194,18 @@ function getAllowedCronjobsForEnvironment()
     echo $ALLOWED_CRONJOBS
 }
       
+function suppressOutput()
+{
+    # save current stdout to file descriptor 3
+    exec 3>&1
+    # redirect stdout to /dev/null
+    exec 1>/dev/null
+}
+
+function restoreOutput()
+{
+    # restore stdout
+    exec 1>&3
+    # close file descriptor 3
+    exec 3>&-
+}

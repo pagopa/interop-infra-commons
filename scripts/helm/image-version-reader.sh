@@ -84,6 +84,9 @@ if [[ -n $microservice ]] && [[ -n $job ]]; then
   help
 fi
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
 
 target=""
 tagetValues=""
@@ -127,3 +130,7 @@ export $digest_placeholder=$found_digest
 envsubst < "$CONTAINER_IMAGES_FOLDER/$tagetValues.yaml" > "$CONTAINER_IMAGES_FOLDER/$tagetValues.compiled.yaml"
 
 cd "$SCRIPTS_FOLDER"
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi

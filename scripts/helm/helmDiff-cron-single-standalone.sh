@@ -15,6 +15,7 @@ help()
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -23,11 +24,11 @@ args=$#
 environment=""
 job=""
 enable_debug=false
-post_clean=false
 skip_dep=false
 images_file=""
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -77,6 +78,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -97,13 +103,19 @@ if [[ -z $job || $job == "" ]]; then
   help
 fi
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -131,6 +143,9 @@ fi
 if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
 fi
+if [[ "$argocd_plugin" == "true" ]]; then
+  OPTIONS=$OPTIONS" --argocd-plugin"
+fi
 
 # START - Find image version and digest
 IMAGE_VERSION_READER_OPTIONS=""
@@ -156,5 +171,9 @@ set -e
 #else
 #  echo "Unexpected error"
 #fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi
 
 exit $diff_result

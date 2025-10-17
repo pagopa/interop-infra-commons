@@ -21,6 +21,7 @@ help()
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -37,6 +38,7 @@ disable_templating_lookup=false
 images_file=""
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -103,6 +105,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -117,12 +124,15 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help
 fi
-echo "Environment: $environment"
+if [[ "$argocd_plugin" != "true" ]]; then
+  echo "Environment: $environment"
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
 
 ENV=$environment
-DELIMITER=";"
-MICROSERVICES_DIR=$(getMicroservicesDir)
-CRONJOBS_DIR=$(getCronjobsDir)
 
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then
@@ -137,9 +147,11 @@ fi
 if [[ -n $images_file ]]; then
   OPTIONS=$OPTIONS" -i $images_file"
 fi
-
 if [[ -n $chart_path ]]; then
   OPTIONS=$OPTIONS" -cp $chart_path"
+fi
+if [[ "$argocd_plugin" == "true" ]]; then
+  OPTIONS="$OPTIONS --argocd-plugin"
 fi
 
 if [[ $skip_dep == false ]]; then
@@ -148,7 +160,9 @@ if [[ $skip_dep == false ]]; then
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -176,6 +190,7 @@ if [[ $template_microservices == true ]]; then
   for CURRENT_SVC in ${ALLOWED_MICROSERVICES//;/ }
   do
     echo "Templating $CURRENT_SVC"
+    
     VALID_CONFIG=$(isMicroserviceEnvConfigValid $CURRENT_SVC $ENV)
     if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
       echo "Environment configuration '$ENV' not found for microservice '$CURRENT_SVC'. Skip"
@@ -208,4 +223,8 @@ fi
 
 if [[ $post_clean == true ]]; then
   rm -rf "$ROOT_DIR/out/templates"
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi

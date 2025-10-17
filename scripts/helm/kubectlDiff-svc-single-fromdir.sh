@@ -13,6 +13,7 @@ help()
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -20,10 +21,9 @@ help()
 args=$#
 environment=""
 microservice=""
-enable_debug=false
-post_clean=false
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -63,6 +63,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -81,13 +86,20 @@ if [[ -z $microservice || $microservice == "" ]]; then
   echo "Microservice cannot be null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-  
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -121,3 +133,7 @@ eval $DIFF_CMD
 #if [[ $post_clean == true ]]; then
 #  rm -rf $OUT_DIR
 #fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
+fi

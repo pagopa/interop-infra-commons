@@ -19,6 +19,7 @@ help()
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dtl | --disable-templating-lookup ] Disable Helm --dry-run=server option in order to avoid lookup configmaps and secrets when templating
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -35,6 +36,7 @@ verbose=false
 images_file=""
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -103,6 +105,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -v| --verbose )
           verbose=true
           step=1
@@ -126,13 +133,20 @@ if [[ -z $microservice || $microservice == "" ]]; then
   echo "Microservice cannot be null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -196,4 +210,8 @@ fi
 
 if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]] && [[ $post_clean == true ]]; then
   rm -rf $OUT_DIR
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi

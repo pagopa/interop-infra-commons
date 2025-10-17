@@ -8,7 +8,8 @@ help() {
         [ -v | --verbose ] Show debug messages
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -h | --help ] This help
-        [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)"
+        [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)"
     exit 2
 }
 
@@ -25,6 +26,7 @@ step=1
 verbose=false
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 # Check args
 for (( i=0; i<$args; i+=$step ))
@@ -60,6 +62,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         *)
           echo "Unexpected option: $1"
           help
@@ -67,6 +74,10 @@ do
           ;;
     esac
 done
+
+if [[ "$argocd_plugin" == "true" ]]; then
+    suppressOutput
+fi
 
 # Validate path to Chart.yaml
 if [[ -n "$chart_path" ]]; then
@@ -104,13 +115,16 @@ function setupHelmDeps()
         echo "Copying Chart.yaml to charts"
     fi
     cp "$resolved_chart_path" charts/Chart.yaml
+    
     # Execute helm commands
     echo "# Helm dependencies setup #"
     echo "-- Add PagoPA eks repos --"
+    
     helm repo add interop-eks-microservice-chart https://pagopa.github.io/interop-eks-microservice-chart > /dev/null
     helm repo add interop-eks-cronjob-chart https://pagopa.github.io/interop-eks-cronjob-chart > /dev/null
 
     echo "-- Update PagoPA eks repo --"
+    
     helm repo update interop-eks-microservice-chart > /dev/null
     helm repo update interop-eks-cronjob-chart > /dev/null
 
@@ -123,13 +137,15 @@ function setupHelmDeps()
     if [[ $verbose == true ]]; then
         echo "-- List chart dependencies --"
     fi
+    
     helm dep list charts | awk '{printf "%-35s %-15s %-20s\n", $1, $2, $3}'
-
+    
     cd charts
 
     if [[ $verbose == true ]]; then
         echo "-- Build chart dependencies --"
     fi
+    
     # Execute helm dependency update command
     dep_up_result=$(helm dep up)
     if [[ $verbose == true ]]; then
@@ -163,6 +179,7 @@ function setupHelmDeps()
 
     if [[ "$disable_plugins_install" == "false" ]]; then
         echo "-- Setting up helm diff plugin --"
+        
         set +e
         # Install helm diff plugin, first check if it is already installed
         if [[ $(helm plugin list | grep -c 'diff') -eq 0 ]]; then
@@ -181,7 +198,12 @@ function setupHelmDeps()
     fi
 
     echo "-- Helm dependencies setup ended --"
-    exit 0
 }
 
 setupHelmDeps $untar
+
+if [[ "$argocd_plugin" == "true" ]]; then
+    restoreOutput
+fi
+
+exit 0

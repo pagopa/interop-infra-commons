@@ -19,6 +19,7 @@ help()
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
+        [ --argocd-plugin ] Set argocd plugin as caller of the script (default: false)
         [ -h | --help ] This help"
     exit 2
 }
@@ -34,6 +35,7 @@ skip_dep=false
 images_file=""
 chart_path=""
 disable_plugins_install=false
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -90,6 +92,11 @@ do
           step=1
           shift 1
           ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
+          ;;
         -h | --help )
           help
           ;;
@@ -104,10 +111,14 @@ if [[ -z $environment || $environment == "" ]]; then
   echo "Environment cannot be null"
   help
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 echo "Environment: $environment"
 
 ENV=$environment
-DELIMITER=";"
 MICROSERVICES_DIR=$(getMicroservicesDir)
 CRONJOBS_DIR=$(getCronjobsDir)
 
@@ -127,13 +138,19 @@ fi
 if [[ -n $chart_path ]]; then
   OPTIONS=$OPTIONS" -cp $chart_path"
 fi
+if [[ "$argocd_plugin" == "true" ]]; then
+  OPTIONS="$OPTIONS --argocd-plugin"
+fi
+
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
   if [[ "$disable_plugins_install" == "true" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --disable-plugins-install"
   fi
-
+  if [[ "$argocd_plugin" == "true" ]]; then
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
+  fi
   if [[ -n "$chart_path" ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
@@ -147,7 +164,7 @@ fi
 OPTIONS=$OPTIONS" -sd"
 
 if [[ $template_microservices == true ]]; then
-  echo "Start microservices kubectl apply"
+  echo "Start microservices kubectl apply"  
   for dir in "$MICROSERVICES_DIR"/*;
   do
     CURRENT_SVC=$(basename "$dir");
@@ -164,4 +181,8 @@ if [[ $template_jobs == true ]]; then
     echo "Diff $CURRENT_JOB"
     sh "$SCRIPTS_FOLDER"/kubectlApply-cron-single-standalone.sh -e $ENV -j $CURRENT_JOB $OPTIONS
   done
+fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput
 fi
