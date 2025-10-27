@@ -1,0 +1,24 @@
+# CMP spec (baked into the image)
+apiVersion: argoproj.io/v1alpha1
+kind: ConfigManagementPlugin
+metadata:
+  # This name is referenced by Applications: spec.source.plugin.name
+  name: infra-commons-cronjobs-plugin
+spec:
+  # MUST print the final K8s manifests to stdout
+  generate:
+    command: [sh, -c]
+    args:
+      - |
+        set -euo pipefail
+
+        /opt/infra-commons/scripts/helm/helmTemplate-cron-single.sh -dpi --argocd-plugin \
+          --environment "$ARGOCD_ENV_ENV" \
+          -j "$ARGOCD_ENV_CRONJOB" \
+          -i "$ARGOCD_ENV_IMAGES_FILE" \
+          --output console 
+  
+  discover:
+    fileName:
+  # Allow the plugin to reuse repo-server’s Git creds if it needs to clone more repos
+  provideGitCreds: true
