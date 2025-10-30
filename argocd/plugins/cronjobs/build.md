@@ -2,14 +2,14 @@
 
 aws ecr get-login-password --region eu-south-1 | docker login --username AWS --password-stdin 505630707203.dkr.ecr.eu-south-1.amazonaws.com
 
-docker buildx build \
+docker buildx build --no-cache \
   --platform linux/amd64 \
   -t argocd-plugin-cronjobs:latest -t argocd-plugin-cronjobs:1.0 -t argocd-plugin-cronjobs:amd64-latest -t argocd-plugin-cronjobs:amd64-1.0 \
   -f argocd/plugins/cronjobs/Dockerfile \
   --load \
   .
 
-docker buildx build \
+docker buildx build --no-cache \
   --platform linux/arm64 \
   -t argocd-plugin-cronjobs:arm64-latest -t argocd-plugin-cronjobs:arm64-1.0 \
   -f argocd/plugins/cronjobs/Dockerfile \
