@@ -178,6 +178,11 @@ if [[ $output_redirect == "console" ]]; then
 elif [[ -n "$output_redirect" ]]; then
   OUTPUT_TO="> \"$output_redirect\""
 fi
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput --force
+fi
+
 #LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" --set enableLookup=false $OUTPUT_TO"
 LINT_CMD+=" \"$ROOT_DIR/charts/interop-eks-microservice-chart\""
 LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\""
@@ -189,8 +194,4 @@ eval $LINT_CMD
 
 if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]] && [[ $post_clean == true ]]; then
   rm -rf $OUT_DIR
-fi
-
-if [[ "$argocd_plugin" == "true" ]]; then
-  restoreOutput
 fi

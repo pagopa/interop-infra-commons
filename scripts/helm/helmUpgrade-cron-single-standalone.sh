@@ -222,8 +222,9 @@ UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" "
 UPGRADE_CMD="$UPGRADE_CMD $OUTPUT_REDIRECT"
 
 echo "[CRONJOB-UPGRADE] Executing $job upgrade command."
-eval $UPGRADE_CMD
 
 if [[ "$argocd_plugin" == "true" ]]; then
-  restoreOutput
+  restoreOutput --force
 fi
+
+eval $UPGRADE_CMD
