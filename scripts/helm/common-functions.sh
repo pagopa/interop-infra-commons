@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+: "${OUTPUT_SUPPRESS_DEPTH:=0}"
+
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR=$PROJECT_DIR
 
@@ -196,16 +198,25 @@ function getAllowedCronjobsForEnvironment()
       
 function suppressOutput()
 {
-    # save current stdout to file descriptor 3
-    exec 3>&1
-    # redirect stdout to /dev/null
-    exec 1>/dev/null
+    if [ "${OUTPUT_SUPPRESS_DEPTH}" -eq 0 ]; then
+        exec 3>&1           # save current stdout
+        exec 1>/dev/null    # silence stdout
+    fi
+    
+    OUTPUT_SUPPRESS_DEPTH=$((OUTPUT_SUPPRESS_DEPTH + 1))
+    export OUTPUT_SUPPRESS_DEPTH
 }
 
 function restoreOutput()
 {
-    # restore stdout
-    exec 1>&3
-    # close file descriptor 3
-    exec 3>&-
+    if [ "${OUTPUT_SUPPRESS_DEPTH:-0}" -gt 0 ]; then
+        OUTPUT_SUPPRESS_DEPTH=$((OUTPUT_SUPPRESS_DEPTH - 1))
+        if [ "${OUTPUT_SUPPRESS_DEPTH}" -eq 0 ]; then
+            exec 1>&3         # restore stdout
+            exec 3>&-         # close saved FD
+            unset OUTPUT_SUPPRESS_DEPTH
+        else
+            export OUTPUT_SUPPRESS_DEPTH
+        fi
+    fi
 }
