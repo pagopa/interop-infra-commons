@@ -214,7 +214,6 @@ function restoreOutput()
         exec 1>&3         # restore stdout
         exec 3>&-         # close saved FD
         export OUTPUT_SUPPRESS_DEPTH
-        suppressOutput
     elif [[ "${OUTPUT_SUPPRESS_DEPTH:-0}" -gt 0 ]]; then
         OUTPUT_SUPPRESS_DEPTH=$((OUTPUT_SUPPRESS_DEPTH - 1))
         if [ "${OUTPUT_SUPPRESS_DEPTH}" -eq 0 ]; then
