@@ -1,0 +1,65 @@
+# Riduzioni risorse per cluster kind locale
+# NOTA: questo file viene fatto il merge con defaults/argocd-cm-values.yaml
+# Le chiavi qui specificate sovrascrivono solo le sezioni indicate,
+# preservando le altre configurazioni come extraContainers, volumes, etc.
+
+controller:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  # revisionHistoryLimit viene preservato dai defaults
+
+repoServer:
+  replicas: 1
+  autoscaling:
+    enabled: false
+    maxReplicas: 5
+    minReplicas: 1
+    targetCPUUtilizationPercentage: 50
+    targetMemoryUtilizationPercentage: 50
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  # Preserva volumes e extraContainers dai defaults
+  # NOTA: Questi vengono interpolati con templatefile() nel modulo
+
+server:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  # autoscaling viene preservato dai defaults
+
+redis:
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 10m
+      memory: 64Mi
+  # metrics viene preservato dai defaults
+
+applicationSet:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 100m
+      memory: 128Mi
+    requests:
+      cpu: 50m
+      memory: 64Mi
+  # metrics e name vengono preservati dai defaults
