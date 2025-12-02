@@ -36,7 +36,7 @@ resource "aws_api_gateway_rest_api" "this" {
   put_rest_api_mode  = "overwrite"
   binary_media_types = ["multipart/form-data"]
 
-  disable_execute_api_endpoint = true
+  disable_execute_api_endpoint = var.disable_execute_api_endpoint
 
   endpoint_configuration {
     types = ["REGIONAL"]

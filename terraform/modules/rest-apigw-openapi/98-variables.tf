@@ -156,3 +156,10 @@ variable "templating_map" {
   type        = map(string)
   default     = {}
 }
+
+variable "disable_execute_api_endpoint" {
+  description = "Disable the default endpoint"
+  type        = bool
+  default     = true
+}
+
