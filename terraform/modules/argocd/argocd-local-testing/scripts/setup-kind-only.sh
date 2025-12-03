@@ -12,15 +12,15 @@ NC='\033[0m'
 KIND_CLUSTER_NAME="argocd-test"
 
 print_status() {
-  echo -e "${GREEN}✓${NC} $1"
+  printf "${GREEN}✓${NC} %s\n" "$1"
 }
 
 print_warning() {
-  echo -e "${YELLOW}⚠${NC} $1"
+  printf "${YELLOW}⚠${NC} %s\n" "$1"
 }
 
 print_error() {
-  echo -e "${RED}✗${NC} $1"
+  printf "${RED}✗${NC} %s\n" "$1"
 }
 
 echo "Checking prerequisites..."
