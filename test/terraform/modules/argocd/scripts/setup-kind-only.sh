@@ -2,14 +2,10 @@
 
 set -euo pipefail
 
-echo "🌱 Creating kind cluster (kind-only setup)..."
-
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 RED='\033[0;31m'
 NC='\033[0m'
-
-KIND_CLUSTER_NAME="argocd-test"
 
 print_status() {
   printf "${GREEN}✓${NC} %s\n" "$1"
@@ -22,6 +18,23 @@ print_warning() {
 print_error() {
   printf "${RED}✗${NC} %s\n" "$1"
 }
+
+echo "🌱 Creating kind cluster (kind-only setup)..."
+
+KIND_CLUSTER_NAME="argocd-test"
+
+# Calculate the absolute path to the repository root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/../../../../../" && pwd)"
+
+# Check root location
+if [[ ! -d "$REPO_ROOT/argocd/plugins/cronjobs" ]]; then
+  print_error "Cannot find argocd/plugins directory at: $REPO_ROOT/argocd/plugins"
+  echo "DEBUG: SCRIPT_DIR=$SCRIPT_DIR"
+  echo "DEBUG: REPO_ROOT=$REPO_ROOT"
+  echo "DEBUG: Expected path: $REPO_ROOT/argocd/plugins/cronjobs"
+  exit 1
+fi
 
 echo "Checking prerequisites..."
 
@@ -74,6 +87,32 @@ fi
 
 kubectl config use-context "kind-${KIND_CLUSTER_NAME}"
 print_status "Kubectl context set"
+
+echo ""
+echo "Building and loading plugin Docker images..."
+
+# Build plugin images
+echo "Building argocd-plugin-cronjobs..."
+docker build -f "$REPO_ROOT/argocd/plugins/cronjobs/Dockerfile" \
+  -t argocd-plugin-cronjobs:local "$REPO_ROOT" > /dev/null 2>&1 || \
+  (print_error "Failed to build cronjobs plugin" && exit 1)
+print_status "argocd-plugin-cronjobs:local built"
+
+echo "Building argocd-plugin-microservices..."
+docker build -f "$REPO_ROOT/argocd/plugins/microservices/Dockerfile" \
+  -t argocd-plugin-microservices:local "$REPO_ROOT" > /dev/null 2>&1 || \
+  (print_error "Failed to build microservices plugin" && exit 1)
+print_status "argocd-plugin-microservices:local built"
+
+# Load images into kind cluster
+echo "Loading images into kind cluster..."
+kind load docker-image argocd-plugin-cronjobs:local --name ${KIND_CLUSTER_NAME} || \
+  (print_error "Failed to load cronjobs image" && exit 1)
+print_status "argocd-plugin-cronjobs:local loaded"
+
+kind load docker-image argocd-plugin-microservices:local --name ${KIND_CLUSTER_NAME} || \
+  (print_error "Failed to load microservices image" && exit 1)
+print_status "argocd-plugin-microservices:local loaded"
 
 echo ""
 echo "Kind cluster ready: context 'kind-${KIND_CLUSTER_NAME}'"
