@@ -7,7 +7,7 @@ locals {
   cronjobs_plugin_image      = var.cronjobs_plugin_image_prefix != "" ? "${var.cronjobs_plugin_image_prefix}/${var.cronjobs_plugin_image_name}:${var.cronjobs_plugin_image_tag}" : "${var.cronjobs_plugin_image_name}:${var.cronjobs_plugin_image_tag}"
 
   # Usa solo i defaults - gli override vengono applicati tramite blocchi set{}
-  argocd_values = yamldecode(templatefile("${path.module}/defaults/argocd-cm-values.yaml", {
+  argocd_values = yamldecode(templatefile("${path.module}/values/argocd-cm-values.yaml", {
     microservices_plugin_name  = var.microservices_plugin_name
     microservices_plugin_image = local.microservices_plugin_image
     cronjobs_plugin_name       = var.cronjobs_plugin_name

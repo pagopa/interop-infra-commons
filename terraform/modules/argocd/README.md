@@ -23,7 +23,7 @@ terraform/modules/argocd/
 ├── 03-argocd-instance.tf         # ArgoCD deployment via Helm
 ├── 98-variables.tf               # Input variables
 ├── 99-outputs.tf                 # Module outputs
-├── defaults/
+├── values/
 │   └── argocd-cm-values.yaml    # Default values for Helm chart
 └── README.md                     # This file
 
