@@ -99,66 +99,6 @@ module "argocd" {
   argocd_admin_bcrypt_password = bcrypt(random_password.argocd_admin.result)
   argocd_admin_password_mtime  = timestamp()
 
-  # Override risorse per cluster kind locale
-  controller_replicas = 1
-  controller_resources = {
-    limits = {
-      cpu    = "500m"
-      memory = "512Mi"
-    }
-    requests = {
-      cpu    = "100m"
-      memory = "256Mi"
-    }
-  }
-
-  reposerver_replicas = 1
-  reposerver_resources = {
-    limits = {
-      cpu    = "500m"
-      memory = "512Mi"
-    }
-    requests = {
-      cpu    = "100m"
-      memory = "256Mi"
-    }
-  }
-
-  server_replicas = 1
-  server_resources = {
-    limits = {
-      cpu    = "500m"
-      memory = "512Mi"
-    }
-    requests = {
-      cpu    = "100m"
-      memory = "256Mi"
-    }
-  }
-
-  redis_resources = {
-    limits = {
-      cpu    = "100m"
-      memory = "128Mi"
-    }
-    requests = {
-      cpu    = "10m"
-      memory = "64Mi"
-    }
-  }
-
-  applicationset_replicas = 1
-  applicationset_resources = {
-    limits = {
-      cpu    = "100m"
-      memory = "128Mi"
-    }
-    requests = {
-      cpu    = "50m"
-      memory = "64Mi"
-    }
-  }
-
   # Nota: Le immagini plugin vengono costruite e caricate da null_resource
   # prima del modulo grazie all'ordine di definizione (null_resource qui sopra)
 }
