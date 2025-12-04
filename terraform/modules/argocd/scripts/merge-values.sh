@@ -11,6 +11,11 @@
 
 set -euo pipefail
 
+# Crea la directory di output se non esiste
+if [[ -n "${MODULE_PATH:-}" ]]; then
+  mkdir -p "${MODULE_PATH}/.terraform"
+fi
+
 # Leggi le variabili d'ambiente
 base_file="${BASE_FILE}"
 override_file="${OVERRIDE_FILE}"
