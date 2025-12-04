@@ -1,6 +1,6 @@
 # ArgoCD Module - Local Testing with Mocks
 
-Questa directory contiene una configurazione Terraform per testare il modulo ArgoCD (`../../`) in ambiente locale utilizzando un cluster kind, senza dipendenze da risorse AWS reali.
+Questa directory contiene una configurazione Terraform per testare il modulo ArgoCD (`../../../terraform/modules/argocd`) in ambiente locale utilizzando un cluster kind, senza dipendenze da risorse AWS reali.
 
 ## Indice
 
@@ -51,7 +51,7 @@ helm version  # >= 3.12
 
 ```bash
 cd /path/to/interop-infra-commons
-./scripts/setup-kind-only.sh
+./test/terraform/modules/argocd/scripts/setup-kind-only.sh
 ```
 
 Questo script:
@@ -85,25 +85,29 @@ argocd-test-control-plane   Ready    control-plane   30s   v1.27.x
 
 ### 3. Preparare i Plugin Docker
 
-Assicurati che i Dockerfile dei plugin esistano (pwd == /path/to/argocd-local-testing):
+Assicurati che i Dockerfile dei plugin esistano (da root della repo):
 
 ```bash
-ls -la ../../../../argocd/plugins/microservices/Dockerfile
-ls -la ../../../../argocd/plugins/cronjobs/Dockerfile
+ls -la argocd/plugins/microservices/Dockerfile
+ls -la argocd/plugins/cronjobs/Dockerfile
 ```
 
 ## File e Struttura
 
 ```
-terraform-with-mocks/
-├── README.md                    # Questo file
-├── main.tf                      # Configurazione principale
-├── variables.tf                 # Variabili di input
-├── outputs.tf                   # Output del modulo
-├── local-overrides.yaml         # Valori usati per l'override dei default del modulo
-├── .terraform/                  # Directory Terraform (auto-generata)
-├── terraform.tfstate            # State file (auto-generato)
-└── terraform.tfstate.backup     # Backup dello state (auto-generato)
+test/terraform/modules/argocd/
+├── scripts/                         # Setup/teardown scripts
+│   ├── setup-kind-only.sh          # Create kind cluster
+│   └── teardown-kind-cluster.sh    # Delete kind cluster
+└── terraform-with-mocks/           # Terraform configuration
+    ├── README.md                    # Questo file
+    ├── main.tf                      # Configurazione principale
+    ├── variables.tf                 # Variabili di input
+    ├── outputs.tf                   # Output del modulo
+    ├── local-overrides.yaml         # Valori usati per l'override dei default del modulo
+    ├── .terraform/                  # Directory Terraform (auto-generata)
+    ├── terraform.tfstate            # State file (auto-generato)
+    └── terraform.tfstate.backup     # Backup dello state (auto-generato)
 ```
 
 ### main.tf
@@ -177,7 +181,7 @@ terraform-with-mocks/
 5. **Module Call**
    ```hcl
    module "argocd" {
-     source = "../../"
+     source = "../../../terraform/modules/argocd"
      
      # AWS bypass via override
      argocd_admin_bcrypt_password = bcrypt(random_password.argocd_admin.result)
@@ -355,7 +359,7 @@ repoServer:
 ### Fase 1: Inizializzazione Terraform
 
 ```bash
-cd terraform/modules/argocd/argocd-local-testing/terraform-with-mocks
+cd test/terraform/modules/argocd/terraform-with-mocks
 
 # Inizializza Terraform
 terraform init
@@ -635,6 +639,11 @@ Quando richiesto, digita `yes`.
 ### Rimuovere il Cluster kind
 
 ```bash
+../scripts/teardown-kind-cluster.sh
+```
+
+O manualmente:
+```bash
 kind delete cluster --name argocd-test
 ```
 
@@ -649,14 +658,14 @@ docker rmi argocd-plugin-cronjobs:local
 
 ```bash
 # Destroy Terraform
-cd terraform/modules/argocd/argocd-local-testing/terraform-with-mocks
+cd test/terraform/modules/argocd/terraform-with-mocks
 terraform destroy -auto-approve
 
 # Delete kind cluster
-kind delete cluster --name argocd-test
+../scripts/teardown-kind-cluster.sh
 
 # Remove Docker images
-docker rmi argocd-plugin-microservices:local argocd-plugin-cronjobs:local
+docker rmi argocd-plugin-microservices:local argocd-plugin-cronjobs:local 2>/dev/null || true
 
 # Reset kubectl context
 kubectl config use-context <default-context>

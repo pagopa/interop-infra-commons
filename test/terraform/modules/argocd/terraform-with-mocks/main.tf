@@ -77,7 +77,7 @@ resource "null_resource" "build_and_load_plugin_images" {
 
 # Usa il modulo ArgoCD
 module "argocd" {
-  source = "../../" # Punta a terraform/modules/argocd
+  source = "../../../../../terraform/modules/argocd" # Punta a terraform/modules/argocd
 
   # Variabili richieste dal modulo
   aws_region       = var.aws_region

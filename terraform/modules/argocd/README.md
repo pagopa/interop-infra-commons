@@ -25,8 +25,19 @@ terraform/modules/argocd/
 ├── 99-outputs.tf                 # Module outputs
 ├── defaults/
 │   └── argocd-cm-values.yaml    # Default values for Helm chart
-└── argocd-local-testing/        # Setup for local testing with kind
-    └── terraform-with-mocks/    # Usage example with AWS mocks
+└── README.md                     # This file
+
+# Local Testing (see test/terraform/modules/argocd/)
+test/terraform/modules/argocd/
+├── scripts/
+│   ├── setup-kind-only.sh        # Create kind cluster for local testing
+│   └── teardown-kind-cluster.sh  # Delete kind cluster
+└── terraform-with-mocks/         # Usage example with AWS mocks
+    ├── main.tf                   # Root configuration
+    ├── variables.tf              # Input variables
+    ├── outputs.tf                # Outputs
+    ├── local-overrides.yaml      # Resource overrides for kind
+    └── README.md                 # Detailed testing guide
 ```
 
 ## Requirements
@@ -152,7 +163,7 @@ module "argocd" {
 }
 ```
 
-**Note:** For a complete local testing example, see the [`argocd-local-testing/terraform-with-mocks/`](./argocd-local-testing/terraform-with-mocks/) directory.
+**Note:** For a complete local testing example, see the [`test/terraform/modules/argocd/terraform-with-mocks/`](../../../test/terraform/modules/argocd/terraform-with-mocks/) directory.
 
 ## Input Variables
 
@@ -252,21 +263,23 @@ The [`defaults/argocd-cm-values.yaml`](./defaults/argocd-cm-values.yaml) file co
 The module includes a dedicated directory for local testing without AWS dependencies:
 
 ```
-argocd-local-testing/
-├── terraform-with-mocks/     # Terraform configuration for kind
-│   ├── main.tf              # Module call with overrides
-│   ├── variables.tf         # Variables for testing
-│   ├── outputs.tf           # Outputs
-│   └── README.md            # Complete testing guide
-└── scripts/
-    └── setup-kind-only.sh   # Script to create kind cluster
+test/terraform/modules/argocd/
+├── scripts/
+│   ├── setup-kind-only.sh        # Script to create kind cluster
+│   └── teardown-kind-cluster.sh  # Script to delete kind cluster
+└── terraform-with-mocks/         # Terraform configuration for kind
+    ├── main.tf                   # Module call with overrides
+    ├── variables.tf              # Variables for testing
+    ├── outputs.tf                # Outputs
+    ├── local-overrides.yaml      # Resource overrides
+    └── README.md                 # Complete testing guide
 ```
 
 ### Quick Start for Testing
 
 ```bash
 # 1. Create kind cluster
-cd terraform/modules/argocd/argocd-local-testing
+cd test/terraform/modules/argocd
 ./scripts/setup-kind-only.sh
 
 # 2. Run Terraform
@@ -278,9 +291,13 @@ terraform apply
 kubectl port-forward svc/argocd-server -n argocd 8080:443
 # Username: admin
 # Password: terraform output -raw argocd_admin_password
+
+# 4. Cleanup
+terraform destroy
+../scripts/teardown-kind-cluster.sh
 ```
 
-For the complete testing guide, see [argocd-local-testing/terraform-with-mocks/README.md](./argocd-local-testing/terraform-with-mocks/README.md).
+For the complete testing guide, see [test/terraform/modules/argocd/terraform-with-mocks/README.md](../../../test/terraform/modules/argocd/terraform-with-mocks/README.md).
 
 ## Module Architecture
 
