@@ -88,7 +88,7 @@ module "argocd" {
   # Configurazione ArgoCD
   argocd_namespace     = var.argocd_namespace
   argocd_chart_version = var.argocd_chart_version
-  argocd_custom_values = "${path.module}/local-overrides.yaml"
+  argocd_custom_values = "${path.module}/custom-values.yaml" # Abilita merge dei values
   deploy_argocd        = var.deploy_argocd
 
   # Credenziali repo (mock values)
@@ -159,6 +159,6 @@ module "argocd" {
     }
   }
 
-  # Note: Il modulo crea il namespace internamente
-  # Le dipendenze sono gestite tramite AWS secret mocks creati prima
+  # Nota: Le immagini plugin vengono costruite e caricate da null_resource
+  # prima del modulo grazie all'ordine di definizione (null_resource qui sopra)
 }
