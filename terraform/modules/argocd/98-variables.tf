@@ -23,6 +23,7 @@ variable "eks_cluster_name" {
 variable "argocd_custom_values" {
   type        = string
   description = "Path to a custom values file to override default ArgoCD configuration values."
+  default     = null
 }
 
 variable "argocd_chart_version" {

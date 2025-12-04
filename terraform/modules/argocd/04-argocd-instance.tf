@@ -35,6 +35,9 @@ resource "helm_release" "argocd" {
     value = "true"
   }
 
-  # Dipendenza esplicita dal merge dei values se custom_values è fornito
-  depends_on = local.should_merge_custom_values ? [terraform_data.merge_argocd_values[0]] : []
+  # Dipendenza esplicita dal file mergiato (quando presente)
+  # Questo garantisce che il provisioner venga eseguito prima della lettura del file
+  depends_on = [
+    data.local_file.merged_values
+  ]
 }

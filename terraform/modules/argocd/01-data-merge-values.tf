@@ -11,13 +11,21 @@ resource "terraform_data" "merge_argocd_values" {
 
   provisioner "local-exec" {
     when    = create
-    command = "${path.module}/scripts/merge-values.sh > ${locals.merged_file_name}"
+    command = "${path.module}/scripts/merge-values.sh > ${local.merged_file_name}"
     
     environment = {
-      # base64 per evitare problemi con caratteri speciali e multilinea
+      MODULE_PATH   = path.module
       BASE_FILE     = base64encode(self.input.base_file_content)
       OVERRIDE_FILE = self.input.override_file
     }
   }
+}
+
+# Data source per leggere il file generato dal terraform_data
+data "local_file" "merged_values" {
+  count    = local.should_merge_custom_values ? 1 : 0
+  filename = local.merged_file_name
+
+  depends_on = [terraform_data.merge_argocd_values]
 }
 
