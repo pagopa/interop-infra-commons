@@ -83,6 +83,14 @@ nodes:
     protocol: TCP
 EOF
   print_status "Kind cluster created"
+  
+  # Aumenta le risorse del container Docker del nodo control-plane
+  CONTAINER_ID=$(docker ps --filter "label=io.x-k8s.kind.cluster=${KIND_CLUSTER_NAME}" -q)
+  if [[ -n "$CONTAINER_ID" ]]; then
+    printf "${YELLOW}Updating container resources (CPU: 2, Memory: 4GB)...${NC}\n"
+    docker update --cpus 2 --memory 4g "$CONTAINER_ID" > /dev/null 2>&1 || \
+      print_warning "Could not update container resources (container may need restart)"
+  fi
 fi
 
 kubectl config use-context "kind-${KIND_CLUSTER_NAME}"
