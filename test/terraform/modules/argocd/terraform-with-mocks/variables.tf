@@ -56,3 +56,9 @@ variable "tags" {
   }
   description = "Tags to apply to resources"
 }
+
+variable "password_seed" {
+  type        = string
+  description = "Seed value to keep the generated password stable across applies"
+  default     = "argocd-admin-password-v1"
+}

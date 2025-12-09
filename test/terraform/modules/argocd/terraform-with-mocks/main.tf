@@ -41,7 +41,14 @@ resource "random_password" "argocd_admin" {
   numeric = true
   upper   = true
   lower   = true
+
+  keepers = {
+    # Mantiene la password stabile finché il seed non cambia
+    seed = var.password_seed
+  }
 }
+
+
 
 # Note: Il namespace viene creato dal modulo ArgoCD
 # Non è necessario crearlo qui per evitare conflitti
@@ -75,6 +82,12 @@ resource "null_resource" "build_and_load_plugin_images" {
   }
 }
 
+resource "time_static" "test_timestamp" {
+  triggers = {
+    seed = "argocd-test-initial"
+  }
+}
+
 # Usa il modulo ArgoCD
 module "argocd" {
   source = "../../../../../terraform/modules/argocd" # Punta a terraform/modules/argocd
@@ -96,8 +109,9 @@ module "argocd" {
   argocd_app_repo_password = var.argocd_app_repo_password
 
   # Override credenziali admin per evitare AWS
-  argocd_admin_bcrypt_password = bcrypt(random_password.argocd_admin.result)
-  argocd_admin_password_mtime  = timestamp()
+  # Usa bcrypt_hash da random_password (memorizzato nello stato) invece di bcrypt() che non è idempotente
+  argocd_admin_bcrypt_password = random_password.argocd_admin.bcrypt_hash
+  argocd_admin_password_mtime  = time_static.test_timestamp.rfc3339
 
   # Nota: Le immagini plugin vengono costruite e caricate da null_resource
   # prima del modulo grazie all'ordine di definizione (null_resource qui sopra)
