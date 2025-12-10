@@ -17,7 +17,7 @@ resource "terraform_data" "merge_argocd_values" {
 
   provisioner "local-exec" {
     command = "${path.module}/scripts/merge-values.sh > ${local.merged_file_name}"
-    
+
     environment = {
       MODULE_PATH   = path.module
       BASE_FILE     = base64encode(self.input.base_file_content)
