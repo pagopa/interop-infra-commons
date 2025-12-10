@@ -52,6 +52,24 @@ variable "deploy_argocd" {
   default     = true
 }
 
+variable "secret_prefix" {
+  description = "Prefix for the secret that will be created"
+  type        = string
+  default     = "k8s/argocd/"
+}
+
+variable "secret_tags" {
+  description = "Tags to apply to the secret that will be created"
+  type        = map(string)
+  default     = {}
+}
+
+variable "secret_recovery_window_in_days" {
+  description = "Number of days that AWS Secrets Manager waits before it can delete the secret"
+  type        = number
+  default     = 0
+}
+
 variable "argocd_admin_bcrypt_password" {
   type        = string
   description = "Optional override: bcrypt hash of ArgoCD admin password. If provided, AWS Secrets Manager resources are skipped."

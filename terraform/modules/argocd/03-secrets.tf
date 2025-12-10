@@ -1,7 +1,10 @@
 resource "aws_secretsmanager_secret" "argocd_admin_credentials" {
   count = var.deploy_argocd && var.argocd_admin_bcrypt_password == null ? 1 : 0
 
-  name = "k8s/argocd/users/admin"
+  name                    = "${var.secret_prefix}users/admin"
+  recovery_window_in_days = var.secret_recovery_window_in_days
+
+  tags = var.secret_tags
 }
 
 data "aws_secretsmanager_random_password" "argocd_admin" {
@@ -48,14 +51,14 @@ resource "kubernetes_secret_v1" "argocd_admin_credentials" {
       "infra.interop.pagopa.it/aws-secretsmanager-secret-id" : aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_id,
       "infra.interop.pagopa.it/aws-secretsmanager-version-id" : aws_secretsmanager_secret_version.argocd_admin_credentials[0].version_id,
       "infra.interop.pagopa.it/updated-at" : time_static.argocd_admin_credentials_update[0].rfc3339
-    } : {
+      } : {
       "infra.interop.pagopa.it/updated-at" : var.argocd_admin_password_mtime
     }
   }
 
   data = var.argocd_admin_bcrypt_password == null ? {
     for key, value in jsondecode(aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_string) : key => value
-  } : {
+    } : {
     username        = "admin"
     password        = "[overridden]"
     bcrypt_password = var.argocd_admin_bcrypt_password
