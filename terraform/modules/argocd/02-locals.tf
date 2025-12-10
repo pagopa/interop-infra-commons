@@ -1,7 +1,7 @@
 locals {
   deploy_argocd           = var.env == "dev"
   argocd_repo_server_name = "argocd-repo-server"
-  merged_file_name = "${path.module}/.terraform/merged-values.yaml"
+  merged_file_name        = "${path.module}/.terraform/merged-values.yaml"
 
   # Costruisce le immagini complete gestendo il prefix vuoto
   microservices_plugin_image = var.microservices_plugin_image_prefix != "" ? "${var.microservices_plugin_image_prefix}/${var.microservices_plugin_image_name}:${var.microservices_plugin_image_tag}" : "${var.microservices_plugin_image_name}:${var.microservices_plugin_image_tag}"
