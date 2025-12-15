@@ -1,4 +1,4 @@
-# Crea namespace ArgoCD
+# Create ArgoCD namespace
 resource "kubernetes_namespace_v1" "argocd" {
   count = var.deploy_argocd ? 1 : 0
 
@@ -35,8 +35,8 @@ resource "helm_release" "argocd" {
     value = "true"
   }
 
-  # Dipendenza esplicita dal file mergiato (quando presente)
-  # Questo garantisce che il provisioner venga eseguito prima della lettura del file
+  # Explicit dependency on the merged file (when present)
+  # This ensures that the provisioner runs before reading the file
   depends_on = [
     data.local_file.merged_values
   ]
