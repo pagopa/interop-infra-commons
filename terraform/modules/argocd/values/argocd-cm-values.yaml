@@ -235,6 +235,8 @@ server:
       memory: 3Gi
 configs:
   params:
+    # Allows insecure connections to the Argo CD API server.
+    server.insecure: "true"
     # https://aws.amazon.com/it/blogs/opensource/argo-cd-application-controller-scalability-testing-on-amazon-eks/
     # status/operations processors:
     # Argo CD utilizes two queues to perform reconciliation (status) and application syncing (operations).

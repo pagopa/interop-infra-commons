@@ -2,6 +2,10 @@ variable "aws_region" {
   type        = string
   description = "AWS region"
 }
+variable "project" {
+  type        = string
+  description = "Project name used for resource naming"
+}
 
 variable "env" {
   type        = string
@@ -17,7 +21,7 @@ variable "tags" {
 
 variable "eks_cluster_name" {
   type        = string
-  description = "Name of the EKS cluster accessing the analytics cluster"
+  description = "Name of the EKS cluster accessing the ArgoCD cluster"
 }
 
 variable "argocd_custom_values" {
@@ -130,101 +134,23 @@ variable "cronjobs_plugin_image_tag" {
   default     = "local"
 }
 
-variable "controller_replicas" {
-  type        = number
-  description = "Number of replicas for controller"
-  default     = null
-}
 
-variable "reposerver_replicas" {
-  type        = number
-  description = "Number of replicas for repo-server"
-  default     = null
-}
+#variable "aws_lb_controller_role_name" {
+#  type        = string
+#  description = "Name of the IAM role to be assumed by the AWS Load Balancer Controller service account"
+#}
 
-variable "server_replicas" {
-  type        = number
-  description = "Number of replicas for server"
-  default     = null
-}
+#variable "aws_lb_controller_chart_version" {
+#  type        = string
+#  description = "Chart version for AWS Load Balancer Controller"
+#}
 
-variable "controller_resources" {
-  type = object({
-    limits = object({
-      cpu    = string
-      memory = string
-    })
-    requests = object({
-      cpu    = string
-      memory = string
-    })
-  })
-  description = "Resource limits and requests for controller"
-  default     = null
-}
+#variable "aws_lb_controller_replicas" {
+#  type        = number
+#  description = "Replica count for AWS Load Balancer Controller"
+#}
 
-variable "reposerver_resources" {
-  type = object({
-    limits = object({
-      cpu    = string
-      memory = string
-    })
-    requests = object({
-      cpu    = string
-      memory = string
-    })
-  })
-  description = "Resource limits and requests for repo-server"
-  default     = null
-}
-
-variable "server_resources" {
-  type = object({
-    limits = object({
-      cpu    = string
-      memory = string
-    })
-    requests = object({
-      cpu    = string
-      memory = string
-    })
-  })
-  description = "Resource limits and requests for server"
-  default     = null
-}
-
-variable "redis_resources" {
-  type = object({
-    limits = object({
-      cpu    = string
-      memory = string
-    })
-    requests = object({
-      cpu    = string
-      memory = string
-    })
-  })
-  description = "Resource limits and requests for redis"
-  default     = null
-}
-
-variable "applicationset_replicas" {
-  type        = number
-  description = "Number of replicas for applicationset"
-  default     = null
-}
-
-variable "applicationset_resources" {
-  type = object({
-    limits = object({
-      cpu    = string
-      memory = string
-    })
-    requests = object({
-      cpu    = string
-      memory = string
-    })
-  })
-  description = "Resource limits and requests for applicationset"
-  default     = null
-}
+#variable "vpn_clients_security_group_id" {
+#  type        = string
+#  description = "ID of the VPN clients SG"
+#}

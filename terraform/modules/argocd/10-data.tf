@@ -1,3 +1,8 @@
+#data "aws_security_group" "vpn_clients" {
+#  id = var.vpn_clients_security_group_id
+#}
+
+# -- Data Sources for Merging YAML Values --
 # Terraform data for deep merging YAML values ​​using yq
 # Runs the merge-values.sh script, which uses yq to merge YAML files
 resource "terraform_data" "merge_argocd_values" {
