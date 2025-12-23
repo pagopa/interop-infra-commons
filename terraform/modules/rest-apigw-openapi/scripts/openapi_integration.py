@@ -39,7 +39,7 @@ def generate_apigw_integration(path_uri, path_parameters, header_parameters, api
 
     return request_integration
 
-def integrate_path(path_uri, path_data, api_version, use_service_prefix):
+def integrate_parameters(path_uri, path_data, api_version, use_service_prefix):
     path_params = []
     header_params = []
 
@@ -56,7 +56,7 @@ def integrate_path(path_uri, path_data, api_version, use_service_prefix):
         if "parameters" in path_data[method]:
             parameters = path_data[method]["parameters"]
             path_params = list(set(path_params + [param.get("name") for param in parameters if param.get("in") == "path"]))
-            header_params = list(set(header_params + [param.get("name") for param in parameters if param.get("in") == "header"]))
+            header_params = list(set(header_params + [param.get("name") for param in parameters if param.get("in") == "header" and param.get("required") is True]))
 
         path_data[method]["x-amazon-apigateway-integration"] = generate_apigw_integration(path_uri, path_params, header_params, api_version, use_service_prefix)
 
@@ -66,7 +66,7 @@ def integrate_openapi(openapi, api_version, use_service_prefix):
     integrated_openapi = copy.deepcopy(openapi)
 
     for path in integrated_openapi["paths"]:
-        integrated_openapi["paths"][path] = integrate_path(path, integrated_openapi["paths"][path], api_version, use_service_prefix)
+        integrated_openapi["paths"][path] = integrate_parameters(path, integrated_openapi["paths"][path], api_version, use_service_prefix)
 
     integrated_openapi["x-amazon-apigateway-binary-media-types"] = ["multipart/form-data"]
 
