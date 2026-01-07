@@ -56,7 +56,7 @@ def integrate_parameters(path_uri, path_data, api_version, use_service_prefix):
         if "parameters" in path_data[method]:
             parameters = path_data[method]["parameters"]
             path_params = list(set(path_params + [param.get("name") for param in parameters if param.get("in") == "path"]))
-            header_params = list(set(header_params + [param.get("name") for param in parameters if param.get("in") == "header" and param.get("required") is True]))
+            header_params = list(set(header_params + [param.get("name") for param in parameters if param.get("in") == "header"]))
 
         path_data[method]["x-amazon-apigateway-integration"] = generate_apigw_integration(path_uri, path_params, header_params, api_version, use_service_prefix)
 
