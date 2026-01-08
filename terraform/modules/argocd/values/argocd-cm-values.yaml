@@ -295,7 +295,59 @@ configs:
           - Event
         clusters:
           - "*"
-    
+
+    resource.customizations.health.batch_CronJob: |
+      hs = { status = "Progressing", message = "" }
+
+      if obj == nil or obj.spec == nil then
+        hs.message = "no spec"
+        return hs
+      end
+
+      -- CronJob suspended
+      if obj.spec.suspend == true then
+        hs.status  = "Degraded"
+        hs.message = "CronJob is suspended"
+        return hs
+      end
+
+      local status = obj.status or {}
+      local active = (status.active and #status.active) or 0
+      local lst    = status.lastScheduleTime
+      local lst_ok = status.lastSuccessfulTime
+
+      -- There's an active Job
+      if active > 0 then
+        hs.status  = "Progressing"
+        hs.message = "Active Jobs: " .. tostring(active)
+        return hs
+      end
+
+      -- If the Job has been scheduled but not yet run successfully after the last schedule -> probably a failure
+      if lst ~= nil then
+        if lst_ok == nil then
+          hs.status  = "Degraded"
+          hs.message = "Last run has no successful completion"
+          return hs
+        end
+        -- If last successful time is before last scheduled time -> probably a failure
+        if lst_ok < lst then
+          hs.status  = "Degraded"
+          hs.message = "Last scheduled run not successful yet"
+          return hs
+        end
+        
+        -- Last run was successful
+        hs.status  = "Healthy"
+        hs.message = "Last run successful"
+        return hs
+      end
+
+      -- Not yet run
+      hs.status  = "Progressing"
+      hs.message = "No runs yet"
+      return hs
+      
     resource.customizations.health.apps_Deployment: |
       hs = { status = "Progressing", message = "" }
 
