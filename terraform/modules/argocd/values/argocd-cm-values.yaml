@@ -490,15 +490,31 @@ configs:
       return hs
 
     resource.customizations.health.argoproj.io_Application: |
+      -- Custom health-check for argoproj.io/Application.
+      -- DATA READS:
+      --   - obj.status.conditions: controller-level conditions (e.g., ComparisonError, SyncError)
+      --   - obj.status.operationState.phase/message: current sync operation phase (Running/Failed/Error)
+      --   - obj.status.sync.status: app-level sync status (Synced/OutOfSync/Unknown/...)
+      --   - obj.status.health.status/message: aggregated health of child resources
+      -- EFFECT IN THE UI:
+      --   - Sets the Application node’s "Health" in trees/tiles where Application appears as a child.
+      --   - Drives color: Degraded (red) / Progressing (yellow) / Healthy (green) / Unknown (gray).
+      -- NOTE: On the main Applications list, the tile’s Health is still computed by the controller’s
+      --       aggregation; this override is applied when the Application is rendered as a resource node.
+
       hs = { status = "Progressing", message = "" }
 
+      -- No status yet -> Progressing
+      -- UI: show "Progressing" while the controller hasn’t populated status.
       if obj.status == nil then
         hs.status = "Progressing"
         hs.message = "Application has no status yet"
         return hs
       end
 
-      -- Well known reconciliation/diff/invalid spec error -> Degraded
+      -- Well known error conditions from controller (reconciliation/diff/invalid spec) -> Degraded
+      -- If any of these conditions is True, we degrade immediately and surface the message.
+      -- UI: Application node turns "Degraded" with the specific error message.
       local function has_error_condition()
         if not obj.status.conditions then 
           return nil 
@@ -525,6 +541,10 @@ configs:
         return hs
       end
 
+      -- Operation phase handling:
+      --  - Error/Failed -> Degraded with message
+      --  - Running      -> Progressing
+      -- UI: reflects live sync operation state on the node.
       if obj.status.operationState ~= nil then
         local phase = obj.status.operationState.phase
         -- Failed operation / specific error
@@ -540,6 +560,10 @@ configs:
         end
       end
 
+      -- Sync-to-health mapping for visibility:
+      --  - OutOfSync -> mark as Missing (treated as not in sync)
+      --  - Any non-Synced (including Unknown) -> Degraded
+      -- UI: makes the Application node show red/yellow when it’s not synced.
       local sync = (obj.status.sync and obj.status.sync.status) or "Unknown"
 
       -- Handle OutOfSync and !sync statuses
@@ -555,10 +579,12 @@ configs:
         return hs
       end
 
-      -- When synced, defer to the app aggregated health
+      -- Synced: defer to aggregated child health
+      -- If aggregated health is present, mirror it; otherwise mark Unknown with a hint.
+      -- UI: node shows Healthy/Progressing/Degraded based on children.
       if obj.status.health and obj.status.health.status then
         hs.status  = obj.status.health.status
-        hs.message = obj.status.health.message or "3"
+        hs.message = obj.status.health.message or "No health reported"
       else
         hs.status  = "Unknown"
         hs.message = "No health reported"
