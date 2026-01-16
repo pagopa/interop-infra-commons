@@ -13,7 +13,7 @@ variable "env" {
 variable "argocd_namespace" {
   type        = string
   description = "Kubernetes namespace where ArgoCD will be deployed."
-  default     = "argocd"
+  default     = "dev-experimental-argocd"
 }
 
 variable "argocd_chart_version" {
@@ -61,4 +61,20 @@ variable "password_seed" {
   type        = string
   description = "Seed value to keep the generated password stable across applies"
   default     = "argocd-admin-password-v1"
+}
+variable "kubernetes_config_context" {
+  type        = string
+  description = "Kubernetes context to use (e.g., 'kind-argocd-test' for local, or 'arn:aws:eks:...' for remote AWS cluster)"
+  default     = "kind-argocd-test"
+}
+
+variable "eks_cluster_name" {
+  type        = string
+  description = "EKS cluster name for the module configuration"
+  default     = "kind-argocd-test"
+}
+variable "local_testing_mode" {
+  type        = bool
+  description = "Enable local testing mode with kubeconfig. Disable for AWS EKS remote cluster."
+  default     = true
 }

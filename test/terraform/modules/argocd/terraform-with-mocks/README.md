@@ -17,13 +17,16 @@ Questa directory contiene una configurazione Terraform per testare il modulo Arg
 
 Questo test dimostra come utilizzare il modulo ArgoCD in modalità "AWS-optional", bypassando le dipendenze da EKS e AWS Secrets Manager attraverso l'uso di variabili di override. Il deployment avviene su un cluster kind locale con plugin ArgoCD personalizzati caricati come sidecar containers.
 
+Inoltre, il modulo ora esegue un deep merge dei valori YAML (defaults + custom) tramite `yq` orchestrato da Terraform, garantendo merge ricorsivo corretto anche per strutture complesse (es. `extraContainers`, `volumes`). Sono stati introdotti meccanismi per rendere il plan idempotente (hash bcrypt stabile e timestamp statico) e dipendenze esplicite per l'ordine di esecuzione.
+
 ### Cosa viene testato
 
 - ✅ Deployment del modulo ArgoCD senza credenziali AWS
-- ✅ Generazione locale delle credenziali admin con bcrypt
+- ✅ Deep merge dei valori YAML con `yq` (defaults + custom)
+- ✅ Generazione e hash della password admin con `random_password.bcrypt_hash` (stabile tra apply)
 - ✅ Build e caricamento di immagini Docker personalizzate (plugin) in kind
 - ✅ Configurazione di plugin ArgoCD come sidecar containers
-- ✅ Override delle risorse per compatibilità con kind (limiti di memoria ridotti) e per testare la possibiltà di sovrascrivere valori di default di ArgoCD
+- ✅ Override delle risorse per compatibilità con kind (limiti ridotti) e possibilità di sovrascrivere valori di default
 - ✅ Namespace management e service discovery
 
 ## Prerequisiti
@@ -45,6 +48,9 @@ terraform version  # >= 1.8.0
 
 # Helm (opzionale, per debug)
 helm version  # >= 3.12
+
+# yq (necessario per il deep merge YAML)
+yq --version  # >= 4.x
 ```
 
 ## Setup Iniziale
@@ -104,7 +110,7 @@ test/terraform/modules/argocd/
     ├── main.tf                      # Configurazione principale
     ├── variables.tf                 # Variabili di input
     ├── outputs.tf                   # Output del modulo
-    ├── local-overrides.yaml         # Valori usati per l'override dei default del modulo
+  ├── custom-values.yaml           # (Opzionale) Valori YAML custom da mergiare ai defaults
     ├── .terraform/                  # Directory Terraform (auto-generata)
     ├── terraform.tfstate            # State file (auto-generato)
     └── terraform.tfstate.backup     # Backup dello state (auto-generato)
@@ -148,13 +154,28 @@ test/terraform/modules/argocd/
 
 3. **Password Generation**
    ```hcl
+   variable "password_seed" {
+     description = "Seed opzionale per stabilizzare la password random tra apply"
+     type        = string
+     default     = null
+   }
+
    resource "random_password" "argocd_admin" {
      length  = 30
      special = true
+     keepers = {
+       seed = var.password_seed
+     }
    }
    ```
    - Genera password random per l'admin di ArgoCD
-   - Viene hashata con bcrypt nel blocco "module"
+   - L'hash bcrypt viene fornito da `random_password.argocd_admin.bcrypt_hash` (stabile se il seed non cambia)
+
+4. **Timestamp Statico**
+   ```hcl
+   resource "time_static" "test_timestamp" {}
+   ```
+   - Fornisce un timestamp stabile per evitare cambiamenti ricorrenti nel plan
 
 4. **Plugin Image Build**
    ```hcl
@@ -184,8 +205,12 @@ test/terraform/modules/argocd/
      source = "../../../terraform/modules/argocd"
      
      # AWS bypass via override
-     argocd_admin_bcrypt_password = bcrypt(random_password.argocd_admin.result)
-     argocd_admin_password_mtime  = timestamp()
+  argocd_admin_bcrypt_password = random_password.argocd_admin.bcrypt_hash
+  argocd_admin_password_mtime  = time_static.test_timestamp.rfc3339
+
+  # Opzionale: YAML custom da mergiare ai defaults del modulo
+  # Se non impostato, si usano solo i defaults
+  argocd_custom_values = "${path.module}/../custom-values.yaml"
      
      # Plugin configuration
      microservices_plugin_image_name   = "argocd-plugin-microservices"
@@ -211,6 +236,8 @@ test/terraform/modules/argocd/
 - `env`: Environment name (default: "local")
 - `argocd_namespace`: Namespace per ArgoCD (default: "argocd")
 - `argocd_chart_version`: Versione Helm chart (default: "9.1.0")
+- `password_seed`: Seed opzionale per stabilizzare la password tra apply
+- `argocd_custom_values`: Path opzionale al file YAML custom da mergiare (default: null)
 - Credenziali repository (opzionali, per test con repo privati)
 
 ### outputs.tf
@@ -248,15 +275,13 @@ terraform output
 terraform output -raw argocd_admin_password  # Mostra password in chiaro
 ```
 
-### local-overrides.yaml
+### Custom Values YAML (Opzionale)
 
-**Stato:** Non utilizzato nel deployment corrente.
+**Uso:** Imposta `argocd_custom_values` al path di un file YAML (es. `custom-values.yaml`) per unire valori custom ai defaults del modulo.
 
-**Motivo:** Terraform `merge()` esegue solo shallow merge (1 livello), non deep merge ricorsivo. Quando si prova a fare merge di questo file con i defaults, le sezioni `extraContainers`, `volumes` e altre configurazioni complesse vengono sovrascritte completamente invece di essere unite.
+**Deep merge:** Il modulo esegue un deep merge ricorsivo dei YAML tramite `yq` (provvisoriamente via `terraform_data` con `local-exec`). Il file risultante non viene committato e la rigenerazione avviene automaticamente quando cambiano i sorgenti (defaults o custom) grazie ai trigger.
 
-**Soluzione adottata:** Override tramite variabili Terraform e dynamic `set` blocks nel modulo.
-
-**Mantenuto per:** Riferimento e documentazione delle risorse ridotte per kind.
+**Nota:** Evita lo shallow merge con `merge()` di Terraform per strutture complesse: il deep merge preserva sezioni come `extraContainers` e `volumes` senza sovrascriverle completamente.
 
 ## Scelte Architetturali
 
@@ -306,39 +331,19 @@ locals {
 
 **Vantaggio:** Questa logica condizionale permette di usare lo stesso modulo sia per deployments in ambienti cloud (con registry ECR/ACR/GCR) che per testing locale (con immagini caricate direttamente in kind).
 
-### 3. Resource Override via Dynamic Set Blocks
+### 3. Deep Merge YAML con yq
 
-**Problema:** YAML merge non funziona per strutture complesse.
+**Problema:** Lo shallow merge di Terraform non gestiva correttamente strutture annidate.
 
-**Tentativo fallito:**
-```hcl
-# ❌ Shallow merge perde extraContainers
-values = yamlencode(merge(
-  local.default_values,
-  yamldecode(file("local-overrides.yaml"))
-))
-```
+**Soluzione:** Il modulo usa uno script `merge-values.sh` che esegue `yq eval-all` con merge profondo dei defaults e del file `argocd_custom_values` (se presente). Terraform legge il risultato e lo passa alla `helm_release`. La selezione dei valori avviene in modo type-safe con `try(yamldecode(...))`.
 
-**Soluzione:** Dynamic `set` blocks in helm_release (03-argocd-instance.tf):
-```hcl
-# Override controller resources
-dynamic "set" {
-  for_each = var.controller_resources != null ? [1] : []
-  content {
-    name  = "controller.resources.requests.cpu"
-    value = var.controller_resources.requests.cpu
-  }
-}
-# ... 24 set blocks totali (4 componenti × 6 campi)
-```
-
-**Vantaggio:** Override granulare senza perdere altre configurazioni.
+**Vantaggio:** Configurazioni complesse (es. sidecar, volumi) vengono unite correttamente senza perdita di informazioni.
 
 ### 4. Plugin Sidecar Injection
 
 **Pattern:** ArgoCD Config Management Plugin (CMP) come sidecar containers.
 
-**Implementazione:** Nel file defaults/argocd-cm-values.yaml:
+**Implementazione:** Nel file values/argocd-cm-values.yaml:
 ```yaml
 repoServer:
   extraContainers:
@@ -382,9 +387,9 @@ terraform plan
 ```
 
 **Verifica:**
-- ✅ Plan should add **5 resources** (namespace, secret, helm_release, random_password, null_resource), 0 to change, 0 to destroy.
+- ✅ Il plan dovrebbe creare le risorse principali (namespace, secret, helm_release) insieme alle risorse di test (random_password, time_static, null_resource). I numeri esatti possono variare leggermente.
 - ✅ Nessun errore di autenticazione AWS
-- ✅ Module call mostra override variables
+- ✅ La chiamata al modulo mostra le override variables e, se impostato, il path di `argocd_custom_values`
 
 **Esempio output:**
 ```
@@ -614,6 +619,28 @@ kubectl logs -n argocd -l app.kubernetes.io/component=server
 ```
 
 **Fix comune:** Aspetta 1-2 minuti che i pod siano completamente Ready.
+
+### "yq: command not found" durante l'apply
+
+**Sintomo:** Il provisioner del modulo fallisce segnalando assenza di `yq`.
+
+**Soluzione:** Installa `yq` versione 4.x:
+```bash
+brew install yq
+yq --version
+```
+
+### Plan mostra cambiamenti ricorrenti (password/timestamp)
+
+**Sintomo:** `terraform plan` mostra modifiche anche senza cambiare file.
+
+**Cause comuni:**
+- Uso di `bcrypt()` direttamente su `random_password.result` (non idempotente)
+- Uso di `timestamp()` dinamico
+
+**Fix:**
+- Usa `random_password.argocd_admin.bcrypt_hash` e imposta un `password_seed` se vuoi stabilità tra apply
+- Usa `time_static` per fornire un mtime stabile al modulo
 
 ## Cleanup
 

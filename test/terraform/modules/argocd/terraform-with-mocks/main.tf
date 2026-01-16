@@ -4,11 +4,11 @@ terraform {
   required_providers {
     kubernetes = {
       source  = "hashicorp/kubernetes"
-      version = "~> 2.18.1"
+      version = "~> 2.30.0"
     }
     helm = {
       source  = "hashicorp/helm"
-      version = "~> 2.9.0"
+      version = "~> 2.13.2"
     }
     null = {
       source  = "hashicorp/null"
@@ -21,16 +21,17 @@ terraform {
   }
 }
 
-# Provider per kind cluster locale
+
+# Provider per kind cluster locale o cluster AWS remoto
 provider "kubernetes" {
   config_path    = "~/.kube/config"
-  config_context = "kind-argocd-test"
+  config_context = var.kubernetes_config_context
 }
 
 provider "helm" {
   kubernetes {
     config_path    = "~/.kube/config"
-    config_context = "kind-argocd-test"
+    config_context = var.kubernetes_config_context
   }
 }
 
@@ -60,18 +61,18 @@ resource "null_resource" "build_and_load_plugin_images" {
       set -e
       REPO_ROOT="${path.module}/../../../../../"
       
-      echo "Building plugin images..."
-      docker build -f "$REPO_ROOT/argocd/plugins/cronjobs/Dockerfile" \
-        -t argocd-plugin-cronjobs:local "$REPO_ROOT"
+      #echo "Building plugin images..."
+      #docker build -f "$REPO_ROOT/argocd/plugins/cronjobs/Dockerfile" \
+      #  -t argocd-plugin-cronjobs:local "$REPO_ROOT"
       
-      docker build -f "$REPO_ROOT/argocd/plugins/microservices/Dockerfile" \
-        -t argocd-plugin-microservices:local "$REPO_ROOT"
+      #docker build -f "$REPO_ROOT/argocd/plugins/microservices/Dockerfile" \
+      #  -t argocd-plugin-microservices:local "$REPO_ROOT"
       
-      echo "Loading images into kind cluster..."
-      kind load docker-image argocd-plugin-cronjobs:local --name argocd-test
-      kind load docker-image argocd-plugin-microservices:local --name argocd-test
+      #echo "Loading images into kind cluster..."
+      #kind load docker-image argocd-plugin-cronjobs:local --name argocd-test
+      #kind load docker-image argocd-plugin-microservices:local --name argocd-test
       
-      echo "Plugin images ready"
+      #echo "Plugin images ready"
     EOT
   }
 
@@ -92,16 +93,19 @@ resource "time_static" "test_timestamp" {
 module "argocd" {
   source = "../../../../../terraform/modules/argocd" # Punta a terraform/modules/argocd
 
+  # ABILITA MODALITÀ TESTING LOCALE
+  local_testing_mode = var.local_testing_mode
+
   # Variabili richieste dal modulo
   aws_region       = var.aws_region
   env              = var.env
   tags             = var.tags
-  eks_cluster_name = "kind-argocd-test" # Mock EKS cluster name
+  eks_cluster_name = var.eks_cluster_name
 
   # Configurazione ArgoCD
   argocd_namespace     = var.argocd_namespace
   argocd_chart_version = var.argocd_chart_version
-  argocd_custom_values = "${path.module}/custom-values.yaml" # Abilita merge dei values
+  argocd_custom_values = "${path.module}/argocd-cm-values-plain.yaml"
   deploy_argocd        = var.deploy_argocd
 
   # Credenziali repo (mock values)
@@ -110,9 +114,13 @@ module "argocd" {
 
   # Override credenziali admin per evitare AWS
   # Usa bcrypt_hash da random_password (memorizzato nello stato) invece di bcrypt() che non è idempotente
-  argocd_admin_bcrypt_password = random_password.argocd_admin.bcrypt_hash
-  argocd_admin_password_mtime  = time_static.test_timestamp.rfc3339
+  # In modalità testing locale, usa la password generata localmente
+  # In modalità AWS remota, usa stringa vuota per generare automaticamente da AWS Secrets Manager
+  argocd_admin_bcrypt_password = var.local_testing_mode ? random_password.argocd_admin.bcrypt_hash : ""
+  argocd_admin_password_mtime  = var.local_testing_mode ? time_static.test_timestamp.rfc3339 : ""
 
   # Nota: Le immagini plugin vengono costruite e caricate da null_resource
   # prima del modulo grazie all'ordine di definizione (null_resource qui sopra)
+
+  project = "argocd-test"
 }
