@@ -567,15 +567,30 @@ configs:
       return hs
     
     resource.customizations.health.argoproj.io_ApplicationSet: |
+      -- Custom health-check for ApplicationSet.
+      -- DATA READS:
+      --   - obj.status.conditions: conditions from the ApplicationSet controller (e.g., ErrorOccurred)
+      --   - obj.status.resources: list of generated Applications, with:
+      --       res.name            -> child Application name
+      --       res.health.status   -> aggregated health of the Application (Healthy/Progressing/Degraded/Missing/...)
+      --       res.status          -> sync status of the Application (Synced/OutOfSync/Unknown/...)
+      -- EFFECT IN THE UI:
+      --   - Sets the "Health" of the ApplicationSet node in Argo CD trees/tiles.
+      --   - Shows Degraded/Progressing/Healthy based on child state and controller conditions.
+
       hs = {}
 
+      -- If status is not yet populated by the controller, treat as progressing.
+      -- UI: ApplicationSet shows "Progressing" with an explanatory message.
       if obj.status == nil then
         hs.status = "Progressing"
         hs.message = "Waiting for ApplicationSet controller to populate status"
         return hs
       end
 
-      -- Handle known error condition
+      -- Handle known controller-level errors (e.g., template/generation failed).
+      -- If ErrorOccurred=True, degrade immediately.
+      -- UI: ApplicationSet shows "Degraded" with the controller error message.
       if obj.status.conditions ~= nil then
         for _, c in ipairs(obj.status.conditions) do
           if c.type == "ErrorOccurred" and c.status == "True" then
@@ -586,6 +601,8 @@ configs:
         end
       end
 
+      -- If no Applications have been generated yet, we’re still progressing.
+      -- UI: "Progressing" with explanation.
       local hasResources = obj.status.resources ~= nil and #obj.status.resources > 0
       if not hasResources then
         hs.status = "Progressing"
@@ -593,6 +610,11 @@ configs:
         return hs
       end
 
+      -- Classify generated Applications:
+      --  - unhealthy: children with health Degraded (red)
+      --  - progressing: children with health Progressing (yellow)
+      --  - outofsync: children with health Missing (drift) or sync != Synced
+      -- UI: these lists drive the final ApplicationSet health below.
       local unhealthy = {}
       local progressing = {}
       local outofsync = {}
@@ -601,16 +623,23 @@ configs:
         local h = (res.health and res.health.status) or "Unknown"
         local s = res.status or "Unknown"
         if h == "Degraded" then
-        table.insert(unhealthy, res.name)
+          table.insert(unhealthy, res.name) -- child is red
         elseif h == "Missing" then
-          table.insert(outofsync, res.name)
+          table.insert(outofsync, res.name) -- child is out of sync (missing)
         elseif h == "Progressing" then
-          table.insert(progressing, res.name)
+          table.insert(progressing, res.name) -- child is in progress
         elseif s ~= "Synced" then
-          table.insert(outofsync, res.name)
+          table.insert(outofsync, res.name) -- any other non-synced case
         end
       end
 
+      -- Final health decision for the ApplicationSet based on children.
+      -- Priority: Degraded > Progressing (OutOfSync) > Progressing (in progress) > Healthy
+      -- UI:
+      --    - If any child is Degraded -> ApplicationSet "Degraded" (red).
+      --    - Else, if any child is OutOfSync/Missing -> "Progressing" (yellow) with list.
+      --    - Else, if any child is Progressing -> "Progressing" (yellow).
+      --    - If all are Healthy & Synced -> "Healthy" (green).
       if #unhealthy > 0 then
         hs.status = "Degraded"
         hs.message = "Unhealthy Applications: " .. table.concat(unhealthy, ", ")
