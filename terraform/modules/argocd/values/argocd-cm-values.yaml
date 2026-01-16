@@ -297,55 +297,80 @@ configs:
           - "*"
 
     resource.customizations.health.batch_CronJob: |
+      -- Custom health-check for batch/v1 CronJob.
+      -- DATA READS:
+      --   - obj.spec.suspend: whether the CronJob is paused
+      --   - obj.status.active: list of currently active Jobs (length indicates running executions)
+      --   - obj.status.lastScheduleTime: last time the CronJob was scheduled
+      --   - obj.status.lastSuccessfulTime: last time a scheduled Job completed successfully
+      -- EFFECT IN THE UI:
+      --   - Colors the CronJob node in Argo CD trees:
+      --       Degraded (red)   -> suspended or last scheduled run not (yet) successful
+      --       Progressing (yellow) -> job currently active or never ran yet
+      --       Healthy (green)  -> last scheduled run completed successfully
+
       hs = { status = "Progressing", message = "" }
 
+      -- Missing spec -> cannot evaluate, keep Progressing with hint
+      -- UI: CronJob shows Progressing until spec/status is available
       if obj == nil or obj.spec == nil then
         hs.message = "no spec"
         return hs
       end
 
-      -- CronJob suspended
+      -- Suspended CronJob -> Degraded
+      -- UI: immediately red with an explicit message
       if obj.spec.suspend == true then
         hs.status  = "Degraded"
         hs.message = "CronJob is suspended"
         return hs
       end
 
+      -- Snapshot status fields
       local status = obj.status or {}
       local active = (status.active and #status.active) or 0
       local lst    = status.lastScheduleTime
       local lst_ok = status.lastSuccessfulTime
 
-      -- There's an active Job
+      -- Active job(s) -> Progressing
+      -- UI: yellow showing how many jobs are currently running
       if active > 0 then
         hs.status  = "Progressing"
         hs.message = "Active Jobs: " .. tostring(active)
         return hs
       end
 
-      -- If the Job has been scheduled but not yet run successfully after the last schedule -> probably a failure
+      -- History-based health: if we have a last schedule time, verify success after that schedule.
       if lst ~= nil then
+
+        -- No recorded success yet after last schedule -> Degraded
+        -- UI: red indicating the most recent run hasn't succeeded
         if lst_ok == nil then
           hs.status  = "Degraded"
           hs.message = "Last run has no successful completion"
           return hs
         end
-        -- If last successful time is before last scheduled time -> probably a failure
+
+        -- lastSuccessfulTime < lastScheduleTime -> last scheduled run not successful yet -> Degraded
+        -- (RFC3339 strings compare lexicographically for ordering)
         if lst_ok < lst then
           hs.status  = "Degraded"
           hs.message = "Last scheduled run not successful yet"
           return hs
         end
         
-        -- Last run was successful
+        -- 5) Last run succeeded -> Healthy
+        -- green with confirmation message
         hs.status  = "Healthy"
         hs.message = "Last run successful"
         return hs
       end
 
-      -- Not yet run
+      -- Never ran yet -> Progressing
+      -- UI: yellow until the first successful execution occurs
       hs.status  = "Progressing"
       hs.message = "No runs yet"
+      
       return hs
 
     resource.customizations.health.apps_Deployment: |
@@ -444,7 +469,7 @@ configs:
       -- UI: Deployment shows Healthy (green)
       hs.status  = "Healthy"; 
       hs.message = "All replicas updated and available";
-       
+
       return hs
       
     resource.customizations.health.v1_Pod: |
