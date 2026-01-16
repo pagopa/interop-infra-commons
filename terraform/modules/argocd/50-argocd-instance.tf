@@ -1,17 +1,30 @@
-# Create ArgoCD namespace
-resource "kubernetes_namespace_v1" "argocd" {
-  count = var.deploy_argocd ? 1 : 0
+# Get existing namespace if not deploying it
+data "kubernetes_namespace_v1" "argocd" {
+  count = var.deploy_argocd && var.deploy_argocd_namespace == true ? 0 : 1
 
   metadata {
     name = var.argocd_namespace
   }
 }
 
+# Crea ArgoCD namespace se richiesto
+resource "kubernetes_namespace_v1" "argocd" {
+  count = var.deploy_argocd && var.deploy_argocd_namespace == true ? 1 : 0
+
+  metadata {
+    name = var.argocd_namespace
+  }
+
+  lifecycle {
+    ignore_changes = all
+  }
+}
+
 resource "helm_release" "argocd" {
   count = var.deploy_argocd ? 1 : 0
 
-  name       = "argocd"
-  namespace  = kubernetes_namespace_v1.argocd[0].metadata[0].name
+  name       = "${var.project}-argocd"
+  namespace  = local.argocd_namespace
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
   version    = var.argocd_chart_version
@@ -22,17 +35,17 @@ resource "helm_release" "argocd" {
 
   set_sensitive {
     name  = "configs.secret.argocdServerAdminPassword"
-    value = var.argocd_admin_bcrypt_password != null ? var.argocd_admin_bcrypt_password : jsondecode(aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_string).bcrypt_password
+    value = var.argocd_admin_bcrypt_password != "" ? var.argocd_admin_bcrypt_password : jsondecode(aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_string).bcrypt_password
   }
 
   set {
     name  = "configs.secret.argocdServerAdminPasswordMtime"
-    value = var.argocd_admin_password_mtime != null ? var.argocd_admin_password_mtime : time_static.argocd_admin_credentials_update[0].rfc3339
+    value = var.argocd_admin_password_mtime != "" ? var.argocd_admin_password_mtime : time_static.argocd_admin_credentials_update[0].rfc3339
   }
 
   set {
     name  = "crds.install"
-    value = "true"
+    value = var.argocd_create_crds ? "true" : "false"
   }
 
   # Explicit dependency on the merged file (when present)
