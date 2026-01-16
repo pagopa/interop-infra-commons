@@ -349,14 +349,27 @@ configs:
       return hs
 
     resource.customizations.health.apps_Deployment: |
+        -- Custom health-check for apps/v1 Deployment.
+        -- DATA READS:
+        --   - obj.status.conditions: controller conditions (Progressing/Available with reason/status)
+        --   - obj.spec.replicas: desired replicas (defaults to 1)
+        --   - obj.status.updatedReplicas / readyReplicas / availableReplicas
+        --   - obj.status.observedGeneration vs obj.metadata.generation
+        -- EFFECT IN THE UI:
+        --   - Colors the Deployment node in Argo CD trees: Degraded (red) for hard rollout failures,
+        --     Progressing (yellow) while rolling out, Healthy (green) when all replicas are updated & available.
+
       hs = { status = "Progressing", message = "" }
 
+      -- No status yet -> still progressing
+      -- UI: Deployment shows Progressing until controller fills status
       if obj.status == nil then
         hs.message = "no status yet"; 
         return hs
       end
 
-      -- Degrade on ProgressDeadlineExceeded
+      -- Hard failure: ProgressDeadlineExceeded
+      -- UI: immediate Degraded with reason when rollout exceeded progress deadline
       if obj.status.conditions then
         for _,c in ipairs(obj.status.conditions) do
           if c.type=="Progressing" and c.status=="False" then
@@ -367,19 +380,19 @@ configs:
               return hs
             end          
           end
-          -- hs.message=c.reason .. " " .. c.status .. " " .. c.type; 
-          -- hs.status="Degraded"; 
-            
-          -- return hs 
-          --if c.type=="Available" and c.status=="False" then
-          --  hs.status="Degraded"; 
-          --  hs.message=c.message or "Unavailable";
-            
-          --  return hs
-          --end
+          -- (Optional debug hooks kept commented)
+          -- hs.message = c.reason .. " " .. c.status .. " " .. c.type
+          -- hs.status  = "Degraded"
+          -- return hs
+          -- if c.type == "Available" and c.status == "False" then
+          --   hs.status  = "Degraded"
+          --   hs.message = c.message or "Unavailable"
+          --   return hs
+          -- end
         end
       end
 
+      -- Snapshot rollout counters
       local desired = (obj.spec and obj.spec.replicas) or 1
       local updated = (obj.status and obj.status.updatedReplicas) or 0
       local ready   = (obj.status and obj.status.readyReplicas) or 0
@@ -387,12 +400,16 @@ configs:
       local observed   = (obj.status and obj.status.observedGeneration) or 0
       local generation = (obj.metadata and obj.metadata.generation) or 0
       
+      -- Controller hasn’t observed the new spec yet -> Progressing
+      -- UI: keeps yellow while waiting for the new generation to be picked up
       if observed < generation then
         hs.message="waiting for controller to observe new generation"; 
         return hs
       end
 
-      -- Check for "pod in backoff/crash": rollout applied (updated==desired) but no pod ready/available
+      -- Heuristic for pod crash/backoff: rollout applied (all updated) but zero ready/available pods.
+      -- Degrade immediately; if Available=False is present, surface its reason.
+      -- UI: Deployment turns red to reflect likely pod crash/backoff      
       if updated >= desired and available == 0 and ready == 0 then
         if obj.status.conditions then
           for _, c in ipairs(obj.status.conditions) do
@@ -409,24 +426,48 @@ configs:
         return hs
       end
       
+      -- Still updating pods -> Progressing
+      -- UI: yellow with a counter of updated vs desired
       if updated < desired then
         hs.message = "updatedReplicas " .. tostring(updated) .. "/" .. tostring(desired);
         return hs
       end
 
+      -- All updated but not yet available -> Progressing
+      -- UI: yellow with a counter of available vs desired (readiness/availability catching up)
       if available < desired then
         hs.message = "availableReplicas " .. tostring(available) .. "/" .. tostring(desired);
         return hs
       end
 
-      hs.status="Healthy"; 
-      hs.message="All replicas updated and available"; 
+      -- Rollout complete and healthy
+      -- UI: Deployment shows Healthy (green)
+      hs.status  = "Healthy"; 
+      hs.message = "All replicas updated and available";
+       
       return hs
       
     resource.customizations.health.v1_Pod: |
-      hs = { status = "Progressing", message = "" }
-      if not obj.status then return hs end
+      -- Custom health-check for core/v1 Pod.
+      -- DATA READS:
+      --   - obj.status.phase: high-level Pod phase (Pending/Running/Succeeded/Failed/Unknown)
+      --   - obj.status.initContainerStatuses / containerStatuses:
+      --       * .state.waiting.reason     -> e.g., ImagePullBackOff, CrashLoopBackOff, ContainerCreating
+      --       * .state.terminated.reason  -> e.g., OOMKilled, Error
+      --       * .restartCount             -> used to threshold CrashLoopBackOff
+      --   - obj.status.conditions: looks for Ready=True when phase=Running
+      -- EFFECT IN THE UI:
+      --   - Colors Pod nodes: Degraded (red) for hard failures, Progressing (yellow) for warm-up/backoff,
+      --     Healthy (green) when Running and Ready=True. Otherwise remains Progressing by default.
 
+      hs = { status = "Progressing", message = "" }
+      if not obj.status then 
+        -- UI: Pod shows Progressing until status is available
+        return hs 
+      end
+
+      -- Immediate failure via phase
+      -- UI: Pod turns Degraded with reason when phase=Failed
       local phase = obj.status.phase or "Unknown"
       if phase == "Failed" then
         hs.status  = "Degraded"
@@ -434,7 +475,8 @@ configs:
         return hs
       end
 
-      -- examine both initContainers and app containers
+      -- Inspect init/app containers for actionable states
+      -- Returns true if a decisive status was found (and hs was set).
       local function scan(statuses)
         for _, cs in ipairs(statuses or {}) do
           local waiting = cs.state and cs.state.waiting
@@ -443,13 +485,17 @@ configs:
 
           if waiting and waiting.reason then
             local r = waiting.reason
-            -- immediate degrade on pull/config errors
+            
+            -- Pull/config errors -> immediate Degraded
+            -- UI: Pod goes red with the specific reason
             if r == "ImagePullBackOff" or r == "ErrImagePull" or r == "CreateContainerConfigError" then
               hs.status  = "Degraded"
               hs.message = r
               return true
             end
-            -- CrashLoopBackOff: patient until few restarts, then degrade
+            
+            -- CrashLoopBackOff -> tolerate brief flaps, degrade after threshold
+            -- UI: <=2 restarts -> Progressing; >=3 -> Degraded with restart count
             if r == "CrashLoopBackOff" then
               if rc >= 3 then
                 hs.status  = "Degraded"; hs.message = r .. " (restarts=" .. tostring(rc) .. ")"
@@ -458,13 +504,17 @@ configs:
               end
               return true
             end
-            -- normal warm-up states
+            
+            -- Normal warm-up states -> Progressing
+            -- UI: Pod shows Progressing while containers are being created/initialized
             if r == "ContainerCreating" or r == "PodInitializing" then
               hs.status  = "Progressing"; hs.message = r
               return true
             end
           end
 
+          -- Termination reasons that imply failure
+          -- UI: Pod becomes Degraded with termination reason
           if term and term.reason then
             if term.reason == "OOMKilled" or term.reason == "Error" then
               hs.status  = "Degraded"; hs.message = term.reason
@@ -475,10 +525,12 @@ configs:
         return false
       end
 
+      -- Check init containers first, then main containers
       if scan(obj.status.initContainerStatuses) then return hs end
       if scan(obj.status.containerStatuses)    then return hs end
 
-      -- Healthy only when Ready=True
+      -- Healthy only when Running AND Ready=True
+      -- UI: Pod turns Healthy (green) when Ready condition is True
       if phase == "Running" and obj.status.conditions then
         for _, c in ipairs(obj.status.conditions) do
           if c.type == "Ready" and c.status == "True" then
@@ -487,6 +539,8 @@ configs:
         end
       end
 
+      -- Default: still Progressing (covers Pending/Unknown/Running but not Ready)
+      -- UI: Pod remains yellow awaiting readiness or further signals
       return hs
 
     resource.customizations.health.argoproj.io_Application: |
