@@ -347,7 +347,7 @@ configs:
       hs.status  = "Progressing"
       hs.message = "No runs yet"
       return hs
-      
+
     resource.customizations.health.apps_Deployment: |
       hs = { status = "Progressing", message = "" }
 
@@ -382,15 +382,33 @@ configs:
 
       local desired = (obj.spec and obj.spec.replicas) or 1
       local updated = (obj.status and obj.status.updatedReplicas) or 0
-      local available = (obj.status and obj.status.availableReplicas) or 0
-      local observed = (obj.status and obj.status.observedGeneration) or 0
+      local ready   = (obj.status and obj.status.readyReplicas) or 0
+      local available  = (obj.status and obj.status.availableReplicas) or 0
+      local observed   = (obj.status and obj.status.observedGeneration) or 0
       local generation = (obj.metadata and obj.metadata.generation) or 0
-
+      
       if observed < generation then
         hs.message="waiting for controller to observe new generation"; 
         return hs
       end
 
+      -- Check for "pod in backoff/crash": rollout applied (updated==desired) but no pod ready/available
+      if updated >= desired and available == 0 and ready == 0 then
+        if obj.status.conditions then
+          for _, c in ipairs(obj.status.conditions) do
+            if c.type == "Available" and c.status == "False" then
+              hs.status  = "Degraded"
+              hs.message = c.reason or "No pods available (likely crash/backoff)"
+              return hs
+            end
+          end
+        end
+
+        hs.status  = "Degraded"
+        hs.message = "No pods available after rollout (likely crash/backoff)"
+        return hs
+      end
+      
       if updated < desired then
         hs.message = "updatedReplicas " .. tostring(updated) .. "/" .. tostring(desired);
         return hs
@@ -472,9 +490,7 @@ configs:
       return hs
 
     resource.customizations.health.argoproj.io_Application: |
-      hs = {}
-      hs.status = "Progressing"
-      hs.message = ""
+      hs = { status = "Progressing", message = "" }
 
       if obj.status == nil then
         hs.status = "Progressing"
@@ -482,11 +498,46 @@ configs:
         return hs
       end
 
-      -- During an active sync, show Progressing
-      if obj.status.operationState ~= nil and obj.status.operationState.phase == "Running" then
-        hs.status = "Progressing"
-        hs.message = "Sync in progress"
+      -- Well known reconciliation/diff/invalid spec error -> Degraded
+      local function has_error_condition()
+        if not obj.status.conditions then 
+          return nil 
+        end
+
+        for _, c in ipairs(obj.status.conditions) do
+          if c.status == "True" and (
+              c.type == "ComparisonError" or
+              c.type == "InvalidSpecError" or
+              c.type == "SyncError" or
+              c.type == "OperationError"
+            ) then
+            return c.message or c.type
+          end
+        end
+
+        return nil
+      end
+
+      local cond_err = has_error_condition()
+      if cond_err then
+        hs.status  = "Degraded"
+        hs.message = cond_err
         return hs
+      end
+
+      if obj.status.operationState ~= nil then
+        local phase = obj.status.operationState.phase
+        -- Failed operation / specific error
+        if phase == "Error" or phase == "Failed" then
+          hs.status  = "Degraded"
+          hs.message = (obj.status.operationState.message or "Sync operation failed")
+          return hs
+        -- During an active sync, show Progressing
+        elseif phase == "Running" then
+          hs.status  = "Progressing"
+          hs.message = "Sync in progress"
+          return hs
+        end
       end
 
       local sync = (obj.status.sync and obj.status.sync.status) or "Unknown"
