@@ -217,6 +217,7 @@ configs:
         clusters:
           - "*"
 
+  
     resource.customizations.health.batch_CronJob: |
       -- Custom health-check for batch/v1 CronJob.
       -- DATA READS:
@@ -392,8 +393,8 @@ configs:
       hs.message = "All replicas updated and available";
 
       return hs
-      
-    resource.customizations.health.v1_Pod: |
+  
+    resource.customizations.health.Pod: |
       -- Custom health-check for core/v1 Pod.
       -- DATA READS:
       --   - obj.status.phase: high-level Pod phase (Pending/Running/Succeeded/Failed/Unknown)
@@ -429,8 +430,9 @@ configs:
           local term    = cs.state and cs.state.terminated
           local rc      = cs.restartCount or 0
 
-          if waiting and waiting.reason then
+          if waiting then
             local r = waiting.reason
+            local m = waiting.message or ""
             
             -- Pull/config errors -> immediate Degraded
             -- UI: Pod goes red with the specific reason
@@ -439,22 +441,33 @@ configs:
               hs.message = r
               return true
             end
+
+            -- Sometimes reason is empty but message contains it
+            if m:find("ImagePullBackOff") or m:find("ErrImagePull") or m:find("CreateContainerConfigError") then
+              hs.status  = "Degraded"
+              hs.message = "Pull/Config error"
+              return true
+            end
             
             -- CrashLoopBackOff -> tolerate brief flaps, degrade after threshold
             -- UI: <=2 restarts -> Progressing; >=3 -> Degraded with restart count
             if r == "CrashLoopBackOff" then
               if rc >= 3 then
-                hs.status  = "Degraded"; hs.message = r .. " (restarts=" .. tostring(rc) .. ")"
+                hs.status  = "Degraded"; 
               else
-                hs.status  = "Progressing"; hs.message = r .. " (restarts=" .. tostring(rc) .. ")"
+                hs.status  = "Progressing"; 
               end
+              
+              hs.message = r .. " (restarts=" .. tostring(rc) .. ")"
+              
               return true
             end
             
             -- Normal warm-up states -> Progressing
             -- UI: Pod shows Progressing while containers are being created/initialized
             if r == "ContainerCreating" or r == "PodInitializing" then
-              hs.status  = "Progressing"; hs.message = r
+              hs.status  = "Progressing";
+              hs.message = r
               return true
             end
           end
@@ -480,13 +493,17 @@ configs:
       if phase == "Running" and obj.status.conditions then
         for _, c in ipairs(obj.status.conditions) do
           if c.type == "Ready" and c.status == "True" then
-            hs.status  = "Healthy"; hs.message = "Ready"; return hs
+            hs.status  = "Healthy"; 
+            hs.message = "Ready"; 
+            return hs
           end
         end
       end
 
       -- Default: still Progressing (covers Pending/Unknown/Running but not Ready)
       -- UI: Pod remains yellow awaiting readiness or further signals
+      hs.message = "phase=" .. tostring(phase) .. " reason=" .. tostring(sr)
+
       return hs
 
     resource.customizations.health.argoproj.io_Application: |
