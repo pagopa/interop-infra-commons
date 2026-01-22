@@ -240,10 +240,10 @@ configs:
         return hs
       end
 
-      -- Suspended CronJob -> Degraded
-      -- UI: immediately red with an explicit message
+      -- Suspended CronJob -> expectedly Healthy
+      -- UI: immediately green with an explicit message
       if obj.spec.suspend == true then
-        hs.status  = "Degraded"
+        hs.status  = "Healthy"
         hs.message = "CronJob is suspended"
         return hs
       end
@@ -253,6 +253,13 @@ configs:
       local active = (status.active and #status.active) or 0
       local lst    = status.lastScheduleTime
       local lst_ok = status.lastSuccessfulTime
+
+      -- Never scheduled/run yet
+      if lst == nil and active == 0 then
+        hs.status  = "Healthy"
+        hs.message = "No runs yet (scheduled)"
+        return hs
+      end
 
       -- Active job(s) -> Progressing
       -- UI: yellow showing how many jobs are currently running
@@ -291,7 +298,7 @@ configs:
       -- Never ran yet -> Progressing
       -- UI: yellow until the first successful execution occurs
       hs.status  = "Progressing"
-      hs.message = "No runs yet"
+      hs.message = "Unable to determine"
 
       return hs
 
@@ -629,7 +636,7 @@ configs:
       --   - Sets the "Health" of the ApplicationSet node in Argo CD trees/tiles.
       --   - Shows Degraded/Progressing/Healthy based on child state and controller conditions.
 
-      hs = {}
+      hs = { status = "Progressing", message = "" }
 
       -- If status is not yet populated by the controller, treat as progressing.
       -- UI: ApplicationSet shows "Progressing" with an explanatory message.
