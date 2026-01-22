@@ -408,7 +408,7 @@ configs:
       --     Healthy (green) when Running and Ready=True. Otherwise remains Progressing by default.
 
       hs = { status = "Progressing", message = "" }
-      if not obj.status then 
+      if obj == nil or not obj.status then 
         -- UI: Pod shows Progressing until status is available
         return hs 
       end
@@ -416,9 +416,18 @@ configs:
       -- Immediate failure via phase
       -- UI: Pod turns Degraded with reason when phase=Failed
       local phase = obj.status.phase or "Unknown"
+      local sr    = (obj.status.reason) or ""
+
       if phase == "Failed" then
         hs.status  = "Degraded"
-        hs.message = obj.status.reason or "Pod Failed"
+        hs.message = sr or "Pod Failed"
+        return hs
+      end
+
+      -- Detect pull/config errors even if placed at pod-level reason
+      if sr == "ImagePullBackOff" or sr == "ErrImagePull" or sr == "CreateContainerConfigError" then
+        hs.status  = "Degraded"
+        hs.message = sr
         return hs
       end
 
@@ -434,6 +443,14 @@ configs:
             local r = waiting.reason
             local m = waiting.message or ""
             
+            -- Normal warm-up states -> Progressing
+            -- UI: Pod shows Progressing while containers are being created/initialized
+            if r == "ContainerCreating" or r == "PodInitializing" or r == "Initializing" then
+              hs.status  = "Progressing"
+              hs.message = r
+              return true
+            end
+            
             -- Pull/config errors -> immediate Degraded
             -- UI: Pod goes red with the specific reason
             if r == "ImagePullBackOff" or r == "ErrImagePull" or r == "CreateContainerConfigError" then
@@ -442,13 +459,6 @@ configs:
               return true
             end
 
-            -- Sometimes reason is empty but message contains it
-            if m:find("ImagePullBackOff") or m:find("ErrImagePull") or m:find("CreateContainerConfigError") then
-              hs.status  = "Degraded"
-              hs.message = "Pull/Config error"
-              return true
-            end
-            
             -- CrashLoopBackOff -> tolerate brief flaps, degrade after threshold
             -- UI: <=2 restarts -> Progressing; >=3 -> Degraded with restart count
             if r == "CrashLoopBackOff" then
@@ -462,14 +472,12 @@ configs:
               
               return true
             end
+
+            -- Everything else is treated as a problem
+            hs.status  = "Degraded"
+            hs.message = "Waiting: " .. tostring(r)
             
-            -- Normal warm-up states -> Progressing
-            -- UI: Pod shows Progressing while containers are being created/initialized
-            if r == "ContainerCreating" or r == "PodInitializing" then
-              hs.status  = "Progressing";
-              hs.message = r
-              return true
-            end
+            return true            
           end
 
           -- Termination reasons that imply failure
