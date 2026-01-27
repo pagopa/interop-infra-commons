@@ -97,21 +97,21 @@ variable "argocd_admin_password_mtime" {
   default     = ""
 }
 
-#variable "aws_lb_controller_role_name" {
-#  type        = string
-#  description = "Name of the IAM role to be assumed by the AWS Load Balancer Controller service account"
-#}
-#
-#variable "aws_lb_controller_chart_version" {
-#  type        = string
-#  description = "Chart version for AWS Load Balancer Controller"
-#}
-#
-#variable "aws_lb_controller_replicas" {
-#  type        = number
-#  description = "Replica count for AWS Load Balancer Controller"
-#}
-#
+variable "aws_lb_controller_role_name" {
+  type        = string
+  description = "Name of the IAM role to be assumed by the AWS Load Balancer Controller service account"
+}
+
+variable "aws_lb_controller_chart_version" {
+  type        = string
+  description = "Chart version for AWS Load Balancer Controller"
+}
+
+variable "aws_lb_controller_replicas" {
+  type        = number
+  description = "Replica count for AWS Load Balancer Controller"
+}
+
 #variable "vpn_clients_security_group_id" {
 #  type        = string
 #  description = "ID of the VPN clients SG"
