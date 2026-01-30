@@ -5,6 +5,8 @@ locals {
 }
 
 data "aws_route53_zone" "public" {
+  count = local.setup53_architecture ? 1 : 0
+
   name         = var.public_hosted_zone_name
   private_zone = false
 }
@@ -14,7 +16,7 @@ data "aws_route53_zone" "public" {
 resource "aws_acm_certificate" "argocd" {
   count = local.setup53_architecture ? 1 : 0
 
-  domain_name       = format("argocd.%s", data.aws_route53_zone.public.name)
+  domain_name       = format("argocd.%s", data.aws_route53_zone.public[0].name)
   validation_method = "DNS"
 
   lifecycle {
@@ -40,7 +42,7 @@ resource "aws_route53_record" "argocd_cert_validation" {
   name    = each.value.name
   records = [each.value.record]
   type    = each.value.type
-  zone_id = data.aws_route53_zone.public.zone_id
+  zone_id = data.aws_route53_zone.public[0].zone_id
   ttl     = 300
 }
 
