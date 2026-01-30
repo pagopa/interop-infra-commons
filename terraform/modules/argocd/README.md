@@ -1,60 +1,72 @@
 # ArgoCD Terraform Module
 
-Terraform module for deploying ArgoCD on Kubernetes clusters with support for custom plugins as sidecar containers. The module supports both AWS EKS deployments and local testing on kind.
+Terraform module for deploying ArgoCD on Kubernetes clusters (AWS EKS or local kind). The module supports optional AWS networking resources (Route53, ACM, ALB) for exposing ArgoCD via an internal HTTPS load balancer and includes a local testing mode.
 
 ## Features
 
-- ✅ ArgoCD deployment via Helm chart with optimized configurations
-- ✅ Support for custom plugins as sidecar containers (microservices, cronjobs)
-- ✅ Admin credentials management via AWS Secrets Manager or local overrides
-- ✅ Flexible resource configuration (CPU, memory, replicas) for all components
-- ✅ Support for plugin images from public/private registries or local (kind)
-- ✅ Custom health checks for Deployment, Pod, Application, ApplicationSet
-- ✅ Performance optimizations (QPS, burst, timeouts, parallelism)
-- ✅ AWS-optional mode for local testing without cloud credentials
+- ArgoCD deployment via Helm chart
+- Optional creation of ArgoCD namespace
+- Admin credentials managed by AWS Secrets Manager or provided via overrides
+- Optional internal ALB with HTTPS, ACM certificate, and Route53 private hosted zone
+- Separate target groups for UI (HTTP1) and gRPC (HTTP2)
+- TargetGroupBinding resources for AWS Load Balancer Controller
+- Optional merge of custom Helm values using `yq`
+- Local testing mode using kubeconfig (kind)
 
 ## Module Structure
 
 ```
 terraform/modules/argocd/
-├── 00-main.tf                    # Provider requirements configuration
-├── 01-locals.tf                  # Logic for building local values
-├── 02-secrets.tf                 # Admin secret management (AWS or override)
-├── 03-argocd-instance.tf         # ArgoCD deployment via Helm
+├── 00-main.tf                    # Providers and configuration
+├── 10-data.tf                    # Data sources and values merge
+├── 20-locals.tf                  # Local values and validations
+├── 30-secrets.tf                 # Admin secret management
+├── 40-route53.tf                 # Route53 and ACM resources
+├── 43-alb.tf                     # ALB and Route53 alias record
+├── 44-alb-target-groups.tf       # Target groups, listeners, and TargetGroupBinding
+├── 50-argocd-instance.tf         # ArgoCD Helm release and gRPC service
 ├── 98-variables.tf               # Input variables
 ├── 99-outputs.tf                 # Module outputs
+├── scripts/
+│   └── merge-values.sh           # Deep-merge YAML values via yq
 ├── values/
-│   └── argocd-cm-values.yaml    # Default values for Helm chart
+│   └── argocd-cm-values.yaml      # Default Helm values
 └── README.md                     # This file
 
-# Local Testing (see test/terraform/modules/argocd/)
+# Local testing (see test/terraform/modules/argocd/)
 test/terraform/modules/argocd/
 ├── scripts/
-│   ├── setup-kind-only.sh        # Create kind cluster for local testing
-│   └── teardown-kind-cluster.sh  # Delete kind cluster
-└── terraform-with-mocks/         # Usage example with AWS mocks
-    ├── main.tf                   # Root configuration
-    ├── variables.tf              # Input variables
-    ├── outputs.tf                # Outputs
-    ├── local-overrides.yaml      # Resource overrides for kind
-    └── README.md                 # Detailed testing guide
+│   ├── setup-kind-only.sh
+│   └── teardown-kind-cluster.sh
+└── terraform-with-mocks/
+    ├── main.tf
+    ├── variables.tf
+    ├── outputs.tf
+    ├── local-overrides.yaml
+    └── README.md
 ```
 
 ## Requirements
 
-- **Terraform**: >= 1.8.0
-- **Kubernetes Provider**: ~> 2.18.1
-- **Helm Provider**: ~> 2.9.0
-- **AWS Provider**: ~> 5.33.0 (optional if using overrides)
+- **Terraform**: ~> 1.8.0
+- **AWS Provider**: ~> 5.46.0
+- **Kubernetes Provider**: ~> 2.30.0
+- **Helm Provider**: ~> 2.13.2
+- **ArgoCD Provider**: 7.11.2
+- **kubectl Provider**: ~> 1.14.0
+- **yq**: required only when using `argocd_custom_values`
 
-## Basic Usage (AWS EKS)
+## Usage
+
+### AWS EKS with ALB + Route53
 
 ```hcl
 module "argocd" {
   source = "./terraform/modules/argocd"
 
-  # Basic configuration
+  # Core configuration
   aws_region          = "eu-south-1"
+  project             = "interop"
   env                 = "production"
   eks_cluster_name    = "my-eks-cluster"
   argocd_namespace    = "argocd"
@@ -64,19 +76,17 @@ module "argocd" {
   argocd_app_repo_username = "admin"
   argocd_app_repo_password = var.repo_password
 
-  # Path to custom values (optional)
+  # Optional custom values
   argocd_custom_values = "path/to/custom-values.yaml"
 
-  # Plugin configuration (with ECR registry)
-  microservices_plugin_image_prefix = "123456789.dkr.ecr.eu-south-1.amazonaws.com"
-  microservices_plugin_image_name   = "argocd-plugin-microservices"
-  microservices_plugin_image_tag    = "v1.0.0"
-  
-  cronjobs_plugin_image_prefix = "123456789.dkr.ecr.eu-south-1.amazonaws.com"
-  cronjobs_plugin_image_name   = "argocd-plugin-cronjobs"
-  cronjobs_plugin_image_tag    = "v1.0.0"
+  # ALB + Route53 + ACM
+  create_argocd_alb        = true
+  create_private_hosted_zone = true
+  public_hosted_zone_name  = "dev.interop.pagopa.it"
+  argocd_subdomain          = "argocd"
+  vpn_clients_security_group_id = "sg-0123456789abcdef0"
+  private_subnet_ids        = ["subnet-aaa", "subnet-bbb", "subnet-ccc"]
 
-  # Tags
   tags = {
     Environment = "production"
     Project     = "interop"
@@ -85,292 +95,137 @@ module "argocd" {
 }
 ```
 
-## Advanced Usage with Resource Override
+### Local Testing (kind)
 
 ```hcl
 module "argocd" {
   source = "./terraform/modules/argocd"
 
-  # ... basic configuration ...
+  aws_region          = "eu-south-1"
+  project             = "interop"
+  env                 = "local"
+  eks_cluster_name    = "kind-argocd-test"
+  argocd_namespace    = "argocd"
+  argocd_chart_version = "6.10.0"
 
-  # Resource overrides for constrained clusters
-  controller_resources = {
-    requests = { cpu = "500m", memory = "1Gi" }
-    limits   = { cpu = "2000m", memory = "4Gi" }
-  }
+  argocd_app_repo_username = "admin"
+  argocd_app_repo_password = "password"
 
-  reposerver_resources = {
-    requests = { cpu = "500m", memory = "512Mi" }
-    limits   = { cpu = "1000m", memory = "2Gi" }
-  }
+  # Disable ALB/Route53 (automatically enables local testing mode)
+  create_argocd_alb         = false
+  create_private_hosted_zone = false
 
-  server_resources = {
-    requests = { cpu = "250m", memory = "512Mi" }
-    limits   = { cpu = "1000m", memory = "2Gi" }
-  }
-
-  redis_resources = {
-    requests = { cpu = "50m", memory = "128Mi" }
-    limits   = { cpu = "200m", memory = "256Mi" }
-  }
-
-  applicationset_resources = {
-    requests = { cpu = "50m", memory = "128Mi" }
-    limits   = { cpu = "150m", memory = "256Mi" }
-  }
-
-  # Replica overrides
-  controller_replicas   = 1
-  reposerver_replicas  = 2
-  server_replicas      = 2
-  applicationset_replicas = 1
-}
-```
-
-## Local Testing Usage (kind)
-
-```hcl
-module "argocd" {
-  source = "./terraform/modules/argocd"
-
-  # Minimal configuration
-  aws_region       = "eu-south-1"  # Not used
-  env              = "local"
-  eks_cluster_name = "kind-cluster"  # Not used
-  argocd_namespace = "argocd"
-  argocd_chart_version = "9.1.0"
-  argocd_custom_values = ""
-
-  # AWS bypass with overrides
+  # Optional override to avoid AWS Secrets Manager
   argocd_admin_bcrypt_password = bcrypt("your-password-here")
   argocd_admin_password_mtime  = timestamp()
-
-  # Local plugins (without registry prefix)
-  microservices_plugin_image_prefix = ""
-  microservices_plugin_image_name   = "argocd-plugin-microservices"
-  microservices_plugin_image_tag    = "local"
-  
-  cronjobs_plugin_image_prefix = ""
-  cronjobs_plugin_image_name   = "argocd-plugin-cronjobs"
-  cronjobs_plugin_image_tag    = "local"
-
-  # Reduced resources for kind
-  controller_resources = {
-    requests = { cpu = "100m", memory = "256Mi" }
-    limits   = { cpu = "500m", memory = "512Mi" }
-  }
-  # ... other reduced resources ...
 }
 ```
 
-**Note:** For a complete local testing example, see the [`test/terraform/modules/argocd/terraform-with-mocks/`](../../../test/terraform/modules/argocd/terraform-with-mocks/) directory.
+**Note:** When `create_argocd_alb = false`, the module automatically infers local testing mode and uses kubeconfig instead of EKS credentials.
+
+**Note:** For a complete local testing example (including AWS mocks), see the [`test/terraform/modules/argocd/terraform-with-mocks/`](../../../test/terraform/modules/argocd/terraform-with-mocks/) directory.
+
+## Networking (Route53 + ACM + ALB)
+
+When `create_argocd_alb` and `create_private_hosted_zone` are enabled, the module:
+
+- Creates a private Route53 hosted zone for the provided `public_hosted_zone_name`
+- Requests an ACM certificate validated through the public hosted zone
+- Creates an internal ALB with HTTPS listener
+- Adds two target groups (UI HTTP1 and gRPC HTTP2)
+- Creates a Route53 alias record for `${argocd_subdomain}.${public_hosted_zone_name}`
+- Binds target groups to Kubernetes services via TargetGroupBinding resources
+
+The AWS Load Balancer Controller and its CRDs must be installed in the cluster to use `kubernetes_manifest` TargetGroupBinding resources.
 
 ## Input Variables
 
-### Required
-
-| Name | Type | Description |
-|------|------|-------------|
-| `aws_region` | string | AWS region for cloud resources |
-| `env` | string | Environment name (dev, staging, prod) |
-| `eks_cluster_name` | string | EKS cluster name (used for AWS authentication) |
-| `argocd_namespace` | string | Kubernetes namespace for ArgoCD |
-| `argocd_chart_version` | string | ArgoCD Helm chart version (e.g. "9.1.0") |
-| `argocd_custom_values` | string | Path to custom values file for Helm |
-| `argocd_app_repo_username` | string | Username for application repository |
-| `argocd_app_repo_password` | string | Password for application repository |
-
-### Optional - AWS Bypass
+### Core
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
-| `argocd_admin_bcrypt_password` | string | null | Bcrypt hash of admin password (bypasses AWS Secrets Manager) |
-| `argocd_admin_password_mtime` | string | null | RFC3339 timestamp for secret (bypasses AWS time_static) |
+| `aws_region` | string | n/a | AWS region |
+| `project` | string | n/a | Project name used for resource naming |
+| `env` | string | n/a | Environment name |
+| `eks_cluster_name` | string | n/a | EKS cluster name |
+| `argocd_namespace` | string | n/a | Kubernetes namespace for ArgoCD |
+| `argocd_chart_version` | string | n/a | ArgoCD Helm chart version |
+| `argocd_app_repo_username` | string | n/a | Reserved for future use (not consumed by the module yet) |
+| `argocd_app_repo_password` | string | n/a | Reserved for future use (not consumed by the module yet) |
 
-### Optional - Microservices Plugin
-
-| Name | Type | Default | Description |
-|------|------|---------|-------------|
-| `microservices_plugin_name` | string | "argocd-plugin-microservices" | Plugin container name |
-| `microservices_plugin_image_prefix` | string | "" | Registry prefix (e.g. "ghcr.io/org") |
-| `microservices_plugin_image_name` | string | "argocd-plugin-microservices" | Image name |
-| `microservices_plugin_image_tag` | string | "local" | Image tag |
-
-### Optional - Cronjobs Plugin
+### ArgoCD / Helm
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
-| `cronjobs_plugin_name` | string | "argocd-plugin-cronjobs" | Plugin container name |
-| `cronjobs_plugin_image_prefix` | string | "" | Registry prefix (e.g. "ghcr.io/org") |
-| `cronjobs_plugin_image_name` | string | "argocd-plugin-cronjobs" | Image name |
-| `cronjobs_plugin_image_tag` | string | "local" | Image tag |
+| `argocd_custom_values` | string | null | Path to custom values YAML (merged with defaults) |
+| `argocd_create_crds` | bool | true | Install ArgoCD CRDs |
+| `deploy_argocd` | bool | true | Enable/disable ArgoCD deployment |
+| `deploy_argocd_namespace` | bool | true | Create namespace if true |
+| `argocd_helm_timeout_seconds` | number | 600 | Helm operation timeout |
 
-### Optional - Resource Override
-
-| Name | Type | Default | Description |
-|------|------|---------|-------------|
-| `controller_resources` | object | null | CPU/memory limits for controller |
-| `reposerver_resources` | object | null | CPU/memory limits for repo-server |
-| `server_resources` | object | null | CPU/memory limits for server |
-| `redis_resources` | object | null | CPU/memory limits for redis |
-| `applicationset_resources` | object | null | CPU/memory limits for applicationset |
-| `controller_replicas` | number | null | Number of controller replicas |
-| `reposerver_replicas` | number | null | Number of repo-server replicas |
-| `server_replicas` | number | null | Number of server replicas |
-| `applicationset_replicas` | number | null | Number of applicationset replicas |
-
-### Other
+### Secrets Management
 
 | Name | Type | Default | Description |
 |------|------|---------|-------------|
-| `deploy_argocd` | bool | true | Flag to enable/disable deployment |
-| `tags` | map(any) | `{CreatedBy = "Terraform"}` | Tags to apply to AWS resources |
+| `secret_prefix` | string | "k8s/argocd/" | Secrets Manager prefix |
+| `secret_tags` | map(string) | {} | Tags for Secrets Manager secret |
+| `secret_recovery_window_in_days` | number | 0 | Recovery window for secret deletion |
+| `argocd_admin_bcrypt_password` | string | "" | Override admin bcrypt password (skip Secrets Manager) |
+| `argocd_admin_password_mtime` | string | "" | Override admin password mtime |
+
+### Route53 / ACM / ALB
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `create_private_hosted_zone` | bool | false | Create private hosted zone and associate to VPC |
+| `create_argocd_alb` | bool | true | Create internal ALB for ArgoCD |
+| `public_hosted_zone_name` | string | null | Public hosted zone name for ACM DNS validation |
+| `argocd_subdomain` | string | null | Subdomain used for ArgoCD DNS record |
+| `argocd_alb_name` | string | null | Reserved for future use (not consumed by the module yet) |
+| `vpn_clients_security_group_id` | string | n/a | VPN clients security group ID (used by ALB SG) |
+| `private_subnet_ids` | list(string) | n/a | Private subnets for ALB |
+
+### Tags
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `tags` | map(any) | `{CreatedBy = "Terraform"}` | Tags applied to AWS resources |
+
+**Note:** Local testing mode is automatically inferred when `create_argocd_alb = false`. The module will use kubeconfig instead of EKS credentials.
 
 ## Outputs
 
 | Name | Description |
 |------|-------------|
-| `argocd_server_url` | Internal ArgoCD server URL (e.g. `https://argocd-server.argocd.svc.cluster.local`) |
-| `argocd_admin_credentials` | Map with admin credentials (`username`, `password`, `bcryptPassword`, `passwordMtime`) |
-| `argocd_namespace` | Namespace where ArgoCD is deployed |
-| `argocd_admin_username` | Admin username (always "admin") |
-
-## Default Configurations
-
-The [`defaults/argocd-cm-values.yaml`](./defaults/argocd-cm-values.yaml) file contains optimized configurations for:
-
-- **Performance**: QPS=100, Burst=200 for Kubernetes API
-- **Timeouts**: Exec timeout 5m, reconciliation 120s, hard reconciliation 300s
-- **Parallelism**: 50 status/operation processors, 30 repo parallelism, 100 kubectl parallelism
-- **Plugin Sidecars**: extraContainers configuration for repo-server
-- **Health Checks**: Custom health checks for Deployment, Pod, Application, ApplicationSet
-- **Resource Exclusions**: Excludes Lease, Endpoints, Event from sync
-
-### Default Resource Values
-
-| Component | CPU Request | CPU Limit | Memory Request | Memory Limit | Replicas |
-|-----------|-------------|-----------|----------------|--------------|----------|
-| controller | 2 | 2 | 4Gi | 4Gi | 1 |
-| repoServer | 1 | 1 | 4Gi | 4Gi | 2 |
-| server | 1 | 1 | 3Gi | 3Gi | 2 |
-| redis | 10m | 200m | 64Mi | 256Mi | 1 |
-| applicationSet | 80m | 150m | 64Mi | 256Mi | 1 |
-
-**Note:** These values can be overridden using the `*_resources` and `*_replicas` variables.
-
-## Local Testing
-
-The module includes a dedicated directory for local testing without AWS dependencies:
-
-```
-test/terraform/modules/argocd/
-├── scripts/
-│   ├── setup-kind-only.sh        # Script to create kind cluster
-│   └── teardown-kind-cluster.sh  # Script to delete kind cluster
-└── terraform-with-mocks/         # Terraform configuration for kind
-    ├── main.tf                   # Module call with overrides
-    ├── variables.tf              # Variables for testing
-    ├── outputs.tf                # Outputs
-    ├── local-overrides.yaml      # Resource overrides
-    └── README.md                 # Complete testing guide
-```
-
-### Quick Start for Testing
-
-```bash
-# 1. Create kind cluster
-cd test/terraform/modules/argocd
-./scripts/setup-kind-only.sh
-
-# 2. Run Terraform
-cd terraform-with-mocks
-terraform init
-terraform apply
-
-# 3. Access UI
-kubectl port-forward svc/argocd-server -n argocd 8080:443
-# Username: admin
-# Password: terraform output -raw argocd_admin_password
-
-# 4. Cleanup
-terraform destroy
-../scripts/teardown-kind-cluster.sh
-```
-
-For the complete testing guide, see [test/terraform/modules/argocd/terraform-with-mocks/README.md](../../../test/terraform/modules/argocd/terraform-with-mocks/README.md).
-
-## Module Architecture
-
-### 1. AWS-Optional Pattern
-
-The module supports deployment with or without AWS Secrets Manager:
-
-- **With AWS**: Admin credentials are generated and stored in AWS Secrets Manager
-- **Without AWS**: Credentials are passed via override variables (`argocd_admin_bcrypt_password`, `argocd_admin_password_mtime`)
-
-AWS resources are conditionally created:
-```hcl
-count = var.deploy_argocd && var.argocd_admin_bcrypt_password == null ? 1 : 0
-```
-
-### 2. Plugin Image Construction
-
-The module builds plugin image paths flexibly:
-
-- **With registry**: `<prefix>/<name>:<tag>` → `ghcr.io/org/plugin:v1.0.0`
-- **Without registry** (kind): `<name>:<tag>` → `plugin:local`
-
-This allows using the same module for production and local testing.
-
-### 3. Resource Override via Dynamic Set Blocks
-
-Resource overrides are implemented using dynamic `set` blocks in Helm:
-
-```hcl
-dynamic "set" {
-  for_each = var.controller_resources != null ? [1] : []
-  content {
-    name  = "controller.resources.requests.cpu"
-    value = var.controller_resources.requests.cpu
-  }
-}
-```
-
-This approach allows granular overrides without losing complex configurations like `extraContainers`.
-
-### 4. Plugin Sidecar Injection
-
-ArgoCD plugins are configured as sidecar containers in the repo-server:
-
-```yaml
-repoServer:
-  extraContainers:
-    - name: argocd-plugin-microservices
-      image: ${microservices_plugin_image}
-      command: [/var/run/argocd/argocd-cmp-server]
-      # ... volumeMounts, env ...
-```
-
-This pattern allows extending ArgoCD with custom logic for manifest rendering.
+| `argocd_server_url` | Internal ArgoCD server URL |
+| `argocd_admin_credentials` | Admin credentials secret data (sensitive) |
+| `argocd_alb_dns_name` | DNS name of the ArgoCD ALB |
+| `argocd_alb_arn` | ARN of the ArgoCD ALB |
+| `argocd_route53_record_fqdn` | FQDN of the Route53 alias record |
+| `argocd_alb_url` | Full HTTPS URL to access ArgoCD via ALB |
 
 ## Troubleshooting
+
+### Error: yq is not installed
+
+**Cause**: `argocd_custom_values` is set and the merge script requires `yq`.
+
+**Solution**: Install `yq` on the machine running Terraform.
+
+### Error: TargetGroupBinding CRD not found
+
+**Cause**: AWS Load Balancer Controller is not installed in the cluster.
+
+**Solution**: Install the AWS Load Balancer Controller and its CRDs before applying.
+
+### Error: Missing public hosted zone
+
+**Cause**: `public_hosted_zone_name` does not exist or is not accessible.
+
+**Solution**: Ensure the public hosted zone exists in Route53 and matches the provided name.
 
 ### Error: context deadline exceeded
 
 **Cause**: Timeout during Helm installation.
 
-**Solution**: Increase timeout in `03-argocd-instance.tf` or allocate more resources to the cluster.
-
-### Missing plugin container
-
-**Cause**: Plugin images not available or incorrect image path.
-
-**Solution**: 
-- Verify images exist in the specified registry
-- For kind, ensure images are loaded: `kind load docker-image <image> --name <cluster>`
-
-### Pod in OOMKilled
-
-**Cause**: Insufficient memory limits.
-
-**Solution**: Increase values in `*_resources.limits.memory` or reduce defaults in `argocd-cm-values.yaml`.
+**Solution**: Increase `argocd_helm_timeout_seconds` or allocate more resources to the cluster.
