@@ -28,6 +28,7 @@ resource "helm_release" "argocd" {
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"
   version    = var.argocd_chart_version
+  timeout    = var.argocd_helm_timeout_seconds
 
   values = [
     yamlencode(local.argocd_values)
