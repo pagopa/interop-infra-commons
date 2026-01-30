@@ -26,27 +26,22 @@ output "argocd_admin_credentials" {
 }
 
 # ALB outputs (if enabled)
-#output "argocd_alb_dns_name" {
-#  value       = var.create_argocd_alb && var.deploy_argocd ? aws_lb.argocd[0].dns_name : null
-#  description = "DNS name of the ArgoCD ALB"
-#}
-#
-#output "argocd_alb_zone_id" {
-#  value       = var.create_argocd_alb && var.deploy_argocd ? aws_lb.argocd[0].zone_id : null
-#  description = "Zone ID of the ArgoCD ALB"
-#}
-#
-#output "argocd_domain" {
-#  value       = var.argocd_domain
-#  description = "Configured domain for ArgoCD"
-#}
-#
-#output "argocd_url" {
-#  value       = var.argocd_domain != null ? "https://${var.argocd_domain}" : null
-#  description = "Full HTTPS URL to access ArgoCD"
-#}
-#
-#output "argocd_route53_zone_id" {
-#  value       = local.create_route53_record ? local.route53_zone_id_resolved : null
-#  description = "Route53 zone ID used for DNS record"
-#}
+output "argocd_alb_dns_name" {
+  value       = var.create_argocd_alb && var.deploy_argocd ? aws_lb.argocd[0].dns_name : null
+  description = "DNS name of the ArgoCD ALB"
+}
+
+output "argocd_alb_arn" {
+  value       = var.create_argocd_alb && var.deploy_argocd ? aws_lb.argocd[0].arn : null
+  description = "ARN of the ArgoCD ALB"
+}
+
+output "argocd_route53_record_fqdn" {
+  value       = var.create_argocd_alb && var.deploy_argocd ? aws_route53_record.argocd_alb_alias[0].fqdn : null
+  description = "FQDN of the ArgoCD Route53 record"
+}
+
+output "argocd_alb_url" {
+  value       = var.create_argocd_alb && var.deploy_argocd ? "https://${aws_route53_record.argocd_alb_alias[0].name}" : null
+  description = "Full HTTPS URL to access ArgoCD via ALB"
+}
