@@ -147,13 +147,20 @@ server:
     minReplicas: 1
     targetCPUUtilizationPercentage: 50
     targetMemoryUtilizationPercentage: 50
+  ingress:
+    enabled: false
+  service:
+    ports: 
+      http: 80
+      https: 443
+    type: ClusterIP
   resources:
     limits:
       cpu: 1
-      memory: 3Gi
+      memory: 2Gi
     requests:
-      cpu: 1
-      memory: 3Gi
+      cpu: 100m
+      memory: 256Mi
 configs:
   params:
     # Allows insecure connections to the Argo CD API server.
