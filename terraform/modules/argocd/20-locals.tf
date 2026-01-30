@@ -1,4 +1,7 @@
 locals {
+  # Infer local testing mode when ALB is disabled
+  is_local_testing = !var.create_argocd_alb
+
   deploy_argocd           = var.env == "dev"
   argocd_repo_server_name = "argocd-repo-server"
   merged_file_name        = "${path.module}/.terraform/merged-values.yaml"

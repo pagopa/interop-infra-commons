@@ -61,9 +61,6 @@ resource "time_static" "test_timestamp" {
 module "argocd" {
   source = "../../../../../terraform/modules/argocd" # Punta a terraform/modules/argocd
 
-  # ABILITA MODALITÀ TESTING LOCALE
-  local_testing_mode = var.local_testing_mode
-
   # Variabili richieste dal modulo
   aws_region       = var.aws_region
   env              = "dev"
@@ -82,10 +79,11 @@ module "argocd" {
   argocd_app_repo_username = var.argocd_app_repo_username
   argocd_app_repo_password = var.argocd_app_repo_password
 
-  # Override credenziali admin per evitare AWS
-  # Usa bcrypt_hash da random_password (memorizzato nello stato) invece di bcrypt() che non è idempotente
-  # In modalità testing locale, usa la password generata localmente
-  # In modalità AWS remota, usa stringa vuota per generare automaticamente da AWS Secrets Manager
+  # Disabilita ALB/Route53 per modalità locale (questo attiva automaticamente is_local_testing)
+  create_argocd_alb          = false
+  create_private_hosted_zone = false
+
+  # Override credenziali admin per evitare AWS Secrets Manager
   argocd_admin_bcrypt_password = random_password.argocd_admin.bcrypt_hash
   argocd_admin_password_mtime  = time_static.test_timestamp.rfc3339
 

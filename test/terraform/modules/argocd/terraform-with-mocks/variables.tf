@@ -73,8 +73,3 @@ variable "eks_cluster_name" {
   description = "EKS cluster name for the module configuration"
   default     = "kind-argocd-test"
 }
-variable "local_testing_mode" {
-  type        = bool
-  description = "Enable local testing mode with kubeconfig. Disable for AWS EKS remote cluster."
-  default     = true
-}

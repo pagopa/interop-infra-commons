@@ -148,10 +148,3 @@ variable "private_subnet_ids" {
   type        = list(string)
   description = "List of private subnet IDs for ALB placement"
 }
-
-# Testing mode - disables AWS data sources
-variable "local_testing_mode" {
-  type        = bool
-  description = "Enable local testing mode (disables AWS data sources for local kind clusters)"
-  default     = false
-}
