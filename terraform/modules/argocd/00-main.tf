@@ -51,7 +51,7 @@ provider "aws" {
   default_tags {
     tags = var.tags
   }
-  
+
   # Skip validations in local testing mode
   skip_credentials_validation = var.local_testing_mode
   skip_requesting_account_id  = var.local_testing_mode
@@ -60,28 +60,28 @@ provider "aws" {
 
 provider "kubernetes" {
   # In local testing mode, use kubeconfig; in AWS mode, use EKS credentials
-  config_path    = var.local_testing_mode ? "~/.kube/config" : null
-  config_context = var.local_testing_mode ? "kind-argocd-test" : null
-  host           = !var.local_testing_mode ? data.aws_eks_cluster.this[0].endpoint : null
+  config_path            = var.local_testing_mode ? "~/.kube/config" : null
+  config_context         = var.local_testing_mode ? "kind-argocd-test" : null
+  host                   = !var.local_testing_mode ? data.aws_eks_cluster.this[0].endpoint : null
   cluster_ca_certificate = !var.local_testing_mode ? base64decode(data.aws_eks_cluster.this[0].certificate_authority[0].data) : null
-  token          = !var.local_testing_mode ? data.aws_eks_cluster_auth.this[0].token : null
+  token                  = !var.local_testing_mode ? data.aws_eks_cluster_auth.this[0].token : null
 }
 
 provider "helm" {
   kubernetes {
-    config_path    = var.local_testing_mode ? "~/.kube/config" : null
-    config_context = var.local_testing_mode ? "kind-argocd-test" : null
-    host           = !var.local_testing_mode ? data.aws_eks_cluster.this[0].endpoint : null
+    config_path            = var.local_testing_mode ? "~/.kube/config" : null
+    config_context         = var.local_testing_mode ? "kind-argocd-test" : null
+    host                   = !var.local_testing_mode ? data.aws_eks_cluster.this[0].endpoint : null
     cluster_ca_certificate = !var.local_testing_mode ? base64decode(data.aws_eks_cluster.this[0].certificate_authority[0].data) : null
-    token          = !var.local_testing_mode ? data.aws_eks_cluster_auth.this[0].token : null
+    token                  = !var.local_testing_mode ? data.aws_eks_cluster_auth.this[0].token : null
   }
 }
 
 provider "kubectl" {
-  config_path      = var.local_testing_mode ? "~/.kube/config" : null
-  config_context   = var.local_testing_mode ? "kind-argocd-test" : null
-  host             = !var.local_testing_mode ? data.aws_eks_cluster.this[0].endpoint : null
+  config_path            = var.local_testing_mode ? "~/.kube/config" : null
+  config_context         = var.local_testing_mode ? "kind-argocd-test" : null
+  host                   = !var.local_testing_mode ? data.aws_eks_cluster.this[0].endpoint : null
   cluster_ca_certificate = !var.local_testing_mode ? base64decode(data.aws_eks_cluster.this[0].certificate_authority[0].data) : null
-  token            = !var.local_testing_mode ? data.aws_eks_cluster_auth.this[0].token : null
-  load_config_file = var.local_testing_mode
+  token                  = !var.local_testing_mode ? data.aws_eks_cluster_auth.this[0].token : null
+  load_config_file       = var.local_testing_mode
 }

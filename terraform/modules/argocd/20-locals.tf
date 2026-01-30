@@ -3,7 +3,7 @@ locals {
   argocd_repo_server_name = "argocd-repo-server"
   merged_file_name        = "${path.module}/.terraform/merged-values.yaml"
   argocd_namespace        = var.deploy_argocd_namespace ? kubernetes_namespace_v1.argocd[0].metadata[0].name : data.kubernetes_namespace_v1.argocd[0].metadata[0].name
-  
+
   # Default values ​​template file (processed with plugin variables)
   default_values_file = templatefile("${path.module}/values/argocd-cm-values.yaml", {})
 

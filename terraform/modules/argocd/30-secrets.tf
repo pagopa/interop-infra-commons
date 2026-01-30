@@ -45,20 +45,20 @@ resource "kubernetes_secret_v1" "argocd_admin_credentials" {
   count = var.deploy_argocd ? 1 : 0
 
   metadata {
-    namespace   = local.argocd_namespace
-    name        = "argocd-admin-user"
+    namespace = local.argocd_namespace
+    name      = "argocd-admin-user"
     annotations = var.argocd_admin_bcrypt_password == "" ? {
       "infra.interop.pagopa.it/aws-secretsmanager-secret-id" : aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_id,
       "infra.interop.pagopa.it/aws-secretsmanager-version-id" : aws_secretsmanager_secret_version.argocd_admin_credentials[0].version_id,
       "infra.interop.pagopa.it/updated-at" : time_static.argocd_admin_credentials_update[0].rfc3339
-    } : {
+      } : {
       "infra.interop.pagopa.it/updated-at" : var.argocd_admin_password_mtime
     }
   }
 
   data = var.argocd_admin_bcrypt_password == "" ? {
     for key, value in jsondecode(aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_string) : key => value
-  } : {
+    } : {
     username        = "admin"
     password        = "[overridden]"
     bcrypt_password = var.argocd_admin_bcrypt_password
