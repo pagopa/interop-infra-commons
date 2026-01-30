@@ -4,7 +4,7 @@ data "kubernetes_service_v1" "argocd_server" {
 
   metadata {
     name      = "argocd-server"
-    namespace  = local.argocd_namespace
+    namespace = local.argocd_namespace
   }
 
   depends_on = [helm_release.argocd]
@@ -27,12 +27,12 @@ output "argocd_admin_credentials" {
 
 # ALB outputs (if enabled)
 #output "argocd_alb_dns_name" {
-#  value       = var.enable_argocd_alb && var.deploy_argocd ? aws_lb.argocd[0].dns_name : null
+#  value       = var.create_argocd_alb && var.deploy_argocd ? aws_lb.argocd[0].dns_name : null
 #  description = "DNS name of the ArgoCD ALB"
 #}
 #
 #output "argocd_alb_zone_id" {
-#  value       = var.enable_argocd_alb && var.deploy_argocd ? aws_lb.argocd[0].zone_id : null
+#  value       = var.create_argocd_alb && var.deploy_argocd ? aws_lb.argocd[0].zone_id : null
 #  description = "Zone ID of the ArgoCD ALB"
 #}
 #
