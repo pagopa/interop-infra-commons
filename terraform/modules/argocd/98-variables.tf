@@ -67,6 +67,7 @@ variable "deploy_argocd_namespace" {
   description = "Flag to determine whether to deploy the ArgoCD namespace."
   default     = true
 }
+
 variable "secret_prefix" {
   description = "Prefix for the secret that will be created"
   type        = string
@@ -97,73 +98,51 @@ variable "argocd_admin_password_mtime" {
   default     = ""
 }
 
-variable "aws_lb_controller_role_name" {
+
+#########################################################
+# ArgoCD Route53 / ACM / ALB / ALB Controller variables #
+#########################################################
+
+variable "create_private_hosted_zone" {
+  type        = bool
+  description = "If true, create a Private Hosted Zone for the provided domain and associate it with VPC"
+  default     = false
+}
+
+variable "create_argocd_alb" {
+  type        = bool
+  description = "Enable creation of ALB to expose ArgoCD"
+  default     = true
+}
+
+variable "public_hosted_zone_name" {
   type        = string
-  description = "Name of the IAM role to be assumed by the AWS Load Balancer Controller service account"
+  description = "The name of the public hosted zone (e.g., dev.interop.pagopa.it) used to resolve ACM DNS validation records."
+  default     = null
 }
 
-variable "aws_lb_controller_chart_version" {
+variable "argocd_subdomain" {
   type        = string
-  description = "Chart version for AWS Load Balancer Controller"
+  description = "Sub-Domain name for ArgoCD (e.g. argocd) that will be used to create the full domain name (e.g. argocd.dev.interop.pagopa.it) when creating Route53 records."
+  default     = null
 }
 
-variable "aws_lb_controller_replicas" {
-  type        = number
-  description = "Replica count for AWS Load Balancer Controller"
+variable "argocd_alb_name" {
+  type        = string
+  description = "Name of the ALB to be created for ArgoCD"
+  default     = null
 }
 
-#variable "vpn_clients_security_group_id" {
-#  type        = string
-#  description = "ID of the VPN clients SG"
-#}
-#
-#variable "private_subnet_ids" {
-#  type        = list(string)
-#  description = "List of private subnet IDs for ALB placement"
-#}
-#
-## ALB exposure variables
-#variable "enable_argocd_alb" {
-#  type        = bool
-#  description = "Enable creation of ALB to expose ArgoCD"
-#  default     = true
-#}
-#
-#variable "argocd_domain" {
-#  type        = string
-#  description = "Domain name for ArgoCD (e.g. argocd.internal.example.com)"
-#  default     = null
-#}
-#
-#variable "acm_cert_arn" {
-#  type        = string
-#  description = "ACM certificate ARN for ALB HTTPS listener"
-#  default     = null
-#}
-#
-#variable "alb_internal" {
-#  type        = bool
-#  description = "Whether the ALB is internal (true) or internet-facing (false)"
-#  default     = true
-#}
-#
-#variable "alb_security_group_id" {
-#  type        = string
-#  description = "Optional Security Group ID to attach to the ALB. If null, a new SG limited to VPN clients will be created."
-#  default     = null
-#}
-#
-#variable "create_private_hosted_zone" {
-#  type        = bool
-#  description = "If true, create a Private Hosted Zone for the provided domain and associate it with VPC"
-#  default     = false
-#}
-#
-#variable "route53_zone_id" {
-#  type        = string
-#  description = "Optional existing Route53 Hosted Zone ID. If null and create_private_hosted_zone=false, no DNS record is created."
-#  default     = null
-#}
+
+variable "vpn_clients_security_group_id" {
+  type        = string
+  description = "ID of the VPN clients SG"
+}
+
+variable "private_subnet_ids" {
+  type        = list(string)
+  description = "List of private subnet IDs for ALB placement"
+}
 
 # Testing mode - disables AWS data sources
 variable "local_testing_mode" {
