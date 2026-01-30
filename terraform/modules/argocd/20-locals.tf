@@ -18,3 +18,18 @@ locals {
   # Final ArgoCD values
   argocd_values = local.merged_values
 }
+
+# Validation data source for Route53/ALB configuration dependencies
+data "terraform_data" "validate_route53_alb_config" {
+  lifecycle {
+    precondition {
+      condition     = var.create_private_hosted_zone ? (var.public_hosted_zone_name != null && trim(var.public_hosted_zone_name) != "") : true
+      error_message = "public_hosted_zone_name is required when create_private_hosted_zone=true."
+    }
+
+    precondition {
+      condition     = (var.create_argocd_alb && var.create_private_hosted_zone) ? (var.argocd_subdomain != null && trim(var.argocd_subdomain) != "") : true
+      error_message = "argocd_subdomain is required when both create_argocd_alb=true and create_private_hosted_zone=true."
+    }
+  }
+}

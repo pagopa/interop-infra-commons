@@ -124,22 +124,12 @@ variable "public_hosted_zone_name" {
   type        = string
   description = "The name of the public hosted zone (e.g., dev.interop.pagopa.it) used to resolve ACM DNS validation records."
   default     = null
-
-  validation {
-    condition     = var.create_private_hosted_zone ? (var.public_hosted_zone_name != null && trim(var.public_hosted_zone_name) != "") : true
-    error_message = "public_hosted_zone_name is required when create_private_hosted_zone=true."
-  }
 }
 
 variable "argocd_subdomain" {
   type        = string
   description = "Sub-Domain name for ArgoCD (e.g. argocd) that will be used to create the full domain name (e.g. argocd.dev.interop.pagopa.it) when creating Route53 records."
   default     = null
-
-  validation {
-    condition     = (var.create_argocd_alb && var.create_private_hosted_zone) ? (var.argocd_subdomain != null && trim(var.argocd_subdomain) != "") : true
-    error_message = "argocd_subdomain is required when create_argocd_alb=true."
-  }
 }
 
 variable "argocd_alb_name" {
