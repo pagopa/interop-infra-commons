@@ -148,3 +148,118 @@ variable "private_subnet_ids" {
   type        = list(string)
   description = "List of private subnet IDs for ALB placement"
 }
+
+#########################################################
+# ArgoCD Project variables                              #
+#########################################################
+
+variable "create_argocd_project" {
+  type        = bool
+  description = "Flag to determine whether to create an ArgoCD AppProject"
+  default     = false
+}
+
+variable "argocd_project_name" {
+  type        = string
+  description = "Name of the ArgoCD AppProject"
+  default     = "default"
+}
+
+variable "argocd_project_description" {
+  type        = string
+  description = "Description of the ArgoCD AppProject"
+  default     = "Default ArgoCD Project"
+}
+
+variable "argocd_project_source_repos" {
+  type        = list(string)
+  description = "List of Git repositories allowed for this project. Use ['*'] to allow all repositories."
+  default     = ["*"]
+}
+
+variable "argocd_project_destinations" {
+  type = list(object({
+    server    = string
+    namespace = string
+  }))
+  description = "List of destination clusters and namespaces. Use server='https://kubernetes.default.svc' for in-cluster and namespace='*' for all namespaces."
+  default = [
+    {
+      server    = "https://kubernetes.default.svc"
+      namespace = "*"
+    }
+  ]
+}
+
+variable "argocd_project_cluster_resource_whitelist" {
+  type = list(object({
+    group = string
+    kind  = string
+  }))
+  description = "Cluster-scoped resources allowed to be managed. Use [{group='*', kind='*'}] to allow all."
+  default = [
+    {
+      group = "*"
+      kind  = "*"
+    }
+  ]
+}
+
+variable "argocd_project_namespace_resource_whitelist" {
+  type = list(object({
+    group = string
+    kind  = string
+  }))
+  description = "Namespace-scoped resources allowed to be managed. Use [{group='*', kind='*'}] to allow all."
+  default = [
+    {
+      group = "*"
+      kind  = "*"
+    }
+  ]
+}
+
+variable "argocd_project_orphaned_resources_warn" {
+  type        = bool
+  description = "Enable warnings for orphaned resources in the project"
+  default     = false
+}
+
+variable "argocd_project_roles" {
+  type = list(object({
+    name        = string
+    description = string
+    policies    = list(string)
+    groups      = optional(list(string), [])
+  }))
+  description = "List of roles to create for the ArgoCD project"
+  default     = []
+}
+
+#########################################################
+# ArgoCD RBAC variables                                 #
+#########################################################
+
+variable "create_argocd_rbac" {
+  type        = bool
+  description = "Flag to determine whether to create ClusterRole and ClusterRoleBinding for ArgoCD"
+  default     = false
+}
+
+variable "argocd_application_controller_sa_name" {
+  type        = string
+  description = "Name of the ArgoCD Application Controller ServiceAccount"
+  default     = "argocd-application-controller"
+}
+
+variable "argocd_server_sa_name" {
+  type        = string
+  description = "Name of the ArgoCD Server ServiceAccount"
+  default     = "argocd-server"
+}
+
+variable "argocd_repo_server_sa_name" {
+  type        = string
+  description = "Name of the ArgoCD Repo Server ServiceAccount"
+  default     = "argocd-repo-server"
+}
