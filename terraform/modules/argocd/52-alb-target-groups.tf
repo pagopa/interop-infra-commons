@@ -10,7 +10,7 @@ resource "aws_lb_target_group" "argocd_ui" {
   target_type          = "ip"
   ip_address_type      = "ipv4"
   deregistration_delay = 30
-  vpc_id               = data.aws_eks_cluster.this.vpc_config[0].vpc_id
+  vpc_id               = data.aws_eks_cluster.this[0].vpc_config[0].vpc_id
 
   stickiness {
     enabled         = true
@@ -45,7 +45,7 @@ resource "aws_lb_target_group" "argocd_grpc" {
   count = local.setup_loadbalancer ? 1 : 0
 
   name                 = substr(format("%s-argocd-grpc-%s", var.resource_prefix, var.env), 0, 32)
-  vpc_id               = data.aws_eks_cluster.this.vpc_config[0].vpc_id
+  vpc_id               = data.aws_eks_cluster.this[0].vpc_config[0].vpc_id
   target_type          = "ip"
   port                 = 80
   protocol             = "HTTP"
