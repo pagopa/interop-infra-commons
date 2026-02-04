@@ -23,7 +23,7 @@ resource "kubernetes_namespace_v1" "argocd" {
 resource "helm_release" "argocd" {
   count = var.deploy_argocd ? 1 : 0
 
-  name       = "${var.project}-argocd"
+  name       = "${var.resource_prefix}-argocd"
   namespace  = local.argocd_namespace
   repository = "https://argoproj.github.io/argo-helm"
   chart      = "argo-cd"

@@ -2,9 +2,9 @@ variable "aws_region" {
   type        = string
   description = "AWS region"
 }
-variable "project" {
+variable "resource_prefix" {
   type        = string
-  description = "Project name used for resource naming"
+  description = "Resource prefix used for resource naming"
 }
 
 variable "env" {

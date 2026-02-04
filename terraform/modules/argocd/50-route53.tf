@@ -73,7 +73,7 @@ resource "aws_route53_zone" "argocd_private" {
   tags = merge(
     var.tags,
     {
-      Name = "${var.project}-${var.env}-argocd-zone"
+      Name = "${var.resource_prefix}-${var.env}-argocd-zone"
     }
   )
 }

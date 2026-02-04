@@ -515,7 +515,7 @@ metadata:
   name: test-app
   namespace: argocd
 spec:
-  project: default
+  resource_prefix: default
   source:
     repoURL: https://github.com/argoproj/argocd-example-apps.git
     targetRevision: HEAD

@@ -4,12 +4,12 @@ locals {
 
 
 resource "aws_security_group" "argocd_alb_sg" {
-  name        = format("alb/%s-argocd-%s", var.project, var.env)
+  name        = format("alb/%s-argocd-%s", var.resource_prefix, var.env)
   description = "Allow HTTPS from VPN or internal CIDR"
   vpc_id      = data.aws_eks_cluster.this.vpc_config[0].vpc_id
 
   tags = {
-    Name = format("alb/%s-argocd-%s", var.project, var.env)
+    Name = format("alb/%s-argocd-%s", var.resource_prefix, var.env)
   }
 }
 
@@ -32,7 +32,7 @@ resource "aws_vpc_security_group_egress_rule" "allow_all_traffic_ipv4" {
 resource "aws_lb" "argocd" {
   count = local.setup_loadbalancer ? 1 : 0
 
-  name                       = format("%s-argocd-alb-%s", var.project, var.env)
+  name                       = format("%s-argocd-alb-%s", var.resource_prefix, var.env)
   enable_deletion_protection = var.env == "prod" ? true : false
   internal                   = true
   load_balancer_type         = "application"
@@ -45,9 +45,9 @@ resource "aws_lb" "argocd" {
   security_groups = [aws_security_group.argocd_alb_sg.id]
 
   tags = {
-    Name        = format("%s-argocd-alb-%s", var.project, var.env)
+    Name        = format("%s-argocd-alb-%s", var.resource_prefix, var.env)
     Environment = var.env
-    Project     = var.project
+    Project     = var.resource_prefix
   }
 }
 

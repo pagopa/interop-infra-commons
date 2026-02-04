@@ -87,5 +87,5 @@ module "argocd" {
   argocd_admin_bcrypt_password = random_password.argocd_admin.bcrypt_hash
   argocd_admin_password_mtime  = time_static.test_timestamp.rfc3339
 
-  project = "argocd-plain-cluster"
+  resource_prefix = "argocd-plain-cluster"
 }

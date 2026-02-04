@@ -121,5 +121,5 @@ module "argocd" {
   # Nota: Le immagini plugin vengono costruite e caricate da null_resource
   # prima del modulo grazie all'ordine di definizione (null_resource qui sopra)
 
-  project = "argocd-test"
+  resource_prefix = "argocd-test"
 }

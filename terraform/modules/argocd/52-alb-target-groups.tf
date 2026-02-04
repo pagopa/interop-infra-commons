@@ -2,7 +2,7 @@
 resource "aws_lb_target_group" "argocd_ui" {
   count = local.setup_loadbalancer ? 1 : 0
   
-  name  = substr(format("%s-argocd-ui-%s", var.project, var.env), 0, 32)
+  name  = substr(format("%s-argocd-ui-%s", var.resource_prefix, var.env), 0, 32)
 
   port                 = 80
   protocol             = "HTTP"
@@ -34,9 +34,9 @@ resource "aws_lb_target_group" "argocd_ui" {
   }
 
   tags = {
-    Name        = format("%s-argocd-ui-%s", var.project, var.env)
+    Name        = format("%s-argocd-ui-%s", var.resource_prefix, var.env)
     Environment = var.env
-    Project     = var.project
+    Project     = var.resource_prefix
   }
 }
 
@@ -44,7 +44,7 @@ resource "aws_lb_target_group" "argocd_ui" {
 resource "aws_lb_target_group" "argocd_grpc" {
   count = local.setup_loadbalancer ? 1 : 0
 
-  name                 = substr(format("%s-argocd-grpc-%s", var.project, var.env), 0, 32)
+  name                 = substr(format("%s-argocd-grpc-%s", var.resource_prefix, var.env), 0, 32)
   vpc_id               = data.aws_eks_cluster.this.vpc_config[0].vpc_id
   target_type          = "ip"
   port                 = 80
@@ -73,9 +73,9 @@ resource "aws_lb_target_group" "argocd_grpc" {
   }
 
   tags = {
-    Name        = format("%s-argocd-grpc-%s", var.project, var.env)
+    Name        = format("%s-argocd-grpc-%s", var.resource_prefix, var.env)
     Environment = var.env
-    Project     = var.project
+    Project     = var.resource_prefix
   }
 }
 
