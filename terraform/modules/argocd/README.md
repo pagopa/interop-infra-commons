@@ -7,6 +7,8 @@ Terraform module for deploying ArgoCD on Kubernetes clusters (AWS EKS or local k
 - ArgoCD deployment via Helm chart
 - Optional creation of ArgoCD namespace
 - Admin credentials managed by AWS Secrets Manager or provided via overrides
+- **ArgoCD AppProject creation with customizable permissions**
+- **ClusterRole and ClusterRoleBinding for cluster-wide resource lookup**
 - Optional internal ALB with HTTPS, ACM certificate, and Route53 private hosted zone
 - Separate target groups for UI (HTTP1) and gRPC (HTTP2)
 - TargetGroupBinding resources for AWS Load Balancer Controller
@@ -21,16 +23,19 @@ terraform/modules/argocd/
 ├── 10-data.tf                    # Data sources and values merge
 ├── 20-locals.tf                  # Local values and validations
 ├── 30-secrets.tf                 # Admin secret management
-├── 40-route53.tf                 # Route53 and ACM resources
-├── 43-alb.tf                     # ALB and Route53 alias record
-├── 44-alb-target-groups.tf       # Target groups, listeners, and TargetGroupBinding
-├── 50-argocd-instance.tf         # ArgoCD Helm release and gRPC service
+├── 40-argocd-instance.tf         # ArgoCD Helm release and gRPC service
+├── 41-argocd-project.tf          # ArgoCD AppProject resource
+├── 42-argocd-rbac.tf             # ClusterRole and ClusterRoleBinding
+├── 50-route53.tf                 # Route53 and ACM resources
+├── 51-alb.tf                     # ALB and Route53 alias record
+├── 52-alb-target-groups.tf       # Target groups, listeners, and TargetGroupBinding
 ├── 98-variables.tf               # Input variables
 ├── 99-outputs.tf                 # Module outputs
+├── clusterrole.yaml              # Legacy ClusterRole manifest (deprecated)
 ├── scripts/
 │   └── merge-values.sh           # Deep-merge YAML values via yq
 ├── values/
-│   └── argocd-cm-values.yaml      # Default Helm values
+│   └── argocd-cm-values.yaml     # Default Helm values
 └── README.md                     # This file
 
 # Local testing (see test/terraform/modules/argocd/)
@@ -93,6 +98,68 @@ module "argocd" {
     ManagedBy   = "terraform"
   }
 }
+```
+
+### With ArgoCD Project and RBAC for Cluster Lookup
+
+```hcl
+module "argocd" {
+  source = "./terraform/modules/argocd"
+
+  # Core configuration
+  aws_region          = "eu-south-1"
+  resource_prefix     = "prod-interop"
+  env                 = "production"
+  eks_cluster_name    = "my-eks-cluster"
+  argocd_namespace    = "argocd"
+  argocd_chart_version = "9.1.0"
+
+  # Repository credentials
+  argocd_app_repo_username = "admin"
+  argocd_app_repo_password = var.repo_password
+
+  # ALB + Route53 + ACM
+  create_argocd_alb        = true
+  create_private_hosted_zone = true
+  public_hosted_zone_name  = "dev.interop.pagopa.it"
+  argocd_subdomain          = "argocd"
+  vpn_clients_security_group_id = "sg-0123456789abcdef0"
+  private_subnet_ids        = ["subnet-aaa", "subnet-bbb", "subnet-ccc"]
+
+  # Enable ArgoCD Project creation
+  create_argocd_project = true
+  argocd_project_name   = "my-application-project"
+  argocd_project_description = "Project for my applications"
+  argocd_project_source_repos = [
+    "https://github.com/myorg/myrepo.git",
+    "https://github.com/myorg/another-repo.git"
+  ]
+  argocd_project_destinations = [
+    {
+      server    = "https://kubernetes.default.svc"
+      namespace = "production"
+    },
+    {
+      server    = "https://kubernetes.default.svc"
+      namespace = "staging"
+    }
+  ]
+
+  # Enable RBAC for cluster-wide resource lookup
+  create_argocd_rbac = true
+  
+  # Optional: override default ServiceAccount names if needed
+  # argocd_application_controller_sa_name = "argocd-application-controller"
+  # argocd_server_sa_name = "argocd-server"
+  # argocd_repo_server_sa_name = "argocd-repo-server"
+
+  tags = {
+    Environment = "production"
+    Project     = "interop"
+    ManagedBy   = "terraform"
+  }
+}
+```
 ```
 
 ### Local Testing (kind)
@@ -185,6 +252,29 @@ The AWS Load Balancer Controller and its CRDs must be installed in the cluster t
 | `vpn_clients_security_group_id` | string | n/a | VPN clients security group ID (used by ALB SG) |
 | `private_subnet_ids` | list(string) | n/a | Private subnets for ALB |
 
+### ArgoCD Project
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `create_argocd_project` | bool | false | Create ArgoCD AppProject |
+| `argocd_project_name` | string | "default" | Name of the ArgoCD project |
+| `argocd_project_description` | string | "Default ArgoCD Project" | Project description |
+| `argocd_project_source_repos` | list(string) | `["*"]` | Allowed source repositories |
+| `argocd_project_destinations` | list(object) | In-cluster all namespaces | Destination clusters and namespaces |
+| `argocd_project_cluster_resource_whitelist` | list(object) | `[{group="*", kind="*"}]` | Allowed cluster resources |
+| `argocd_project_namespace_resource_whitelist` | list(object) | `[{group="*", kind="*"}]` | Allowed namespace resources |
+| `argocd_project_orphaned_resources_warn` | bool | false | Enable orphaned resources warnings |
+| `argocd_project_roles` | list(object) | `[]` | Project roles configuration |
+
+### ArgoCD RBAC
+
+| Name | Type | Default | Description |
+|------|------|---------|-------------|
+| `create_argocd_rbac` | bool | false | Create ClusterRole and ClusterRoleBinding for ArgoCD |
+| `argocd_application_controller_sa_name` | string | "argocd-application-controller" | Application Controller ServiceAccount name |
+| `argocd_server_sa_name` | string | "argocd-server" | Server ServiceAccount name |
+| `argocd_repo_server_sa_name` | string | "argocd-repo-server" | Repo Server ServiceAccount name |
+
 ### Tags
 
 | Name | Type | Default | Description |
@@ -203,6 +293,10 @@ The AWS Load Balancer Controller and its CRDs must be installed in the cluster t
 | `argocd_alb_arn` | ARN of the ArgoCD ALB |
 | `argocd_route53_record_fqdn` | FQDN of the Route53 alias record |
 | `argocd_alb_url` | Full HTTPS URL to access ArgoCD via ALB |
+| `argocd_project_name` | Name of the created ArgoCD AppProject |
+| `argocd_application_controller_cluster_role_name` | Application Controller ClusterRole name |
+| `argocd_server_cluster_role_name` | Server ClusterRole name |
+| `argocd_repo_server_cluster_role_name` | Repo Server ClusterRole name |
 
 ## Troubleshooting
 
