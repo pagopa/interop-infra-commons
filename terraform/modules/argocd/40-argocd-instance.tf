@@ -3,7 +3,7 @@ data "kubernetes_namespace_v1" "argocd" {
   count = var.deploy_argocd && var.deploy_argocd_namespace == true ? 0 : 1
 
   metadata {
-    name = local.argocd_namespace
+    name = var.argocd_namespace
   }
 }
 
@@ -12,7 +12,7 @@ resource "kubernetes_namespace_v1" "argocd" {
   count = var.deploy_argocd && var.deploy_argocd_namespace == true ? 1 : 0
 
   metadata {
-    name = local.argocd_namespace
+    name = var.argocd_namespace
   }
 
   lifecycle {
