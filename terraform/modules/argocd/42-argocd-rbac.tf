@@ -3,7 +3,7 @@ resource "kubernetes_cluster_role_v1" "argocd_application_controller" {
   count = var.deploy_argocd && var.create_argocd_rbac ? 1 : 0
 
   metadata {
-    name = "${var.resource_prefix}-argocd-application-controller"
+    name = "${var.resource_prefix}-argocd-application-controller-${var.env}"
     labels = {
       "app.kubernetes.io/name"       = "argocd-application-controller"
       "app.kubernetes.io/part-of"    = "argocd"
@@ -68,7 +68,7 @@ resource "kubernetes_cluster_role_binding_v1" "argocd_application_controller" {
   count = var.deploy_argocd && var.create_argocd_rbac ? 1 : 0
 
   metadata {
-    name = "${var.resource_prefix}-argocd-application-controller"
+    name = "${var.resource_prefix}-argocd-application-controller-${var.env}"
     labels = {
       "app.kubernetes.io/name"       = "argocd-application-controller"
       "app.kubernetes.io/part-of"    = "argocd"
@@ -94,7 +94,7 @@ resource "kubernetes_cluster_role_v1" "argocd_server" {
   count = var.deploy_argocd && var.create_argocd_rbac ? 1 : 0
 
   metadata {
-    name = "${var.resource_prefix}-argocd-server"
+    name = "${var.resource_prefix}-argocd-server-${var.env}"
     labels = {
       "app.kubernetes.io/name"       = "argocd-server"
       "app.kubernetes.io/part-of"    = "argocd"
@@ -127,7 +127,7 @@ resource "kubernetes_cluster_role_binding_v1" "argocd_server" {
   count = var.deploy_argocd && var.create_argocd_rbac ? 1 : 0
 
   metadata {
-    name = "${var.resource_prefix}-argocd-server"
+    name = "${var.resource_prefix}-argocd-server-${var.env}"
     labels = {
       "app.kubernetes.io/name"       = "argocd-server"
       "app.kubernetes.io/part-of"    = "argocd"
@@ -153,7 +153,7 @@ resource "kubernetes_cluster_role_v1" "argocd_repo_server" {
   count = var.deploy_argocd && var.create_argocd_rbac ? 1 : 0
 
   metadata {
-    name = "${var.resource_prefix}-argocd-repo-server"
+    name = "${var.resource_prefix}-argocd-repo-server-${var.env}"
     labels = {
       "app.kubernetes.io/name"       = "argocd-repo-server"
       "app.kubernetes.io/part-of"    = "argocd"
@@ -178,7 +178,7 @@ resource "kubernetes_cluster_role_binding_v1" "argocd_repo_server" {
   count = var.deploy_argocd && var.create_argocd_rbac ? 1 : 0
 
   metadata {
-    name = "${var.resource_prefix}-argocd-repo-server"
+    name = "${var.resource_prefix}-argocd-repo-server-${var.env}"
     labels = {
       "app.kubernetes.io/name"       = "argocd-repo-server"
       "app.kubernetes.io/part-of"    = "argocd"
