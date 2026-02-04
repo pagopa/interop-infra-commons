@@ -1,14 +1,22 @@
 locals {
-  # Infer local testing mode when ALB is disabled
-  is_local_testing = !var.create_argocd_alb
+  # Use explicit is_local_testing variable instead of inferring from ALB
+  is_local_testing = var.is_local_testing
 
   deploy_argocd           = var.env == "dev"
   argocd_repo_server_name = "argocd-repo-server"
   merged_file_name        = "${path.module}/.terraform/merged-values.yaml"
   argocd_namespace        = var.deploy_argocd_namespace ? kubernetes_namespace_v1.argocd[0].metadata[0].name : data.kubernetes_namespace_v1.argocd[0].metadata[0].name
 
+  microservices_plugin_image = var.microservices_plugin_image_prefix != "" ? "${var.microservices_plugin_image_prefix}/${var.microservices_plugin_image_name}:${var.microservices_plugin_image_tag}" : "${var.microservices_plugin_image_name}:${var.microservices_plugin_image_tag}"
+  cronjobs_plugin_image      = var.cronjobs_plugin_image_prefix != "" ? "${var.cronjobs_plugin_image_prefix}/${var.cronjobs_plugin_image_name}:${var.cronjobs_plugin_image_tag}" : "${var.cronjobs_plugin_image_name}:${var.cronjobs_plugin_image_tag}"
+
   # Default values ​​template file (processed with plugin variables)
-  default_values_file = templatefile("${path.module}/values/argocd-cm-values.yaml", {})
+  default_values_file = templatefile("${path.module}/values/argocd-cm-values.yaml", {
+    microservices_plugin_name  = var.microservices_plugin_name
+    microservices_plugin_image = local.microservices_plugin_image
+    cronjobs_plugin_name       = var.cronjobs_plugin_name
+    cronjobs_plugin_image      = local.cronjobs_plugin_image
+  })
 
   # Determines whether to merge with custom files
   should_merge_custom_values = var.argocd_custom_values != null && var.argocd_custom_values != ""
@@ -22,8 +30,8 @@ locals {
   argocd_values = local.merged_values
 }
 
-# Validation data source for Route53/ALB configuration dependencies
-data "terraform_data" "validate_route53_alb_config" {
+# Validation resource for Route53/ALB configuration dependencies
+resource "terraform_data" "validate_route53_alb_config" {
   lifecycle {
     precondition {
       condition     = var.create_private_hosted_zone ? (var.public_hosted_zone_name != null && trim(var.public_hosted_zone_name) != "") : true
