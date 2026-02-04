@@ -1,5 +1,5 @@
 resource "aws_secretsmanager_secret" "argocd_admin_credentials" {
-  count = var.deploy_argocd && var.argocd_admin_bcrypt_password == "" ? 1 : 0
+  count = var.deploy_argocd && var.use_aws_secrets_manager ? 1 : 0
 
   name                    = "${var.secret_prefix}users/admin"
   recovery_window_in_days = var.secret_recovery_window_in_days
@@ -8,7 +8,7 @@ resource "aws_secretsmanager_secret" "argocd_admin_credentials" {
 }
 
 data "aws_secretsmanager_random_password" "argocd_admin" {
-  count = var.deploy_argocd && var.argocd_admin_bcrypt_password == "" ? 1 : 0
+  count = var.deploy_argocd && var.use_aws_secrets_manager ? 1 : 0
 
   password_length            = 30
   require_each_included_type = true
@@ -18,7 +18,7 @@ data "aws_secretsmanager_random_password" "argocd_admin" {
 }
 
 resource "aws_secretsmanager_secret_version" "argocd_admin_credentials" {
-  count = var.deploy_argocd && var.argocd_admin_bcrypt_password == "" ? 1 : 0
+  count = var.deploy_argocd && var.use_aws_secrets_manager ? 1 : 0
 
   secret_id = aws_secretsmanager_secret.argocd_admin_credentials[0].id
 
@@ -34,7 +34,7 @@ resource "aws_secretsmanager_secret_version" "argocd_admin_credentials" {
 }
 
 resource "time_static" "argocd_admin_credentials_update" {
-  count = var.deploy_argocd && var.argocd_admin_bcrypt_password == "" ? 1 : 0
+  count = var.deploy_argocd && var.use_aws_secrets_manager ? 1 : 0
 
   triggers = {
     secret_string = aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_string
@@ -47,7 +47,7 @@ resource "kubernetes_secret_v1" "argocd_admin_credentials" {
   metadata {
     namespace = local.argocd_namespace
     name      = "argocd-admin-user"
-    annotations = var.argocd_admin_bcrypt_password == "" ? {
+    annotations = var.use_aws_secrets_manager ? {
       "infra.interop.pagopa.it/aws-secretsmanager-secret-id" : aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_id,
       "infra.interop.pagopa.it/aws-secretsmanager-version-id" : aws_secretsmanager_secret_version.argocd_admin_credentials[0].version_id,
       "infra.interop.pagopa.it/updated-at" : time_static.argocd_admin_credentials_update[0].rfc3339
@@ -56,7 +56,7 @@ resource "kubernetes_secret_v1" "argocd_admin_credentials" {
     }
   }
 
-  data = var.argocd_admin_bcrypt_password == "" ? {
+  data = var.use_aws_secrets_manager ? {
     for key, value in jsondecode(aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_string) : key => value
     } : {
     username        = "admin"
