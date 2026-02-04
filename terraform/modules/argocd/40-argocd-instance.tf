@@ -3,7 +3,7 @@ data "kubernetes_namespace_v1" "argocd" {
   count = var.deploy_argocd && var.deploy_argocd_namespace == true ? 0 : 1
 
   metadata {
-    name = var.argocd_namespace
+    name = local.argocd_namespace
   }
 }
 
@@ -12,7 +12,7 @@ resource "kubernetes_namespace_v1" "argocd" {
   count = var.deploy_argocd && var.deploy_argocd_namespace == true ? 1 : 0
 
   metadata {
-    name = var.argocd_namespace
+    name = local.argocd_namespace
   }
 
   lifecycle {
@@ -64,7 +64,7 @@ resource "helm_release" "argocd" {
 resource "kubernetes_service_v1" "argogrpc" {
   metadata {
     name      = "${var.resource_prefix}-argocd-server-grpc"
-    namespace = var.argocd_namespace
+    namespace = local.argocd_namespace
     labels = {
       app = "argocd-server"
     }

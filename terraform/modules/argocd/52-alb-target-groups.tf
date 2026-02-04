@@ -141,7 +141,7 @@ resource "kubernetes_manifest" "argocd_ui_tgb" {
     kind       = "TargetGroupBinding"
     metadata = {
       name      = "argocd-server-ui"
-      namespace = var.argocd_namespace
+      namespace = local.argocd_namespace
 
     }
     spec = {
@@ -168,7 +168,7 @@ resource "kubernetes_manifest" "argocd_grpc_tgb" {
     kind       = "TargetGroupBinding"
     metadata = {
       name      = "argocd-server-grpc"
-      namespace = var.argocd_namespace
+      namespace = local.argocd_namespace
     }
     spec = {
       serviceRef = {

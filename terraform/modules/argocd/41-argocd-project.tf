@@ -7,7 +7,7 @@ resource "kubectl_manifest" "argocd_project" {
     kind       = "AppProject"
     metadata = {
       name      = var.argocd_project_name
-      namespace = var.argocd_namespace
+      namespace = local.argocd_namespace
       finalizers = [
         "resources-finalizer.argocd.argoproj.io"
       ]
@@ -19,7 +19,7 @@ resource "kubectl_manifest" "argocd_project" {
       sourceRepos = var.argocd_project_source_repos
 
       sourceNamespaces = var.argocd_project_source_namespaces
-      
+
       # Destination clusters and namespaces
       destinations = [
         for dest in var.argocd_project_destinations : {
