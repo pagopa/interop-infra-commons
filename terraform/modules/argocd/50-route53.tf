@@ -67,7 +67,7 @@ resource "aws_route53_zone" "argocd_private" {
 
   # private zone
   vpc {
-    vpc_id = data.aws_eks_cluster.this.vpc_config[0].vpc_id
+    vpc_id = data.aws_eks_cluster.this[0].vpc_config[0].vpc_id
   }
 
   tags = merge(
