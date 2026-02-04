@@ -1,4 +1,6 @@
 data "aws_security_group" "vpn_clients" {
+  count = local.setup_loadbalancer ? 1 : 0
+  
   id = var.vpn_clients_security_group_id
 }
 
