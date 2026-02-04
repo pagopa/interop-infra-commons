@@ -163,6 +163,7 @@ server:
       memory: 256Mi
 configs:
   params:
+    application.namespaces: "*"
     # Allows insecure connections to the Argo CD API server.
     server.insecure: "true"
     # https://aws.amazon.com/it/blogs/opensource/argo-cd-application-controller-scalability-testing-on-amazon-eks/
