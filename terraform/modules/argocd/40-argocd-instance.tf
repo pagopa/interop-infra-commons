@@ -36,12 +36,12 @@ resource "helm_release" "argocd" {
 
   set_sensitive {
     name  = "configs.secret.argocdServerAdminPassword"
-    value = var.argocd_admin_bcrypt_password != "" ? var.argocd_admin_bcrypt_password : jsondecode(aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_string).bcrypt_password
+    value = var.use_aws_secrets_manager ? jsondecode(aws_secretsmanager_secret_version.argocd_admin_credentials[0].secret_string).bcrypt_password : var.argocd_admin_bcrypt_password
   }
 
   set {
     name  = "configs.secret.argocdServerAdminPasswordMtime"
-    value = var.argocd_admin_password_mtime != "" ? var.argocd_admin_password_mtime : time_static.argocd_admin_credentials_update[0].rfc3339
+    value = var.use_aws_secrets_manager ? time_static.argocd_admin_credentials_update[0].rfc3339 : var.argocd_admin_password_mtime
   }
 
   set {
@@ -51,7 +51,7 @@ resource "helm_release" "argocd" {
 
   set {
     name  = "configs.cm.url"
-    value = "https://${aws_route53_record.argocd_alb_alias[0].fqdn}"
+    value = var.create_argocd_alb ? "https://${aws_route53_record.argocd_alb_alias[0].fqdn}" : "https://argocd.example.com"
   }
 
   # Explicit dependency on the merged file (when present)
@@ -63,7 +63,7 @@ resource "helm_release" "argocd" {
 
 resource "kubernetes_service_v1" "argogrpc" {
   metadata {
-    name      = "argocd-server-grpc"
+    name      = "${var.resource_prefix}-argocd-server-grpc"
     namespace = var.argocd_namespace
     labels = {
       app = "argocd-server"
