@@ -108,7 +108,86 @@ repoServer:
     - name: cmp-tmp
       emptyDir: {}
   extraArgs: []
-  extraContainers: []
+  extraContainers:
+    - name: ${microservices_plugin_name}
+      image: ${microservices_plugin_image}
+      imagePullPolicy: IfNotPresent
+      command:
+        - /var/run/argocd/argocd-cmp-server
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /home/argocd/plugin
+          name: plugin-home
+        - mountPath: /tmp
+          name: cmp-tmp
+      env:
+          # Repo server uses “exec” to run helm, kustomize, etc… for a large helm chart manifest generation may take time. 
+          # Description: Defines the maximum time (in seconds) a command can execute before timing out.
+          # Default Value: 90s
+        - name: ARGOCD_EXEC_TIMEOUT
+          value: "5m"
+          # Repo server uses “git ls-remote” to resolve commit SHA hash. Default value is 1, means if the first attempt fails it stop to check agian. 
+          # Description: Specifies the number of retry attempts for Git operations.
+          # Default Value: 1
+        - name: ARGOCD_GIT_ATTEMPTS_COUNT
+          value: "3"
+          # Starting v3.0, Argo CD performs a parallel generation of Helm manifests by default.
+        - name: ARGOCD_EXEC_FATAL_TIMEOUT
+          value: "5m"
+        - name: XDG_CONFIG_HOME
+          value: "/home/argocd/plugin/.config"
+        - name: HELM_CONFIG_HOME
+          value: "/home/argocd/plugin/.config/helm"
+        - name: HELM_DATA_HOME
+          value:  "/home/argocd/plugin/.local/share/helm"
+        - name: HELM_CACHE_HOME
+          value: "/home/argocd/plugin/.cache/helm"
+    - name: ${cronjobs_plugin_name}
+      image: ${cronjobs_plugin_image}
+      imagePullPolicy: IfNotPresent
+      command:
+        - /var/run/argocd/argocd-cmp-server
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999
+      volumeMounts:
+        - mountPath: /var/run/argocd
+          name: var-files
+        - mountPath: /home/argocd/cmp-server/plugins
+          name: plugins
+        - mountPath: /home/argocd/plugin
+          name: plugin-home
+        - mountPath: /tmp
+          name: cmp-tmp
+      env:
+          # Repo server uses “exec” to run helm, kustomize, etc… for a large helm chart manifest generation may take time. 
+          # Description: Defines the maximum time (in seconds) a command can execute before timing out.
+          # Default Value: 90s
+        - name: ARGOCD_EXEC_TIMEOUT
+          value: "5m"
+          # Repo server uses “git ls-remote” to resolve commit SHA hash. Default value is 1, means if the first attempt fails it stop to check agian. 
+          # Description: Specifies the number of retry attempts for Git operations.
+          # Default Value: 1
+        - name: ARGOCD_GIT_ATTEMPTS_COUNT
+          value: "3"
+        - name: ARGOCD_HELM_ALLOW_CONCURRENCY
+          value: "true"
+        - name: ARGOCD_EXEC_FATAL_TIMEOUT
+          value: "5m"
+        - name: XDG_CONFIG_HOME
+          value: "/home/argocd/plugin/.config"
+        - name: HELM_CONFIG_HOME
+          value: "/home/argocd/plugin/.config/helm"
+        - name: HELM_DATA_HOME
+          value:  "/home/argocd/plugin/.local/share/helm"
+        - name: HELM_CACHE_HOME
+          value: "/home/argocd/plugin/.cache/helm"
   metrics:
     enabled: false
     service:
