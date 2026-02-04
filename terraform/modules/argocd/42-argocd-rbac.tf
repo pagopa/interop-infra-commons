@@ -194,7 +194,7 @@ resource "kubernetes_cluster_role_binding_v1" "argocd_repo_server" {
 
   subject {
     kind      = "ServiceAccount"
-    name      = var.argocd_repo_server_sa_name
+    name      = "${var.resource_prefix}-argocd-repo-server"
     namespace = local.argocd_namespace
   }
 }
