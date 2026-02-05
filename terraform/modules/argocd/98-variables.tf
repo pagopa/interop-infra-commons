@@ -199,12 +199,6 @@ variable "argocd_subdomain" {
   default     = null
 }
 
-variable "argocd_alb_name" {
-  type        = string
-  description = "Name of the ALB to be created for ArgoCD"
-  default     = null
-}
-
 variable "vpn_clients_security_group_id" {
   type        = string
   description = "ID of the VPN clients SG"
