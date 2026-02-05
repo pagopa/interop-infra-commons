@@ -5,9 +5,6 @@
 server:
   replicas: 1
   resources:
-    limits:
-      cpu: 1
-      memory: "1Gi"
     requests:
       cpu: 500m
       memory: "512Mi"
@@ -16,12 +13,9 @@ server:
 controller:
   replicas: 1
   resources:
-    limits:
-      cpu: 1
-      memory: "4Gi"
     requests:
       cpu: 500m
-      memory: "256Mi"
+      memory: "2Gi"
   readinessProbe:
     httpGet:
       path: /healthz
@@ -32,7 +26,22 @@ controller:
     failureThreshold: 6
     successThreshold: 1
 
-# Custom config aggiuntiva
 repoServer:
-  replicas: 1
+  replicas: 2
   logLevel: "debug"
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: 8081
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 8081
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 6
