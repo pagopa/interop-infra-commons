@@ -22,6 +22,15 @@ controller:
     requests:
       cpu: 500m
       memory: "256Mi"
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: metrics
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
 
 # Custom config aggiuntiva
 repoServer:
