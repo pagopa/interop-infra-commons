@@ -153,7 +153,7 @@ module "argocd" {
 
 
   argocd_repository_url      = "https://github.com/pagopa/interop-core-deployment.git"
-  argocd_repository_username = "***REMOVED***"
-  argocd_repository_password = "***REMOVED***"
+  argocd_repository_username = ""
+  argocd_repository_password = ""
 
 }
