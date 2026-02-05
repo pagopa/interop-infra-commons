@@ -117,8 +117,19 @@ module "argocd" {
   argocd_app_repo_password = var.argocd_app_repo_password
 
   # Disabilita ALB/Route53 per deployment senza load balancer
-  create_argocd_alb          = false
-  create_private_hosted_zone = false
+  #create_argocd_alb          = false
+  #create_private_hosted_zone = false
+
+  # Abilita ALB/Route53
+  create_argocd_alb          = true
+  create_private_hosted_zone = true
+  public_hosted_zone_name = "interop-dev.pagopa.it"
+  argocd_subdomain        = "dev-experimental-argocd"
+  vpn_clients_security_group_id = "sg-0bb1c123456789abc"
+  private_subnet_ids = [
+    "subnet-0bb1c123456789abc",
+    "subnet-0cc1c123456789abc"
+  ]
 
   # Abilita creazione ArgoCD Project e RBAC
   create_argocd_project = var.create_argocd_project
@@ -142,7 +153,7 @@ module "argocd" {
 
 
   argocd_repository_url      = "https://github.com/pagopa/interop-core-deployment.git"
-  argocd_repository_username = "TODO"
-  argocd_repository_password = "TODO"
+  argocd_repository_username = "***REMOVED***"
+  argocd_repository_password = "***REMOVED***"
 
 }
