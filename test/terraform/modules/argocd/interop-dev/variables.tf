@@ -83,3 +83,58 @@ variable "create_argocd_rbac" {
   description = "Flag to determine whether to create ClusterRole and ClusterRoleBinding for ArgoCD"
   default     = true
 }
+
+
+########
+# ArgoCD Repository variables
+########
+
+variable "argocd_repository_type" {
+  type        = string
+  description = "Repository type: 'git' or 'helm'"
+  default     = "git"
+  validation {
+    condition     = contains(["git", "helm"], var.argocd_repository_type)
+    error_message = "Repository type must be either 'git' or 'helm'."
+  }
+}
+
+variable "argocd_repository_url" {
+  type        = string
+  description = "URL of the repository (e.g., https://github.com/myorg/myrepo.git or https://helm.example.com)"
+  default     = ""
+}
+
+
+variable "argocd_repository_username" {
+  type        = string
+  description = "Username for repository authentication (for HTTPS repos)"
+  default     = ""
+  sensitive   = true
+}
+
+variable "argocd_repository_password" {
+  type        = string
+  description = "Password or personal access token for repository authentication (for HTTPS repos)"
+  default     = ""
+  sensitive   = true
+}
+
+variable "argocd_repository_ssh_private_key" {
+  type        = string
+  description = "SSH private key for repository authentication (for SSH repos)"
+  default     = ""
+  sensitive   = true
+}
+
+variable "argocd_repository_insecure" {
+  type        = bool
+  description = "Allow insecure connections (skip TLS verification)"
+  default     = false
+}
+
+variable "argocd_repository_enable_lfs" {
+  type        = bool
+  description = "Enable Git LFS for the repository"
+  default     = false
+}
