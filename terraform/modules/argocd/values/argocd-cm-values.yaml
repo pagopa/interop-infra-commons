@@ -46,6 +46,9 @@ redis:
       cpu: 10m
       memory: 64Mi
 applicationSet:
+  extraArgs:
+    - --applicationset-namespaces=dev-experimental-argocd,dev-experimental-argocd-interop,dev-experimental-argocd-interop-apps
+    - --enable-scm-providers=false
   metrics:
     enabled: true
     service:
@@ -243,6 +246,8 @@ server:
 configs:
   params:
     application.namespaces: "*"
+    applicationsetcontroller.namespaces: "dev-experimental-argocd,dev-experimental-argocd-interop,dev-experimental-argocd-interop-apps"
+    applicationsetcontroller.enable.scm.providers: "false"
     # Allows insecure connections to the Argo CD API server.
     server.insecure: "true"
     # https://aws.amazon.com/it/blogs/opensource/argo-cd-application-controller-scalability-testing-on-amazon-eks/

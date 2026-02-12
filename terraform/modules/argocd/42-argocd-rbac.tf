@@ -198,3 +198,164 @@ resource "kubernetes_cluster_role_binding_v1" "argocd_repo_server" {
     namespace = local.argocd_namespace
   }
 }
+
+# ApplicationSet Role to access specific namespaces
+resource "kubernetes_role_v1" "applicationset_ns_dev_experimental_argocd" {
+  metadata {
+    name      = "${var.resource_prefix}-argocd-applicationset-controller-${var.env}"
+    namespace = local.argocd_namespace
+  }
+
+  rule {
+    api_groups = ["argoproj.io"]
+    resources  = ["applications", "applicationsets"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+
+  # AppProjects (solo lettura)
+  rule {
+    api_groups = ["argoproj.io"]
+    resources  = ["appprojects"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  # ConfigMaps + Secrets (necessari per lookup/generator)
+  rule {
+    api_groups = [""]
+    resources  = ["configmaps", "secrets"]
+    verbs      = ["get", "list", "watch"]
+  }
+}
+
+resource "kubernetes_role_binding_v1" "applicationset_ns_dev_experimental_argocd" {
+  metadata {
+    name      = "${var.resource_prefix}-argocd-applicationset-controller-${var.env}"
+    namespace = local.argocd_namespace
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = kubernetes_role_v1.applicationset_ns_dev_experimental_argocd.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "argocd-applicationset-controller"
+    namespace = local.argocd_namespace
+  }
+}
+resource "kubernetes_role_v1" "applicationset_ns_dev_experimental_argocd_interop_apps" {
+  metadata {
+    name      = "${var.resource_prefix}-argocd-applicationset-controller-${var.env}"
+    namespace = "dev-experimental-argocd-interop-apps"
+  }
+
+  rule {
+    api_groups = ["argoproj.io"]
+    resources  = ["applications", "applicationsets"]
+    verbs      = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+
+  # AppProjects (solo lettura)
+  rule {
+    api_groups = ["argoproj.io"]
+    resources  = ["appprojects"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  # ConfigMaps + Secrets (necessari per lookup/generator)
+  rule {
+    api_groups = [""]
+    resources  = ["configmaps", "secrets"]
+    verbs      = ["get", "list", "watch"]
+  }
+}
+
+resource "kubernetes_role_binding_v1" "applicationset_ns_dev_experimental_argocd_interop_apps" {
+  metadata {
+    name      = "${var.resource_prefix}-argocd-applicationset-controller-${var.env}"
+    namespace = "dev-experimental-argocd-interop-apps"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "Role"
+    name      = kubernetes_role_v1.applicationset_ns_dev_experimental_argocd_interop_apps.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "argocd-applicationset-controller"
+    namespace = local.argocd_namespace
+  }
+}
+
+# ClusterRole per ApplicationSet Controller - permessi cluster-wide per supportare generatori e gestione risorse cluster-wide
+# Mapping from https://github.com/argoproj/argo-helm/blob/main/charts/argo-cd/templates/argocd-applicationset/clusterrole.yaml
+resource "kubernetes_cluster_role_v1" "argocd_applicationset_cluster_permissions" {
+  metadata {
+    name = "argocd-applicationset-controller-cluster-permissions"
+  }
+
+  # argoproj.io resources
+  rule {
+    api_groups = ["argoproj.io"]
+    resources = [
+      "applications",
+      "applications/finalizers",
+      "applicationsets",
+      "applicationsets/finalizers",
+      "applicationsets/status",
+      "appprojects"
+    ]
+    verbs = ["get", "list", "watch", "create", "update", "patch", "delete"]
+  }
+
+  # Secrets
+  rule {
+    api_groups = [""]
+    resources  = ["secrets", "configmaps"]
+    verbs      = ["get", "list", "watch"]
+  }
+
+  # Events
+  rule {
+    api_groups = [""]
+    resources  = ["events"]
+    verbs      = ["create", "patch"]
+  }
+
+  # Cluster generator support
+  rule {
+    api_groups = ["argoproj.io"]
+    resources = ["clusters"]
+    verbs = ["get", "list", "watch"]
+  }
+
+  # Repository generator support
+  rule {
+    api_groups = ["argoproj.io"]
+    resources = ["repositories"]
+    verbs = ["get", "list", "watch"]
+  }
+
+}
+
+resource "kubernetes_cluster_role_binding_v1" "argocd_applicationset_cluster_permissions" {
+  metadata {
+    name = "argocd-applicationset-controller-cluster-permissions"
+  }
+
+  role_ref {
+    api_group = "rbac.authorization.k8s.io"
+    kind      = "ClusterRole"
+    name      = kubernetes_cluster_role_v1.argocd_applicationset_cluster_permissions.metadata[0].name
+  }
+
+  subject {
+    kind      = "ServiceAccount"
+    name      = "argocd-applicationset-controller"
+    namespace = local.argocd_namespace
+  }
+}
