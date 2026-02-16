@@ -1,0 +1,47 @@
+# Custom ArgoCD values for testing
+# Questo file verrà mergiato con i valori di default
+
+# Override della configurazione del server
+server:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: "512Mi"
+
+# Override della configurazione del controller
+controller:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 500m
+      memory: "2Gi"
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: metrics
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+    successThreshold: 1
+
+repoServer:
+  replicas: 2
+  logLevel: "debug"
+  readinessProbe:
+    httpGet:
+      path: /healthz
+      port: 8081
+    initialDelaySeconds: 20
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 6
+  livenessProbe:
+    httpGet:
+      path: /healthz
+      port: 8081
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    timeoutSeconds: 5
+    failureThreshold: 6

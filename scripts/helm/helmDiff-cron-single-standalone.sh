@@ -156,6 +156,10 @@ fi
 . "$SCRIPTS_FOLDER"/image-version-reader-v2.sh -e $environment -j $job $IMAGE_VERSION_READER_OPTIONS
 # END - Find image version and digest
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput --force
+fi
+
 set +e
 helm diff upgrade --install  "$job"  "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
   --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
@@ -171,9 +175,5 @@ set -e
 #else
 #  echo "Unexpected error"
 #fi
-
-if [[ "$argocd_plugin" == "true" ]]; then
-  restoreOutput
-fi
 
 exit $diff_result

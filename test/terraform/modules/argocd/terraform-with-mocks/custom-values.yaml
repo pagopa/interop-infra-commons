@@ -1,0 +1,29 @@
+# Custom ArgoCD values for testing
+# Questo file verrà mergiato con i valori di default
+
+# Override della configurazione del server
+server:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 1
+      memory: "1Gi"
+    requests:
+      cpu: 500m
+      memory: "512Mi"
+
+# Override della configurazione del controller
+controller:
+  replicas: 1
+  resources:
+    limits:
+      cpu: 1
+      memory: "1Gi"
+    requests:
+      cpu: 500m
+      memory: "256Mi"
+
+# Custom config aggiuntiva
+repoServer:
+  replicas: 1
+  logLevel: "debug"
