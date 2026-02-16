@@ -31,7 +31,6 @@ job=""
 enable_atomic=false
 enable_debug=false
 enable_dryrun=false
-post_clean=false
 output_redirect=""
 skip_dep=false
 images_file=""
@@ -162,10 +161,10 @@ if [[ $skip_dep == false ]]; then
     HELMDEP_OPTIONS="$HELMDEP_OPTIONS --argocd-plugin"
   fi
   if [[ -n "$chart_path" ]]; then
-    HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --chart-path "$chart_path""
+    HELMDEP_OPTIONS="$HELMDEP_OPTIONS --chart-path "$chart_path""
   fi
 
-  HELMDEP_OPTIONS+="$HELMDEP_OPTIONS --environment "$environment""
+  HELMDEP_OPTIONS="$HELMDEP_OPTIONS --environment "$environment""
 
   bash "$SCRIPTS_FOLDER"/helmDep.sh $HELMDEP_OPTIONS
   skip_dep=true
