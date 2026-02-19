@@ -6,7 +6,7 @@ import json
 
 http_methods = ["get", "head", "options", "trace", "post", "put", "patch", "delete", "x-amazon-apigateway-any-method"]
 
-def generate_apigw_integration(path_uri, path_parameters, api_version, use_service_prefix):
+def generate_apigw_integration(path_uri, path_parameters, header_parameters, api_version, use_service_prefix):
     normalized_uri = path_uri.replace("proxy+", "proxy")
 
     base_integration_uri = "http://${stageVariables.CustomDomainName}"
@@ -18,7 +18,7 @@ def generate_apigw_integration(path_uri, path_parameters, api_version, use_servi
         base_integration_uri += "/${stageVariables.ApiVersion}"
 
     request_integration = {
-        "type":  "http_proxy",
+        "type": "http_proxy",
         "httpMethod": "ANY",
         "passthroughBehavior": "when_no_match",
         "connectionId": "${stageVariables.VpcLinkId}",
@@ -26,21 +26,28 @@ def generate_apigw_integration(path_uri, path_parameters, api_version, use_servi
         "uri": f"{base_integration_uri}{normalized_uri}"
     }
 
-    if len(path_parameters) > 0:
-        path_integrations = dict()
-        for param in path_parameters:
-            path_integrations[f"integration.request.path.{param}"] = f"method.request.path.{param}"
-        request_integration["requestParameters"] = path_integrations
+    request_parameters = {}
+
+    for param in path_parameters:
+        request_parameters[f"integration.request.path.{param}"] = f"method.request.path.{param}"
+
+    for param in header_parameters:
+        request_parameters[f"integration.request.header.{param}"] = f"method.request.header.{param}"
+
+    if request_parameters:
+        request_integration["requestParameters"] = request_parameters
 
     return request_integration
 
-def integrate_path(path_uri, path_data, api_version, use_service_prefix):
+def integrate_parameters(path_uri, path_data, api_version, use_service_prefix):
     path_params = []
+    header_params = []
 
     # TODO: OpenAPI spec allows refs for parameters, but we don't support it at the moment
     if "parameters" in path_data:
         parameters = path_data["parameters"]
         path_params = [param.get("name") for param in parameters if param.get("in") == "path"]
+        header_params = list(set(header_params + [param.get("name") for param in parameters if param.get("in") == "header"]))
 
     # TODO: OpenAPI spec allows refs for parameters, but we don't support it at the moment
     for method in path_data:
@@ -49,8 +56,9 @@ def integrate_path(path_uri, path_data, api_version, use_service_prefix):
         if "parameters" in path_data[method]:
             parameters = path_data[method]["parameters"]
             path_params = list(set(path_params + [param.get("name") for param in parameters if param.get("in") == "path"]))
+            header_params = list(set(header_params + [param.get("name") for param in parameters if param.get("in") == "header"]))
 
-        path_data[method]["x-amazon-apigateway-integration"] = generate_apigw_integration(path_uri, path_params, api_version, use_service_prefix)
+        path_data[method]["x-amazon-apigateway-integration"] = generate_apigw_integration(path_uri, path_params, header_params, api_version, use_service_prefix)
 
     return path_data
 
@@ -58,7 +66,7 @@ def integrate_openapi(openapi, api_version, use_service_prefix):
     integrated_openapi = copy.deepcopy(openapi)
 
     for path in integrated_openapi["paths"]:
-        integrated_openapi["paths"][path] = integrate_path(path, integrated_openapi["paths"][path], api_version, use_service_prefix)
+        integrated_openapi["paths"][path] = integrate_parameters(path, integrated_openapi["paths"][path], api_version, use_service_prefix)
 
     integrated_openapi["x-amazon-apigateway-binary-media-types"] = ["multipart/form-data"]
 
