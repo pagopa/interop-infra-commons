@@ -28,6 +28,12 @@ variable "openapi_relative_path" {
   type        = string
 }
 
+variable "binary_media_types" {
+  description = "List of Content-Type values to treat as binary media types"
+  type        = list(string)
+  default     = ["multipart/form-data"]
+}
+
 variable "domain_name" {
   description = "Domain name to be assigned to the API Gateway"
   type        = string
@@ -115,8 +121,41 @@ variable "alarm_5xx_datapoints" {
   default     = 0
 }
 
+variable "additional_4xx_alarm_config" {
+  description = <<EOT
+    Additional alarm to catch significant 4xx errors in low-request environment. 
+    This configuration is an object with the following fields:
+     - `period`: the alarm evaluation period in seconds, usually 60.
+     - `threshold_percentage`: the `4xx_errors / requests_count` minimum ratio to trigger alarm
+     - `min_requests`: the minimum `requests_count`: if the `requests_count` is below 
+                       `min_requests` the alarm is not set regardless the 
+                       `4xx_errors / requests_count` ratio
+     - `eval_periods`: Number of periods to be evaluated to decide alarm triggering
+     - `datapoints`: Number of last N periods are evaluated as 'bad'. Where N is the 
+                     `eval_periods` value and 'bad' means "A period with at least 
+                     `min_requests` HTTP request and a `4xx_errors / requests_count` 
+                     ratio with a value at least `threshold_percentage`".
+    If a second alarm do not define this field or define it as `null`
+  EOT
+  type = object({
+    threshold_percentage = number
+    period               = number
+    eval_periods         = number
+    datapoints           = number
+    min_requests         = number
+  })
+  nullable = true
+  default  = null
+}
+
 variable "alarm_4xx_threshold_percentage" {
   description = "Threshold to trigger 4xx APIGW alarm"
+  type        = number
+  default     = 0
+}
+
+variable "alarm_4xx_min_requests" {
+  description = "Minimum number of requests to enable 4xx APIGW alarm triggering"
   type        = number
   default     = 0
 }
@@ -149,6 +188,12 @@ variable "openapi_s3_object_key" {
   description = "Key of the S3 object used to store the OpenAPI definition"
   type        = string
   default     = null
+}
+
+variable "remap_missing_auth_token_to_404_problem" {
+  description = "Enable remap 403 'Missing Authentication Token' to 404 with the 'Problem' JSON response"
+  type        = bool
+  default     = false
 }
 
 variable "templating_map" {
