@@ -213,4 +213,3 @@ variable "enable_base_path_mapping" {
   type        = bool
   default     = true
 }
-
