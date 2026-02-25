@@ -309,7 +309,47 @@ configs:
         clusters:
           - "*"
 
-  
+    resource.customizations.health.Secret: |
+      hs = {}
+
+      local ann = obj.metadata and obj.metadata.annotations or {}
+
+      local contract = ann["externalsecret/secret-contract-hash"]
+      local applied  = ann["externalsecret/secret-applied-hash"]
+
+      -- 1. contract must exist (Helm side)
+      if contract == nil or contract == "" then
+        hs.status = "Progressing"
+        hs.message = "Waiting contract hash"
+        return hs
+      end
+
+      -- 2. ESO has not reconciled yet
+      if applied == nil or applied == "" then
+        hs.status = "Progressing"
+        hs.message = "Waiting ESO reconciliation"
+        return hs
+      end
+
+      -- 3. ESO reconciliation not aligned yet
+      if contract ~= applied then
+        hs.status = "Progressing"
+        hs.message = "ESO not aligned with desired contract"
+        return hs
+      end
+
+      -- 4. Optional safety: ensure data exists
+      local data = obj.data or {}
+      if next(data) == nil then
+        hs.status = "Progressing"
+        hs.message = "Secret metadata aligned but data empty"
+        return hs
+      end
+
+      hs.status = "Healthy"
+      hs.message = "Secret ready (contract applied)"
+      return hs
+
     resource.customizations.health.batch_CronJob: |
       -- Custom health-check for batch/v1 CronJob.
       -- DATA READS:
