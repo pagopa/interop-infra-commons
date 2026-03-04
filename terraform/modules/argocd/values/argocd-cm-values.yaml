@@ -314,7 +314,7 @@ configs:
 
       local ann = obj.metadata and obj.metadata.annotations or {}
 
-      local contract = ann["externalsecret/secret-contract-hash"]
+      local contract = ann["externalsecret/secret-data-hash"]
       local applied  = ann["externalsecret/secret-applied-hash"]
 
       -- 1. contract must exist (Helm side)
@@ -346,9 +346,50 @@ configs:
         return hs
       end
 
+      local md = obj.metadata or {}
+      local managed = md.managedFields or {}
+
+      -- helper: nested lookup - check for everything in the path, return nil if any part is missing
+      local function get(tbl, ...)
+        local cur = tbl
+        for i = 1, select("#", ...) do
+          local key = select(i, ...)
+          if cur == nil then
+            return nil
+          end
+          cur = cur[key]
+        end
+        return cur
+      end
+
+      for _, mf in ipairs(managed) do
+
+        -- condition 1: operation must be Update
+        if mf.operation == "Update" then
+
+          local fields = mf.fieldsV1 or {}
+
+          local hasData = get(fields, "f:data") ~= nil
+          local hasMetadata = get(fields, "f:metadata") ~= nil
+
+          local hasDataHash =
+            get(fields,
+                "f:metadata",
+                "f:annotations",
+                "f:reconcile.external-secrets.io/data-hash") ~= nil
+
+          if hasData and hasMetadata and hasDataHash then
+            hs.status = "Healthy"
+            hs.message = "ESO update detected: data + metadata + data-hash"
+            return hs
+          end
+        end
+      end
+
       hs.status = "Healthy"
       hs.message = "Secret ready (contract applied)"
       return hs
+
 
     resource.customizations.health.batch_CronJob: |
       -- Custom health-check for batch/v1 CronJob.
