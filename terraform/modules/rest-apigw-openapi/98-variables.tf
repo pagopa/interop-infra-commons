@@ -208,8 +208,8 @@ variable "disable_execute_api_endpoint" {
   default     = true
 }
 
-variable "enable_base_path_mapping" {
-  description = "Enable 'Custom Domain Name' base path mapping"
-  type        = bool
-  default     = true
+variable "base_path_mapping" {
+  description = "'Custom Domain Name' for base path mapping"
+  type        = string
+  default     = null
 }
