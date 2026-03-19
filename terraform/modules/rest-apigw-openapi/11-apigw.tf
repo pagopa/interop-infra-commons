@@ -22,9 +22,10 @@ data "external" "openapi_integration" {
   local.type_options, local.api_version_options, local.service_prefix_options, local.swagger_options, local.maintenance_options)
 }
 
-# Open point: should we consider using the base_path_mapping variable when interpolating the APIGW name (in case api_version is null)?
+# Open point: should we consider using the base_path_mapping variable when interpolating the APIGW name in case api_version is null?
 locals {
-  rest_apigw_name = (var.api_version != null ? format("interop-%s-%s-%s", var.api_name, var.api_version, var.env)
+  rest_apigw_name = (var.api_version != null ? format("interop-%s-%s-%s", var.api_name, var.api_version, var.env) 
+  : var.base_path_mapping != null ? format("interop-%s-%s-%s", var.api_name, var.base_path_mapping, var.env) 
   : format("interop-%s-%s", var.api_name, var.env))
 }
 
