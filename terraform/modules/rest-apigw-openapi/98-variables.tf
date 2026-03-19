@@ -209,7 +209,7 @@ variable "disable_execute_api_endpoint" {
 }
 
 variable "base_path_mapping" {
-  description = "'Custom Domain Name' for base path mapping"
+  description = "Custom Domain Name base path mapping"
   type        = string
   default     = null
 }
