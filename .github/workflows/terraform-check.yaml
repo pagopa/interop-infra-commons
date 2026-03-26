@@ -1,0 +1,249 @@
+name: Terraform Checks
+run-name: "${{ github.ref_name }} - Interop Infra Commons Terraform Checks"
+
+on:
+  pull_request:
+    paths:
+      - "terraform/modules/**"
+  push:
+    branches:
+      - '**'
+      - '!main'
+    paths:
+      - "terraform/modules/**"
+  workflow_dispatch:
+
+env:
+  TFLINT_VERSION: "v0.61.0"
+  TF_VERSION_FALLBACK: "1.8.0"
+
+jobs:
+  # Discover modules and resolve the Terraform version declared in each one
+  discover-modules:
+    name: Discover Terraform Modules
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+    
+      - name: Cache Terraform versions
+        id: cache-tf
+        uses: actions/cache@v4
+        with:
+            path: .tf-versions.json
+            key: tf-versions-${{ runner.os }}-${{ github.ref_name }}
+            restore-keys: |
+                tf-versions-${{ runner.os }}-
+
+      - name: Fetch Terraform versions
+        if: steps.cache-tf.outputs.cache-hit != 'true'
+        run: |
+            curl -s https://api.github.com/repos/hashicorp/terraform/releases \
+                | jq -r '[.[].tag_name | sub("^v";"")  | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) ]' > .tf-versions.json
+
+            echo "Fetched Terraform versions:"
+            cat .tf-versions.json
+
+      - name: Build module matrix with TF versions
+        id: set-matrix
+        run: |
+          set -euo pipefail
+ 
+          npm install semver >/dev/null 2>&1
+
+          TF_VERSIONS=$(cat .tf-versions.json)
+
+          matrix_entries="[]"
+ 
+          while IFS= read -r module_dir; do
+            module_name=$(basename "$module_dir")
+ 
+            # grep:
+            #  -h Suppress the prefixing of file names on output. 
+            #  -r Recursive search
+            # sed:
+            #  -E Extended regex: The regex captures the version string in required_version = "x.y.z"
+            constraint=$(grep -rh 'required_version' "$module_dir"/*.tf 2>/dev/null \
+                | sed -E 's/.*required_version *= *"([^"]+)".*/\1/' \
+                | head -1)
+
+            constraint=${constraint:-"*"}
+
+            echo "Module: $module_name | constraint: $constraint"
+
+            tf_version=$(TF_VERSIONS="$TF_VERSIONS" \
+                CONSTRAINT="$constraint" \
+                FALLBACK="$TF_VERSION_FALLBACK" \
+                node -e '
+                    const semver = require("semver");
+
+                    const versions = JSON.parse(process.env.TF_VERSIONS);
+                    const constraint = process.env.CONSTRAINT;
+
+                    function terraformToSemver(c) {
+                        if (!c) return "*";
+
+                        // ~> 1.3.0  -> >=1.3.0 <1.4.0
+                        let m = c.match(/^~>\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
+                        if (m) {
+                          const major = Number(m[1]);
+                          const minor = m[2] !== undefined ? Number(m[2]) : undefined;
+                          const patch = m[3] !== undefined ? Number(m[3]) : undefined;
+
+                          if (patch !== undefined) {
+                            return `>=${major}.${minor}.${patch} <${major}.${minor + 1}.0`;
+                          }
+
+                          // ~> X.Y
+                          if (minor !== undefined) {
+                            return `>=${major}.${minor}.0 <${major + 1}.0.0`;
+                          }
+
+                          
+                          return `>=${major}.0.0 <${major + 1}.0.0`;
+                        }
+
+                        return c;
+                    }
+
+                    const semverConstraint = terraformToSemver(constraint);
+
+                    const resolved = semver.maxSatisfying(versions, semverConstraint) || process.env.FALLBACK;
+
+                    //console.log(resolved);
+                ')
+            
+            echo "$module_name: Resolved TF version: $tf_version"
+
+            matrix_entries=$(echo "$matrix_entries" | jq -c \
+              --arg path "$module_dir" \
+              --arg name "$module_name" \
+              --arg ver  "$tf_version" \
+              '. + [{"path": $path, "name": $name, "tf_version": $ver}]')
+ 
+          done < <(find terraform/modules -mindepth 1 -maxdepth 1 -type d | sort)
+ 
+          echo "matrix={\"include\":$(echo "$matrix_entries")}" >> "$GITHUB_OUTPUT"
+
+  # Run fmt, validate and tflint in parallel for every module
+  terraform-checks:
+    name: "[${{ matrix.name }}] Terraform Checks"
+    needs: discover-modules
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix: ${{ fromJson(needs.discover-modules.outputs.matrix) }}
+      max-parallel: 5
+
+    defaults:
+      run:
+        working-directory: ${{ matrix.path }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # The version here comes from the module's own required_version field
+      - name: "Setup Terraform ${{ matrix.tf_version }}"
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ matrix.tf_version }}
+
+      - name: terraform fmt
+        id: fmt
+        run: terraform fmt -check -recursive -diff
+        # -check: exit 1 when files need formatting (non-destructive)
+        # -diff:  print the diff so reviewers see what needs fixing
+
+      - name: terraform init
+        id: init
+        run: |
+          terraform init \
+            -backend=false \
+            -input=false \
+            -no-color
+        # -backend=false: skip remote-state init
+
+      - name: terraform validate
+        id: validate
+        run: terraform validate -no-color # alt: terraform validate -json (machine readable, not human friendly)
+
+      - name: Setup TFLint ${{ env.TFLINT_VERSION }}
+        uses: terraform-linters/setup-tflint@v5 # ultima versione v6 richiede nodejs 24
+        with:
+          tflint_version: ${{ env.TFLINT_VERSION }}
+          # cache: true - solo da v6
+
+      - name: Init TFLint
+        run: |
+          # # Use module-local config if present, otherwise fall back to repo root
+          if [ -f .tflint.hcl ] || [ -f "$GITHUB_WORKSPACE/.tflint.hcl" ]; then
+            if [ ! -f .tflint.hcl ] && [ -f "$GITHUB_WORKSPACE/.tflint.hcl" ]; then
+                cp "$GITHUB_WORKSPACE/.tflint.hcl" .
+            fi
+          
+            tflint --init
+          fi
+
+      - name: Cache TFLint plugins
+        uses: actions/cache@v4
+        with:
+            path: ~/.tflint.d/plugins
+            key: tflint-${{ env.TFLINT_VERSION }}-${{ hashFiles('**/.tflint.hcl') }}
+            restore-keys: |
+                tflint-${{ env.TFLINT_VERSION }}-
+                tflint-
+
+
+      - name: Run TFLint
+        id: lint
+        run: tflint --format compact --no-color
+        
+      - name: Check summary
+        if: always()
+        run: |
+          icon() {
+            case "$1" in
+              success) echo "✅" ;;
+              failure) echo "❌" ;;
+              *) echo "$1" ;;
+            esac
+          }
+
+          fmt_outcome="${{ steps.fmt.outcome }}"
+          init_outcome="${{ steps.init.outcome }}"
+          validate_outcome="${{ steps.validate.outcome }}"
+          lint_outcome="${{ steps.lint.outcome }}"
+
+          echo "::group::Terraform check summary (${{ matrix.name }})"
+          echo "module=${{ matrix.name }}"
+          echo "terraform_version=${{ matrix.tf_version }}"
+          echo "terraform_fmt=$(icon "$fmt_outcome") $fmt_outcome"
+          echo "terraform_init=$(icon "$init_outcome") $init_outcome"
+          echo "terraform_validate=$(icon "$validate_outcome") $validate_outcome"
+          echo "tflint=$(icon "$lint_outcome") $lint_outcome"
+          echo "::endgroup::"
+
+          summary_line="module=${{ matrix.name }} tf=${{ matrix.tf_version }} fmt=$fmt_outcome init=$init_outcome validate=$validate_outcome tflint=$lint_outcome"
+          if [[ "$fmt_outcome" == "failure" || "$init_outcome" == "failure" || "$validate_outcome" == "failure" || "$lint_outcome" == "failure" ]]; then
+            echo "::warning title=Terraform checks summary::$summary_line"
+          else
+            echo "::notice title=Terraform checks summary::$summary_line"
+          fi
+
+  terraform-ci-gate:
+    name: Terraform CI Gate
+    if: always()
+    needs: terraform-checks
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Check matrix jobs status
+        run: |
+          result="${{ needs.terraform-checks.result }}"
+          if [[ "$result" != "success" ]]; then
+            echo "::error title=Terraform CI Gate::One or more Terraform module checks failed (result: $result)"
+            exit 1
+          fi
+          echo "::notice title=Terraform CI Gate::All Terraform module checks passed."
