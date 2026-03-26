@@ -17,6 +17,10 @@ env:
   TFLINT_VERSION: "v0.61.0"
   TF_VERSION_FALLBACK: "1.8.0"
 
+permissions:
+  id-token: write
+  contents: read
+  
 jobs:
   # Discover modules and resolve the Terraform version declared in each one
   discover-modules:
