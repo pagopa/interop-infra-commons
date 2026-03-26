@@ -200,42 +200,9 @@ jobs:
                 tflint-${{ env.TFLINT_VERSION }}-
                 tflint-
 
-
       - name: Run TFLint
         id: lint
         run: tflint --format compact --no-color
-        
-      - name: Check summary
-        if: always()
-        run: |
-          icon() {
-            case "$1" in
-              success) echo "✅" ;;
-              failure) echo "❌" ;;
-              *) echo "$1" ;;
-            esac
-          }
-
-          fmt_outcome="${{ steps.fmt.outcome }}"
-          init_outcome="${{ steps.init.outcome }}"
-          validate_outcome="${{ steps.validate.outcome }}"
-          lint_outcome="${{ steps.lint.outcome }}"
-
-          echo "::group::Terraform check summary (${{ matrix.name }})"
-          echo "module=${{ matrix.name }}"
-          echo "terraform_version=${{ matrix.tf_version }}"
-          echo "terraform_fmt=$(icon "$fmt_outcome") $fmt_outcome"
-          echo "terraform_init=$(icon "$init_outcome") $init_outcome"
-          echo "terraform_validate=$(icon "$validate_outcome") $validate_outcome"
-          echo "tflint=$(icon "$lint_outcome") $lint_outcome"
-          echo "::endgroup::"
-
-          summary_line="module=${{ matrix.name }} tf=${{ matrix.tf_version }} fmt=$fmt_outcome init=$init_outcome validate=$validate_outcome tflint=$lint_outcome"
-          if [[ "$fmt_outcome" == "failure" || "$init_outcome" == "failure" || "$validate_outcome" == "failure" || "$lint_outcome" == "failure" ]]; then
-            echo "::warning title=Terraform checks summary::$summary_line"
-          else
-            echo "::notice title=Terraform checks summary::$summary_line"
-          fi
 
   terraform-ci-gate:
     name: Terraform CI Gate
