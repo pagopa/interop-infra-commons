@@ -128,7 +128,13 @@ jobs:
             mkdir -p $HOME/.terraform.d/plugin-cache
     
       - name: Setup tfenv PATH
-        run: echo "$HOME/.tfenv/bin" >> $GITHUB_PATH
+        run: |
+            echo "$HOME/.tfenv/bin" >> $GITHUB_PATH
+            echo $GITHUB_PATH
+            ls -l $HOME/.tfenv
+            ls -l $HOME/.tfenv/bin
+            ls -l $HOME/.terraform.d
+
 
       # Install latest Terraform 1.x - stable releases only (skip alphas, betas, rcs)
       - name: Install Terraform
