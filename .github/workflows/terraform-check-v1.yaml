@@ -102,58 +102,64 @@ jobs:
                 | sed -E 's/.*required_version *= *"([^"]+)".*/\1/' \
                 | head -1)
 
-            constraint=${constraint:-"*"}
+            tf_version=""
 
-            echo "Module: $module_name | constraint: $constraint"
+            if [ -z "$constraint" ]; then
+              echo "No required_version constraint found for module '$module_name', return empty version"
+            else
+              constraint=${constraint:-"*"}
 
-            tf_version=$(TF_VERSIONS="$TF_VERSIONS" \
-                CONSTRAINT="$constraint" \
-                node -e '
-                    const semver = require("semver");
+              echo "Module: $module_name | constraint: $constraint"
 
-                    const versions = JSON.parse(process.env.TF_VERSIONS);
-                    const constraint = process.env.CONSTRAINT;
+              tf_version=$(TF_VERSIONS="$TF_VERSIONS" \
+                  CONSTRAINT="$constraint" \
+                  node -e '
+                      const semver = require("semver");
 
-                    function terraformToSemver(c) {
-                        if (!c) return "*";
+                      const versions = JSON.parse(process.env.TF_VERSIONS);
+                      const constraint = process.env.CONSTRAINT;
 
-                        // ~> 1.3.0  -> >=1.3.0 <1.4.0
-                        let m = c.match(/^~>\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
-                        if (m) {
-                          const major = Number(m[1]);
-                          const minor = m[2] !== undefined ? Number(m[2]) : undefined;
-                          const patch = m[3] !== undefined ? Number(m[3]) : undefined;
+                      function terraformToSemver(c) {
+                          if (!c) return "*";
 
-                          if (patch !== undefined) {
-                            return `>=${major}.${minor}.${patch} <${major}.${minor + 1}.0`;
+                          // ~> 1.3.0  -> >=1.3.0 <1.4.0
+                          let m = c.match(/^~>\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
+                          if (m) {
+                            const major = Number(m[1]);
+                            const minor = m[2] !== undefined ? Number(m[2]) : undefined;
+                            const patch = m[3] !== undefined ? Number(m[3]) : undefined;
+
+                            if (patch !== undefined) {
+                              return `>=${major}.${minor}.${patch} <${major}.${minor + 1}.0`;
+                            }
+
+                            // ~> X.Y
+                            if (minor !== undefined) {
+                              return `>=${major}.${minor}.0 <${major + 1}.0.0`;
+                            }
+
+
+                            return `>=${major}.0.0 <${major + 1}.0.0`;
                           }
 
-                          // ~> X.Y
-                          if (minor !== undefined) {
-                            return `>=${major}.${minor}.0 <${major + 1}.0.0`;
-                          }
+                          return c;
+                      }
 
+                      const semverConstraint = terraformToSemver(constraint);
 
-                          return `>=${major}.0.0 <${major + 1}.0.0`;
-                        }
+                      const resolved = semver.maxSatisfying(versions, semverConstraint);
 
-                        return c;
-                    }
-
-                    const semverConstraint = terraformToSemver(constraint);
-
-                    const resolved = semver.maxSatisfying(versions, semverConstraint) || null;
-
-                    console.log(resolved)
-                ')
-            
-            echo "$module_name: Resolved TF version: $tf_version"
+                      console.log(resolved || "")
+                  ')
+              
+              echo "$module_name: Resolved TF version: $tf_version"
+            fi
 
             matrix_entries=$(echo "$matrix_entries" | jq -c \
-              --arg path "$module_dir" \
-              --arg name "$module_name" \
-              --arg ver  "$tf_version" \
-              '. + [{"path": $path, "name": $name, "tf_version": $ver}]')
+                --arg path "$module_dir" \
+                --arg name "$module_name" \
+                --arg ver  "$tf_version" \
+                '. + [{"path": $path, "name": $name, "tf_version": $ver}]')
 
           done < <(find terraform/modules -mindepth 1 -maxdepth 1 -type d | sort)
 
@@ -172,6 +178,13 @@ jobs:
         working-directory: ${{ matrix.path }}
 
     steps:
+      - name: Validate Terraform version resolved
+        run: |
+          if [ -z "${{ matrix.tf_version }}" ]; then
+            echo "::error::Failed to resolve Terraform version for module '${{ matrix.name }}'"
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -228,6 +241,8 @@ jobs:
 
       - name: Init TFLint
         run: |
+          # AWS Tflint rules: https://github.com/terraform-linters/tflint-ruleset-aws/blob/master/docs/rules/README.md
+
           if [ -f .tflint.hcl ] || [ -f "$GITHUB_WORKSPACE/.tflint.hcl" ]; then
             if [ ! -f .tflint.hcl ] && [ -f "$GITHUB_WORKSPACE/.tflint.hcl" ]; then
               cp "$GITHUB_WORKSPACE/.tflint.hcl" .
