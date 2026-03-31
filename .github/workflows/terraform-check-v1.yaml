@@ -163,7 +163,8 @@ jobs:
 
           done < <(find terraform/modules -mindepth 1 -maxdepth 1 -type d | sort)
 
-          echo "matrix={\"include\":$(echo "$matrix_entries")}" >> "$GITHUB_OUTPUT"
+          matrix_json=$(echo "$matrix_entries" | jq -cr '{include: .}')
+          echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
 
   terraform-checks:
     name: "[${{ matrix.name }}] Terraform Checks"
