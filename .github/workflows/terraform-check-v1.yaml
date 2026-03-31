@@ -27,6 +27,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Terraform dir init
+        run: mkdir -p /home/runner/.terraform.d/plugin-cache
+
       - name: Restore Terraform plugin cache
         id: cache-restore-tf-plugins
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
@@ -37,6 +40,7 @@ jobs:
           restore-keys: |
             tf-${{ runner.os }}-
             tf-
+
 
       - name: Restore Terraform versions cache
         id: cache-restore-tf-versions
@@ -139,6 +143,8 @@ jobs:
                     const semverConstraint = terraformToSemver(constraint);
 
                     const resolved = semver.maxSatisfying(versions, semverConstraint) || null;
+
+                    console.log(resolved)
                 ')
             
             echo "$module_name: Resolved TF version: $tf_version"
