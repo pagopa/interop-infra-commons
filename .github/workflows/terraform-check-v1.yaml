@@ -47,15 +47,36 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
             path: .tf-versions.json
-            key: tf-versions-${{ runner.os }}
+            key: tf-versions-${{ runner.os }}-v1
             restore-keys: |
-                tf-versions-
+                tf-versions-v1
 
       - name: Fetch Terraform versions
         if: steps.cache-restore-tf-versions.outputs.cache-hit != 'true'
         run: |
-            curl -s https://api.github.com/repos/hashicorp/terraform/releases \
-                | jq -r '[.[].tag_name | sub("^v";"")  | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$")) ]' > .tf-versions.json
+            set -euo pipefail
+
+            : > .tf-versions.json
+
+            page=1
+            while :; do
+              response=$(curl -s "https://api.github.com/repos/hashicorp/terraform/releases?per_page=100&page=${page}")
+              count=$(echo "$response" | jq 'length')
+
+              # If count is 0, we've fetched all pages
+              if [ "$count" -eq 0 ]; then
+                break
+              fi
+
+              echo "$response" \
+                | jq -r '.[]?.tag_name | sub("^v";"") | select(test("^[0-9]+\\.[0-9]+\\.[0-9]+$"))' \
+                >> .tf-versions.json
+
+              page=$((page + 1))
+            done
+
+            jq -Rsc 'split("\n") | map(select(length > 0)) | unique' .tf-versions.json > .tf-versions.json.tmp
+            mv .tf-versions.json.tmp .tf-versions.json
 
             echo "Fetched Terraform versions:"
             cat .tf-versions.json
@@ -75,9 +96,9 @@ jobs:
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
             path: .tf-versions.json
-            key: tf-versions-${{ runner.os }}
+            key: tf-versions-${{ runner.os }}-v1
             restore-keys: |
-                tf-versions-
+                tf-versions-v1
 
       - name: Build module matrix
         id: build-matrix
@@ -98,17 +119,15 @@ jobs:
             #  -r Recursive search
             # sed:
             #  -E Extended regex: The regex captures the version string in required_version = "x.y.z"
-            constraint=$(grep -rh 'required_version' "$module_dir"/*.tf 2>/dev/null \
-                | sed -E 's/.*required_version *= *"([^"]+)".*/\1/' \
-                | head -1)
+            constraint=$(grep -rh --include='*.tf' 'required_version' "$module_dir" 2>/dev/null \
+              | sed -E 's/.*required_version *= *"([^"]+)".*/\1/' \
+              | head -1 || true)
 
             tf_version=""
 
             if [ -z "$constraint" ]; then
               echo "No required_version constraint found for module '$module_name', return empty version"
             else
-              constraint=${constraint:-"*"}
-
               echo "Module: $module_name | constraint: $constraint"
 
               tf_version=$(TF_VERSIONS="$TF_VERSIONS" \
@@ -119,41 +138,73 @@ jobs:
                       const versions = JSON.parse(process.env.TF_VERSIONS);
                       const constraint = process.env.CONSTRAINT;
 
+                      const excluded = [];
+
+                      // Normalization: to3Parts converts "1.2" to "1.2.0" for proper semver comparison
+                      function to3Parts(version) {
+                        const parts = version.split(".");
+                        while (parts.length < 3) parts.push("0");
+                        return parts.slice(0, 3).join(".");
+                      }
+
+                      // Converts a Terraform version constraint token to a semver range
+                      function terraformTokenToSemver(token) {
+                        const value = token.trim();
+                        if (!value) return "";
+
+                        // Handle ~> constraint (e.g. "~> 1.2.3")
+                        let m = value.match(/^~>\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
+                        if (m) {
+                          const major = Number(m[1]);
+                          const minor = m[2] !== undefined ? Number(m[2]) : undefined;
+                          const patch = m[3] !== undefined ? Number(m[3]) : undefined;
+
+                          // Transform ~> to semver range:
+                          // - If patch is specified: >=major.minor.patch <major."minor+1".0
+                          // - If only minor is specified: >=major.minor.0 <"major+1".0.0
+                          // - If only major is specified: >=major.0.0 <"major+1".0.0
+
+                          if (patch !== undefined) return `>=${major}.${minor}.${patch} <${major}.${minor + 1}.0`;
+                          if (minor !== undefined) return `>=${major}.${minor}.0 <${major + 1}.0.0`;
+                          return `>=${major}.0.0 <${major + 1}.0.0`;
+                        }
+
+                        // Handle != constraint (e.g. "!= 1.2.3")
+                        m = value.match(/^!=\s*([0-9]+(?:\.[0-9]+){0,2})$/);
+                        if (m) {
+                          // Exclude this specific version from the allowed set
+                          excluded.push(to3Parts(m[1]));
+                          return "";
+                        }
+
+                        // Handle standard comparison operators (e.g. ">= 1.2.3", "< 1.3", "= 1.2.0")
+                        m = value.match(/^(>=|<=|>|<|=)?\s*([0-9]+(?:\.[0-9]+){0,2})$/);
+                        if (m) {
+                          // Default operator is "=" if not specified
+                          const op = m[1] || "=";
+                          return `${op}${to3Parts(m[2])}`;
+                        }
+
+                        return value;
+                      }
+
+                      // Converts a Terraform version constraint string to a semver range, handling multiple comma-separated constraints
                       function terraformToSemver(c) {
-                          if (!c) return "*";
-
-                          // ~> 1.3.0  -> >=1.3.0 <1.4.0
-                          let m = c.match(/^~>\s*(\d+)(?:\.(\d+))?(?:\.(\d+))?$/);
-                          if (m) {
-                            const major = Number(m[1]);
-                            const minor = m[2] !== undefined ? Number(m[2]) : undefined;
-                            const patch = m[3] !== undefined ? Number(m[3]) : undefined;
-
-                            if (patch !== undefined) {
-                              return `>=${major}.${minor}.${patch} <${major}.${minor + 1}.0`;
-                            }
-
-                            // ~> X.Y
-                            if (minor !== undefined) {
-                              return `>=${major}.${minor}.0 <${major + 1}.0.0`;
-                            }
-
-
-                            return `>=${major}.0.0 <${major + 1}.0.0`;
-                          }
-
-                          return c;
+                        if (!c) return "*";
+                        const mapped = c.split(",").map(terraformTokenToSemver).filter(Boolean);
+                        return mapped.length ? mapped.join(" ") : "*";
                       }
 
                       const semverConstraint = terraformToSemver(constraint);
-
-                      const resolved = semver.maxSatisfying(versions, semverConstraint);
+                      const allowedVersions = versions.filter((v) => !excluded.includes(v));
+                      const resolved = semver.maxSatisfying(allowedVersions, semverConstraint);
 
                       console.log(resolved || "")
                   ')
               
-              echo "$module_name: Resolved TF version: $tf_version"
             fi
+            
+            echo "$module_name: Resolved TF version: $tf_version"
 
             matrix_entries=$(echo "$matrix_entries" | jq -c \
                 --arg path "$module_dir" \
@@ -162,9 +213,8 @@ jobs:
                 '. + [{"path": $path, "name": $name, "tf_version": $ver}]')
 
           done < <(find terraform/modules -mindepth 1 -maxdepth 1 -type d | sort)
-
-          matrix_json=$(echo "$matrix_entries" | jq -cr '{include: .}')
-          echo "matrix=$matrix_json" >> "$GITHUB_OUTPUT"
+          
+          echo "matrix={\"include\":$(echo "$matrix_entries")}" >> "$GITHUB_OUTPUT"
 
   terraform-checks:
     name: "[${{ matrix.name }}] Terraform Checks"
@@ -179,15 +229,15 @@ jobs:
         working-directory: ${{ matrix.path }}
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Validate Terraform version resolved
         run: |
           if [ -z "${{ matrix.tf_version }}" ]; then
             echo "::error::Failed to resolve Terraform version for module '${{ matrix.name }}'"
             exit 1
           fi
-
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Terraform cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
