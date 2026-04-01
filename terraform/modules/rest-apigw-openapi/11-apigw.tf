@@ -22,17 +22,10 @@ data "external" "openapi_integration" {
   local.type_options, local.api_version_options, local.service_prefix_options, local.swagger_options, local.maintenance_options)
 }
 
-# Open point: should we consider using the base_path_mapping variable when interpolating the APIGW name in case api_version is null?
-locals {
-  rest_apigw_name = (var.api_version != null ? format("interop-%s-%s-%s", var.api_name, var.api_version, var.env) 
-  : var.base_path_mapping != null ? format("interop-%s-%s-%s", var.api_name, var.base_path_mapping, var.env) 
-  : format("interop-%s-%s", var.api_name, var.env))
-}
-
 resource "aws_api_gateway_rest_api" "this" {
   depends_on = [data.external.openapi_integration]
 
-  name = local.rest_apigw_name
+  name = var.rest_apigw_name
 
   body               = var.openapi_s3_bucket_name != null && var.openapi_s3_object_key != null ? aws_s3_object.openapi[0].content : data.external.openapi_integration.result.integrated_openapi_yaml
   put_rest_api_mode  = "overwrite"
@@ -83,10 +76,10 @@ resource "aws_api_gateway_stage" "env" {
   }
 
   dynamic "access_log_settings" {
-    for_each = var.access_log_group_arn != null ? [var.access_log_group_arn] : []
+    for_each = var.access_log_group_name != null ? [data.aws_cloudwatch_log_group.this.arn] : []
 
     content {
-      destination_arn = var.access_log_group_arn
+      destination_arn = data.aws_cloudwatch_log_group.this.arn
       format = jsonencode({
         "apigwId"              = "$context.apiId"
         "requestId"            = "$context.requestId"
