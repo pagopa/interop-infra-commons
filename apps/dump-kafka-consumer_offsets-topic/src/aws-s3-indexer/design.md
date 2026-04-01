@@ -15,13 +15,6 @@ classDiagram
         +readonly ts string
     }
 
-    class MessageSaverFactory {
-        +getInstance$() ConsumerOffsetMsgDecodersFactory
-
-        getMessageSaver( string baseUrl ) S3MessageSaver
-    }
-    MessageSaverFactory .. IMessageSaver: build
-    
     class IMessageSaver {
         <<interface>>
         +saveMessages( string baseUrl, MessageEntry[] messages ) string[]
@@ -29,6 +22,8 @@ classDiagram
     IMessageSaver .. MessageEntry: use
 
     class S3MessageSaver {
+        constructor( string region )
+        
         +saveMessages( string baseUrl, MessageEntry[] messages ) string[]
     }
     IMessageSaver <|-- S3MessageSaver : is a
@@ -38,11 +33,6 @@ classDiagram
 ## Class responsibilities
  - __MessageEntry__ is a data structure that contains a JSON on one line and a 
    original message creation timestamp (ts); the timestamp is an epoch milliseconds number.
- - __MessageSaverFactory__ simply provide an instance of itself by the static method 
-   _getInstance_ and provide specific instance of _IMessageSaver_. The method 
-   _getMessageSaver_ throw an error if the URL schema is not supported; the currently 
-   supported schemas are:
-    - ``s3://`` that return an object of type _S3MessageSaver_.
  - __IMessageSaver__ interface of classes used to save messages on some storage. The 
    only method _saveMessages_ get an URL and a list of messages. Can throw an error 
    if the URL is not supported. Return the list of created resources.

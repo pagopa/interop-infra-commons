@@ -2,13 +2,11 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
 import { IMessageSaver, MessageEntry } from './types';
 
-const AWS_REGION = process.env.AWS_REGION || "eu-south-1";
-
 export class S3MessageSaver implements IMessageSaver {
     private s3Client: S3Client;
 
-    constructor() {
-        this.s3Client = new S3Client({ region: AWS_REGION });
+    constructor( region: string) {
+        this.s3Client = new S3Client({ region });
     }
 
     async saveMessages(baseUrl: string, messages: MessageEntry[]): Promise<string[]> {
