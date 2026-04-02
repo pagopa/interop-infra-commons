@@ -101,14 +101,14 @@ saml_provider_name         = null
 cert_validity_hours = 8760
 admin_key_version   = 1
 admin_cert_version  = 1
-create_secrets      = false
+create_secrets      = true
 
-# PKI esterna (certificati importati in ACM)
-external_server_certificate_arn    = "arn:aws:acm:eu-west-1:120888772144:certificate/e590cdce-3f54-4ff8-9449-567392ab5bea"
-external_client_ca_certificate_arn = "arn:aws:acm:eu-west-1:120888772144:certificate/fd320da6-d860-4117-99fb-075ca0ddc40c"
+# PKI esterna (certificati importati in ACM) - risorse di test
+#external_server_certificate_arn    = "arn:aws:acm:eu-west-1:120888772144:certificate/e590cdce-3f54-4ff8-9449-567392ab5bea"
+#external_client_ca_certificate_arn = "arn:aws:acm:eu-west-1:120888772144:certificate/fd320da6-d860-4117-99fb-075ca0ddc40c"
 
-#external_server_certificate_arn    = null
-#external_client_ca_certificate_arn = null
+external_server_certificate_arn    = null
+external_client_ca_certificate_arn = null
 
 external_client_ca_cert_pem        = null
 external_client_ca_private_key_pem = null
