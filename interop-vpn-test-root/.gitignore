@@ -1,5 +1,6 @@
 *.tfstate
 *.tfstate.*
 .terraform/
-*.tfvars*
+*.external*
+!terraform.tfvars
 !terraform.tfvars.example

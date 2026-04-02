@@ -34,6 +34,7 @@ data "aws_availability_zones" "available" {
   state = "available"
 }
 
+# Solo per test locale quando keycloak è esposto tramite ngrok - da rimuovere
 data "http" "ngrok_api" {
   count = local.is_saml && var.keycloak_realm != "" ? 1 : 0
   url   = "http://localhost:4040/api/tunnels"
@@ -50,7 +51,7 @@ locals {
   resolved_vpc_id = var.create_test_network ? aws_vpc.main[0].id : var.vpn_vpc_id
   mutual_cert_subnet_ids = var.mutual_cert_subnet_ids
   saml_subnet_ids        = var.saml_subnet_ids
-
+# Solo per test locale quando keycloak è esposto tramite ngrok - da rimuovere
   ngrok_tunnels     = local.is_saml && var.keycloak_realm != "" ? jsondecode(data.http.ngrok_api[0].response_body).tunnels : []
   keycloak_base_url = local.is_saml && var.keycloak_realm != "" ? [for t in local.ngrok_tunnels : t.public_url if startswith(t.public_url, "https")][0] : null
 
