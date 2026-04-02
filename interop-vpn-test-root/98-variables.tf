@@ -1,7 +1,14 @@
 
-variable "app_name" {
-  description = "Application / project name used as prefix for resources"
+variable "aws_region" {
+  description = "AWS region"
   type        = string
+  default     = "eu-west-1"
+}
+
+variable "app_name" {
+  description = "Application name"
+  type        = string
+  default     = "interop-vpn-test"
 }
 
 variable "env" {
@@ -10,19 +17,9 @@ variable "env" {
 }
 
 variable "tags" {
-  description = "Tags to apply to all resources"
+  description = "Tags to apply to all resources."
   type        = map(string)
   default     = {}
-}
-
-
-variable "vpn_type" {
-  description = "VPN authentication mode: 'mutual-cert' or 'saml'"
-  type        = string
-  validation {
-    condition     = contains(["mutual-cert", "saml"], var.vpn_type)
-    error_message = "vpn_type must be 'mutual-cert' or 'saml'."
-  }
 }
 
 variable "name_prefix_override" {
@@ -37,35 +34,86 @@ variable "endpoint_name_prefix_override" {
   default     = null
 }
 
-variable "vpc_id" {
-  description = "VPC ID to associate with the VPN endpoint"
+variable "enable_mutual_cert_vpn" {
+  description = "Create the mutual-cert VPN endpoint."
+  type        = bool
+  default     = true
+}
+
+variable "enable_saml_vpn" {
+  description = "Create the SAML VPN endpoint."
+  type        = bool
+  default     = false
+}
+
+variable "mutual_cert_vpn_type" {
+  description = "VPN type used by the mutual-cert module instance."
   type        = string
+  default     = "mutual-cert"
+}
+
+variable "saml_vpn_type" {
+  description = "VPN type used by the SAML module instance."
+  type        = string
+  default     = "saml"
+}
+
+variable "create_test_network" {
+  description = "Create the test VPC/subnet/IGW/route table in this root."
+  type        = bool
+  default     = true
+}
+
+variable "vpn_vpc_id" {
+  description = "Existing VPC ID to use when create_test_network is false."
+  type        = string
+  default     = null
 }
 
 variable "vpc_cidr" {
-  description = "CIDR block of the VPC (used for authorization rules)"
+  description = "Test VPC CIDR block"
   type        = string
+  default     = "10.0.0.0/16"
 }
 
-variable "subnet_ids" {
-  description = "List of subnet IDs to associate with the VPN endpoint"
-  type        = list(string)
+variable "subnet_cidr" {
+  description = "Test subnet CIDR block"
+  type        = string
+  default     = "10.0.1.0/24"
 }
 
 variable "vpn_client_cidr" {
-  description = "CIDR block for VPN client addresses (must not overlap with VPC CIDR)"
+  description = "Mutual-cert client CIDR"
   type        = string
-  default     = "10.200.0.0/16"
+  default     = "10.100.0.0/22"
 }
 
-variable "saml_metadata_xml" {
-  description = "Raw XML SAML metadata from the IdP"
+variable "vpn_saml_client_cidr" {
+  description = "SAML client CIDR"
+  type        = string
+  default     = "10.101.0.0/22"
+}
+
+variable "mutual_cert_subnet_ids" {
+  description = "Subnet IDs for the mutual-cert endpoint."
+  type        = list(string)
+  default     = []
+}
+
+variable "saml_subnet_ids" {
+  description = "Subnet IDs for the SAML endpoint."
+  type        = list(string)
+  default     = []
+}
+
+variable "keycloak_realm" {
+  description = "Keycloak realm for SAML metadata fetch."
   type        = string
   default     = ""
 }
 
-variable "saml_group" {
-  description = "SAML group ID allowed through the VPN (required for saml mode)"
+variable "saml_metadata_xml" {
+  description = "Raw SAML metadata XML."
   type        = string
   default     = ""
 }
@@ -83,77 +131,39 @@ variable "external_saml_provider_arn" {
 }
 
 variable "dns_servers" {
-  description = "List of DNS server IPs for VPN clients. Defaults to AmazonProvidedDNS (VPC base +2)."
+  description = "DNS servers for VPN clients."
   type        = list(string)
   default     = null
 }
 
 variable "split_tunnel" {
-  description = "Enable split tunnel (only VPC traffic through the VPN)"
+  description = "Enable split tunnel."
   type        = bool
   default     = true
 }
 
 variable "transport_protocol" {
-  description = "Transport protocol: 'udp' or 'tcp'"
+  description = "VPN transport protocol."
   type        = string
   default     = "udp"
-  validation {
-    condition     = contains(["udp", "tcp"], var.transport_protocol)
-    error_message = "transport_protocol must be 'udp' or 'tcp'."
-  }
 }
 
 variable "vpn_port" {
-  description = "Port for the VPN endpoint (443 or 1194)"
+  description = "VPN port."
   type        = number
   default     = 443
-  validation {
-    condition     = contains([443, 1194], var.vpn_port)
-    error_message = "vpn_port must be 443 or 1194."
-  }
-}
-
-variable "session_timeout_hours" {
-  description = "Maximum VPN session duration in hours"
-  type        = number
-  default     = 8
-}
-
-variable "self_service_portal" {
-  description = "Self-service portal status."
-  type        = string
-  default     = "disabled"
 }
 
 variable "connection_log_enabled" {
-  description = "Enable VPN connection logging to CloudWatch"
+  description = "Enable VPN connection logs."
   type        = bool
   default     = true
 }
 
 variable "cloudwatch_log_retention_days" {
-  description = "CloudWatch log retention in days"
+  description = "Log retention in days."
   type        = number
   default     = 30
-}
-
-variable "cert_validity_hours" {
-  description = "Validity period for TLS certificates in hours"
-  type        = number
-  default     = 8760 # 1 year
-}
-
-variable "admin_key_version" {
-  description = "Increment to trigger write-only admin key rotation in Secrets Manager"
-  type        = number
-  default     = 1
-}
-
-variable "admin_cert_version" {
-  description = "Increment to trigger write-only admin cert rotation in Secrets Manager"
-  type        = number
-  default     = 1
 }
 
 variable "create_security_group" {
@@ -208,6 +218,36 @@ variable "log_group_name" {
   description = "Override for the log group name."
   type        = string
   default     = null
+}
+
+variable "session_timeout_hours" {
+  description = "VPN session timeout in hours."
+  type        = number
+  default     = 8
+}
+
+variable "self_service_portal" {
+  description = "Self-service portal status."
+  type        = string
+  default     = "disabled"
+}
+
+variable "cert_validity_hours" {
+  description = "Certificate validity in hours."
+  type        = number
+  default     = 8760
+}
+
+variable "admin_key_version" {
+  description = "Admin key write-only version."
+  type        = number
+  default     = 1
+}
+
+variable "admin_cert_version" {
+  description = "Admin cert write-only version."
+  type        = number
+  default     = 1
 }
 
 variable "external_server_certificate_arn" {
@@ -299,4 +339,10 @@ variable "saml_provider_name" {
   description = "Override for the IAM SAML provider name."
   type        = string
   default     = null
+}
+
+variable "saml_group" {
+  description = "Allowed SAML group."
+  type        = string
+  default     = ""
 }

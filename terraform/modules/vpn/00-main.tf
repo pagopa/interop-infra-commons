@@ -23,11 +23,19 @@ locals {
   subnet_ids_by_index  = { for idx, subnet_id in var.subnet_ids : tostring(idx) => subnet_id }
 
   # PKI: usa risorse esterne se fornite, altrimenti quelle create internamente
-  create_server_pki  = var.external_server_certificate_arn == null
-  create_client_pki  = local.is_mutual_cert && var.external_client_ca_certificate_arn == null
-  server_cert_arn    = local.create_server_pki ? one(aws_acm_certificate.vpn_server[*].arn) : var.external_server_certificate_arn
-  client_ca_cert_arn = local.is_mutual_cert ? (local.create_client_pki ? one(aws_acm_certificate.client_ca[*].arn) : var.external_client_ca_certificate_arn) : null
-  saml_provider_arn  = local.is_saml ? (var.create_saml_provider ? one(aws_iam_saml_provider.idp[*].arn) : var.external_saml_provider_arn) : null
+  create_server_pki           = var.external_server_certificate_arn == null
+  create_client_pki           = local.is_mutual_cert && var.external_client_ca_certificate_arn == null
+  use_external_client_signing = local.is_mutual_cert && var.external_client_ca_cert_pem != null && var.external_client_ca_private_key_pem != null
+  generate_client_admin_cert  = local.is_mutual_cert && (local.create_client_pki || local.use_external_client_signing)
+  server_cert_arn             = local.create_server_pki ? one(aws_acm_certificate.vpn_server[*].arn) : var.external_server_certificate_arn
+  client_ca_cert_arn          = local.is_mutual_cert ? (local.create_client_pki ? one(aws_acm_certificate.client_ca[*].arn) : var.external_client_ca_certificate_arn) : null
+  client_ca_cert_pem_for_signing = local.use_external_client_signing ? var.external_client_ca_cert_pem : (
+    local.create_client_pki ? one(tls_self_signed_cert.client_ca[*].cert_pem) : null
+  )
+  client_ca_private_key_pem_for_signing = local.use_external_client_signing ? var.external_client_ca_private_key_pem : (
+    local.create_client_pki ? one(tls_private_key.client_ca[*].private_key_pem) : null
+  )
+  saml_provider_arn = local.is_saml ? (var.create_saml_provider ? one(aws_iam_saml_provider.idp[*].arn) : var.external_saml_provider_arn) : null
 
   # Security group: usa quello creato internamente o quelli passati dall'esterno
   security_group_ids = var.create_security_group ? [aws_security_group.vpn[0].id] : var.external_security_group_ids
@@ -92,5 +100,25 @@ check "external_client_ca_for_mutual_cert_only" {
   assert {
     condition     = local.is_mutual_cert || var.external_client_ca_certificate_arn == null
     error_message = "external_client_ca_certificate_arn can be set only when vpn_type is 'mutual-cert'."
+  }
+}
+
+check "external_client_ca_signing_pair" {
+  assert {
+    condition = (
+      (var.external_client_ca_cert_pem == null && var.external_client_ca_private_key_pem == null) ||
+      (var.external_client_ca_cert_pem != null && var.external_client_ca_private_key_pem != null)
+    )
+    error_message = "external_client_ca_cert_pem and external_client_ca_private_key_pem must be provided together."
+  }
+
+  assert {
+    condition     = !local.use_external_client_signing || var.external_client_ca_certificate_arn != null
+    error_message = "external_client_ca_certificate_arn must be provided when external client CA signing PEMs are used."
+  }
+
+  assert {
+    condition     = local.is_mutual_cert || (var.external_client_ca_cert_pem == null && var.external_client_ca_private_key_pem == null)
+    error_message = "external_client_ca_cert_pem and external_client_ca_private_key_pem can be set only when vpn_type is 'mutual-cert'."
   }
 }
