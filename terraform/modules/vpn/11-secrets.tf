@@ -1,7 +1,7 @@
 resource "aws_secretsmanager_secret" "admin_key" {
   count                   = local.generate_client_admin_cert && var.create_secrets ? 1 : 0
   name                    = "${local.secret_prefix}/admin-client-key"
-  recovery_window_in_days = 7
+  recovery_window_in_days = var.secret_recovery_window_days
   tags                    = merge(var.tags, { Name = "${local.name_prefix}-admin-key" })
 }
 
@@ -17,7 +17,7 @@ resource "aws_secretsmanager_secret_version" "admin_key" {
 resource "aws_secretsmanager_secret" "admin_cert" {
   count                   = local.generate_client_admin_cert && var.create_secrets ? 1 : 0
   name                    = "${local.secret_prefix}/admin-client-cert"
-  recovery_window_in_days = 7
+  recovery_window_in_days = var.secret_recovery_window_days
   tags                    = merge(var.tags, { Name = "${local.name_prefix}-admin-cert" })
 }
 

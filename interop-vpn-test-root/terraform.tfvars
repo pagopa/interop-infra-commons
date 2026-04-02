@@ -98,10 +98,11 @@ external_saml_provider_arn = null
 saml_provider_name         = null
 
 # PKI lifecycle
-cert_validity_hours = 8760
-admin_key_version   = 1
-admin_cert_version  = 1
-create_secrets      = true
+cert_validity_hours         = 8760
+admin_key_version           = 1
+admin_cert_version          = 1
+create_secrets              = true
+secret_recovery_window_days = 0 # 0 = cancellazione immediata (test); 7-30 = recovery window (prod)
 
 # PKI esterna (certificati importati in ACM) - risorse di test
 #external_server_certificate_arn    = "arn:aws:acm:eu-west-1:120888772144:certificate/e590cdce-3f54-4ff8-9449-567392ab5bea"

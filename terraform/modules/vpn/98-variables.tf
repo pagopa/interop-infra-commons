@@ -241,6 +241,16 @@ variable "create_secrets" {
   default     = true
 }
 
+variable "secret_recovery_window_days" {
+  description = "Recovery window in days for Secrets Manager secrets on deletion. Set to 0 for immediate deletion (useful in test environments)."
+  type        = number
+  default     = 7
+  validation {
+    condition     = var.secret_recovery_window_days == 0 || (var.secret_recovery_window_days >= 7 && var.secret_recovery_window_days <= 30)
+    error_message = "secret_recovery_window_days must be 0 (immediate) or between 7 and 30."
+  }
+}
+
 variable "secret_name_prefix" {
   description = "Secrets Manager name prefix."
   type        = string

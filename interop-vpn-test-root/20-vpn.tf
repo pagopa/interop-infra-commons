@@ -45,6 +45,7 @@ module "vpn_mutual_cert" {
   external_client_ca_cert_pem        = var.external_client_ca_cert_pem
   external_client_ca_private_key_pem = var.external_client_ca_private_key_pem
   create_secrets                     = var.create_secrets
+  secret_recovery_window_days        = var.secret_recovery_window_days
   secret_name_prefix                 = var.secret_name_prefix
   server_ca_common_name              = var.server_ca_common_name
   server_common_name                 = var.server_common_name
@@ -94,6 +95,7 @@ module "vpn_saml" {
   cert_validity_hours             = var.cert_validity_hours
   external_server_certificate_arn = var.external_server_certificate_arn
   secret_name_prefix              = var.secret_name_prefix
+  secret_recovery_window_days     = var.secret_recovery_window_days
   server_ca_common_name           = var.server_ca_common_name
   server_common_name              = var.server_common_name
 
