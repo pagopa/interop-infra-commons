@@ -114,6 +114,9 @@ external_client_ca_certificate_arn = null
 external_client_ca_cert_pem        = null
 external_client_ca_private_key_pem = null
 
+# client_admin_key e server_key aggiunti su Secrets Manager
+external_client_admin_key_secret_arn = "arn:aws:secretsmanager:eu-west-1:120888772144:secret:interop-vpn-dev/vpn/test-external-admin-key-EPP06H"
+external_server_key_secret_arn       = "arn:aws:secretsmanager:eu-west-1:120888772144:secret:interop-vpn-dev/vpn/test-external-server-key-AtNtOc"
 
 # PKI naming
 secret_name_prefix       = null

@@ -1,6 +1,3 @@
-#Issue aperto sul provider TLS:
-#  https://github.com/hashicorp/terraform-provider-tls/issues/728
-
 # common
 
 # Repro ephemeral server key:
@@ -10,11 +7,11 @@
 #   rsa_bits  = 2048
 # }
 
-resource "tls_private_key" "server" {
-  count     = local.create_server_pki ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
+# resource "tls_private_key" "server" {
+#   count     = local.create_server_pki ? 1 : 0
+#   algorithm = "RSA"
+#   rsa_bits  = 2048
+# }
 
 # Repro ephemeral client key:
 # ephemeral "tls_private_key" "client_admin" {
@@ -22,11 +19,11 @@ resource "tls_private_key" "server" {
 #   rsa_bits  = 2048
 # }
 
-resource "tls_private_key" "client_admin" {
-  count     = local.generate_client_admin_cert ? 1 : 0
-  algorithm = "RSA"
-  rsa_bits  = 2048
-}
+# resource "tls_private_key" "client_admin" {
+#   count     = local.generate_client_admin_cert ? 1 : 0
+#   algorithm = "RSA"
+#   rsa_bits  = 2048
+# }
 
 
 # chiave in state TF (sensitive) - tls_self_signed_cert non supporta wo
@@ -53,9 +50,15 @@ resource "tls_self_signed_cert" "server_ca" {
 
 resource "tls_cert_request" "server" {
   count           = local.create_server_pki ? 1 : 0
+  #private_key_pem = tls_private_key.server[0].private_key_pem
+
   # Repro ephemeral:
   # private_key_pem = ephemeral.tls_private_key.server[0].private_key_pem
-  private_key_pem = tls_private_key.server[0].private_key_pem
+
+  # Repro SM:
+  private_key_pem = data.aws_secretsmanager_secret_version.server_key_external[0].secret_string
+
+
   subject {
     common_name  = "${local.name_prefix}.server"
     organization = local.name_prefix
@@ -75,9 +78,14 @@ resource "tls_locally_signed_cert" "server" {
 # Creata solo quando la PKI server è interna.
 resource "aws_acm_certificate" "vpn_server" {
   count = local.create_server_pki ? 1 : 0
+  # private_key       = tls_private_key.server[0].private_key_pem
+
   # Repro ephemeral:
   # private_key = ephemeral.tls_private_key.server[0].private_key_pem
-  private_key       = tls_private_key.server[0].private_key_pem
+
+  # Repro SM:
+  private_key = data.aws_secretsmanager_secret_version.server_key_external[0].secret_string
+
   certificate_body  = tls_locally_signed_cert.server[0].cert_pem
   certificate_chain = tls_self_signed_cert.server_ca[0].cert_pem
   tags              = merge(var.tags, { Name = "${local.name_prefix}-server-cert" })
@@ -106,9 +114,13 @@ resource "tls_self_signed_cert" "client_ca" {
 
 resource "tls_cert_request" "client_admin" {
   count           = local.generate_client_admin_cert ? 1 : 0
+  # private_key_pem = tls_private_key.client_admin[0].private_key_pem
+
   # Repro ephemeral:
   # private_key_pem = ephemeral.tls_private_key.client_admin.private_key_pem
-  private_key_pem = tls_private_key.client_admin[0].private_key_pem
+
+  # Repro SM:
+  private_key_pem = data.aws_secretsmanager_secret_version.admin_key_external[0].secret_string
   subject {
     common_name  = "${local.name_prefix}.client.admin"
     organization = local.name_prefix

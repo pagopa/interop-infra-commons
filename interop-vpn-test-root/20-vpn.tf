@@ -43,7 +43,9 @@ module "vpn_mutual_cert" {
   external_server_certificate_arn    = var.external_server_certificate_arn
   external_client_ca_certificate_arn = var.external_client_ca_certificate_arn
   external_client_ca_cert_pem        = var.external_client_ca_cert_pem
-  external_client_ca_private_key_pem = var.external_client_ca_private_key_pem
+  external_client_ca_private_key_pem   = var.external_client_ca_private_key_pem
+  external_client_admin_key_secret_arn = var.external_client_admin_key_secret_arn
+  external_server_key_secret_arn       = var.external_server_key_secret_arn
   create_secrets                     = var.create_secrets
   secret_recovery_window_days        = var.secret_recovery_window_days
   secret_name_prefix                 = var.secret_name_prefix

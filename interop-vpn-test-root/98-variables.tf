@@ -275,6 +275,18 @@ variable "external_client_ca_private_key_pem" {
   sensitive   = true
 }
 
+variable "external_client_admin_key_secret_arn" {
+  description = "ARN of an existing Secrets Manager secret containing the client admin private key PEM."
+  type        = string
+  default     = null
+}
+
+variable "external_server_key_secret_arn" {
+  description = "ARN of an existing Secrets Manager secret containing the server private key PEM."
+  type        = string
+  default     = null
+}
+
 variable "create_secrets" {
   description = "Create Secrets Manager secrets."
   type        = bool
