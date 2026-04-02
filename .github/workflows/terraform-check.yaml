@@ -1,6 +1,5 @@
-name: Terraform Checks V1.2
-run-name: "${{ github.ref_name }} - Interop Infra Commons Terraform Checks V1.2"
-description: "V1.2 - tfenv inside matrix jobs, no separate cache warmup, no custom semver parsing"
+name: Terraform Checks
+run-name: "${{ github.ref_name }} - Interop Infra Commons Terraform Checks"
 
 on:
   pull_request:

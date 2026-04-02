@@ -1,5 +1,5 @@
 name: Terraform Checks V1
-run-name: "${{ github.ref_name }} - Interop Infra Commons Terraform Checks V1"
+run-name: "OLD ${{ github.ref_name }} - Interop Infra Commons Terraform Checks V1"
 description: "V1 - tfenv inside matrix jobs, no separate cache warmup"
 
 on:
