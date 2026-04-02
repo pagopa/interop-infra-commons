@@ -37,13 +37,12 @@ export class S3MessageSaver implements IMessageSaver {
             const yyyy = date.getUTCFullYear();
             const mm = String(date.getUTCMonth() + 1).padStart(2, '0');
             const dd = String(date.getUTCDate()).padStart(2, '0');
-            const hh = String(date.getUTCHours()).padStart(2, '0');
-
+            
             const jsonParsed = JSON.parse(msg.json);
             const kindField = jsonParsed.kind || 'NONE';
 
             const prefix = basePath ? `${basePath}/` : '';
-            const keyPrefix = `${prefix}kind=${kindField}/year=${yyyy}/month=${mm}/day=${dd}/hour=${hh}`;
+            const keyPrefix = `${prefix}kind=${kindField}/year=${yyyy}/month=${mm}/day=${dd}`;
 
             if (!groupedMessages.has(keyPrefix)) {
                 groupedMessages.set(keyPrefix, []);

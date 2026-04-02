@@ -37,7 +37,7 @@ classDiagram
    only method _saveMessages_ get an URL and a list of messages. Can throw an error 
    if the URL is not supported. Return the list of created resources.
  - __S3MessageSaver__ support s3 like URLs and save JSON messages of one line into 
-   S3 objects with key in the form ``<URL-path>/kind=<kindField>/year=<timestamp-YYYY>/month=<timestamp-MM>/day=<timestamp-DD>/hour=<timestamp-HH>/<UUID>.ndjson`` 
+   S3 objects with key in the form ``<URL-path>/kind=<kindField>/year=<timestamp-YYYY>/month=<timestamp-MM>/day=<timestamp-DD>/<UUID>.ndjson`` 
    into bucket ``<URL-domain>``. Where _kindField_ is the content of field named kind 
    in the JSON message; 'NONE' if the field is absent or empty.
    This class configure the ``AWS_REGION`` to use from environment variable with a default 
