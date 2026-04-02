@@ -1,10 +1,10 @@
 
-# ```msg-decoder``` package design
+# ``aws-s3-indexer`` package design
 
-This package has to perform the task of transforming a class ```EachMessagePayload``` object
-into an object of class ```ConsumerOffsetMsg```.
+This package has to persist messages to a persistent storage. Actually only S3 bucket 
+is supported.
 
-## Class diagram and 
+## Class diagram
 ```mermaid
 classDiagram
     direction TB

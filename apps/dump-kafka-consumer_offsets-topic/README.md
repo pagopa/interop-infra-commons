@@ -18,3 +18,6 @@ The container is configured with the following __environment variables__:
  - __S3_SAVING_BATCH_SECONDS__: maximum number of seconds between two S3 saving and kafka 
    consumer group offsets.
  
+ # Implementation
+ Read [design.md file](./src/design.md)
+ 

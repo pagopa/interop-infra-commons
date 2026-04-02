@@ -69,12 +69,7 @@ export class ConsumerOffsetMessageHandler {
     let offsetsToBeCommitted: TopicPartitionOffsetAndMetadata[];
 
     if ( this.haveToFlush() ) {
-      this.logger.info(` - Saving ${this.jsonMessages.length} messages to S3`);
-      const savedFiles = await this.msgSaver.saveMessages( this.s3destinationBaseUrl, this.jsonMessages );
-      this.logger.info(`   Saved Files: ${JSON.stringify(savedFiles)}`);
-      this.logger.info(`   Commit offsets: ${JSON.stringify( this.lastOffsetsToCommit)}`);
-      offsetsToBeCommitted = this.offsetsMapToOffsetsArray( this.lastOffsetsToCommit );
-      this.initMessages();
+      offsetsToBeCommitted = await this.flushMessagesToStorage();
     }
     else {
       offsetsToBeCommitted = []
@@ -100,6 +95,16 @@ export class ConsumerOffsetMessageHandler {
     const enoughMessages = this.jsonMessages.length >= this.s3SavingBatchSize;
     const timeLimitExpired = this.lastSaveEpoch + this.s3SavingBatchSeconds < currentEpoch()
     return enoughMessages || timeLimitExpired;
+  }
+
+  private async flushMessagesToStorage(): Promise<TopicPartitionOffsetAndMetadata[]> {
+    this.logger.info(` - Saving ${this.jsonMessages.length} messages to S3`);
+    const savedFiles = await this.msgSaver.saveMessages( this.s3destinationBaseUrl, this.jsonMessages );
+    this.logger.info(`   Saved Files: ${JSON.stringify(savedFiles)}`);
+    this.logger.info(`   Commit offsets: ${JSON.stringify( this.lastOffsetsToCommit)}`);
+    const offsetsToBeCommitted = this.offsetsMapToOffsetsArray( this.lastOffsetsToCommit );
+    this.initMessages();
+    return offsetsToBeCommitted;
   }
 
   private decodedMessageToJson( decodedMessage: ConsumerOffsetMsg ) {
