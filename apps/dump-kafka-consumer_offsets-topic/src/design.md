@@ -1,7 +1,8 @@
-# ``aws-s3-indexer`` package design
+# ``dump-kafka-consumer_offsets-topic`` application design
 
-This package has to persist messages to a persistent storage. Actually only S3 bucket 
-is supported.
+This document describes the overall application design, including configuration,
+message handling, and the application entrypoint. Persisted storage is supported
+through S3 buckets.
 
 ## Class diagram
 ```mermaid
