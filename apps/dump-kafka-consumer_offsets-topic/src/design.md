@@ -16,7 +16,7 @@ classDiagram
         +readonly awsRegion string
         +readonly consumerGroupName string
         +readonly s3SavingBatchSize number // min:1 ; max: 1000 * 1000
-        +readonly s3SavingBatchSeconds number // min:1  ; max:3600
+        +readonly s3SavingBatchSeconds number // min:60 ; max:3600
     }
 
     class ConsumerOffsetMessageHandler {
