@@ -16,7 +16,7 @@ vpn_vpc_id          = null
 vpc_cidr    = "10.0.0.0/16"
 subnet_cidr = "10.0.1.0/24"
 
-# If false, create the vpn endpoint without subnet associations.
+# If false, create the mutual-cert endpoint without subnet associations.
 create_network_associations = true
 
 vpn_client_cidr = "10.100.0.0/22"

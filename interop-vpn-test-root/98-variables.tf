@@ -73,9 +73,14 @@ variable "subnet_ids" {
 }
 
 variable "create_network_associations" {
-  description = "Create subnet associations for the VPN endpoint."
+  description = "Create subnet associations for the VPN endpoint in mutual-cert mode."
   type        = bool
   default     = true
+
+  validation {
+    condition     = var.vpn_type == "mutual-cert" || var.create_network_associations
+    error_message = "create_network_associations can be set to false only when vpn_type is 'mutual-cert'."
+  }
 }
 
 variable "saml_metadata_xml" {
