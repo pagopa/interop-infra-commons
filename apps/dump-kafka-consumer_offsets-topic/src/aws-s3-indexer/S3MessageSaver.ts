@@ -24,14 +24,13 @@ export class S3MessageSaver implements IMessageSaver {
         const groupedMessages = new Map<string, string[]>();
 
         for (const msg of messages) {
-            // Parse the string into an integer representing epoch seconds
+            // Parse the string into an integer representing epoch milliseconds
             const epochMilliseconds = parseInt(msg.ts, 10);
             
             if (isNaN(epochMilliseconds)) {
                 throw new Error(`Invalid epoch milliseconds timestamp provided: ${msg.ts}`);
             }
 
-            // JavaScript Date requires milliseconds, so multiply by 1000
             const date = new Date(epochMilliseconds);
 
             const yyyy = date.getUTCFullYear();

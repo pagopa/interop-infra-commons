@@ -3,7 +3,7 @@ import { Logger } from "pino";
 import { Batch, EachBatchPayload, KafkaMessage, TopicPartitionOffsetAndMetadata } from "@confluentinc/kafka-javascript/types/kafkajs";
 import { S3MessageSaver } from "./aws-s3-indexer/S3MessageSaver";
 import { IMessageSaver, MessageEntry } from "./aws-s3-indexer/types";
-import { ConsumerOffsetMsg, IConsumerOffsetMsgDecoder, OffsetCommitMsgKey } from "./msg-decoder/data-structures";
+import { ConsumerOffsetMsg, ConsumerOffsetMsgKind, IConsumerOffsetMsgDecoder, OffsetCommitMsgKey } from "./msg-decoder/data-structures";
 import { ConsumerOffsetMsgDecodersFactory } from "./msg-decoder/decoders";
 import { ConsumersOffsetsDumperConfig } from "./Config";
 
@@ -116,7 +116,7 @@ export class ConsumerOffsetMessageHandler {
   }
 
   private isInternalTopicCommitMessage( decodedMessage: ConsumerOffsetMsg ) {
-    let isInternalOffsetCommit = ( decodedMessage.kind === "OFFSET_COMMIT" );
+    let isInternalOffsetCommit = ( decodedMessage.kind === ConsumerOffsetMsgKind.OFFSET_COMMIT );
     if( isInternalOffsetCommit ) {
       if( 'topic' in decodedMessage.key ) {
         const decodedMessageKey: OffsetCommitMsgKey = decodedMessage.key as OffsetCommitMsgKey;
