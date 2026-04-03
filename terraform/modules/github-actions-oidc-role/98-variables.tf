@@ -15,7 +15,7 @@ variable "conditions" {
     variable = string
     values   = list(string)
   }))
-  description = "Conditions for the assume role policy (e.g. sub claim). The iss and aud conditions are added automatically."
+  description = "Conditions for the assume role policy (e.g. sub claim). The aud condition is added automatically."
 }
 
 variable "ecr_push_repositories" {
