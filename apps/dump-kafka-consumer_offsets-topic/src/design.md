@@ -47,13 +47,17 @@ classDiagram
 sequenceDiagram
     participant Caller as Kafka Consumer (Caller)
     participant Handler as ConsumerOffsetMessageHandler
+    participant Decoder as IConsumerOffsetMsgDecoder
     participant Saver as IMessageSaver
 
     Caller->>+Handler: handleBatch(params)
     
     loop For each message in batch.messages
-        Handler->>Handler: handleOneMessage(batch, message)
+        Handler->>+Handler: handleOneMessage(batch, message)
+        Handler->>+Decoder: decodeMsg( Batch batch, KafkaMessage msg )
+        Decoder->>-Handler: return decoded message
         Note over Handler: if committed offset topic is not __consumer_offsets then update list of readed offsets
+        Handler->>-Handler: handleOneMessage END
     end
 
     alt haveToFlush() is true
