@@ -3,8 +3,13 @@ import { Logger } from "pino";
 // src/AuthProvider.ts
 const { generateAuthToken } = require('aws-msk-iam-sasl-signer-js');
 
-// Change return type to Promise<string>
-export async function oauthBearerTokenProvider(logger: Logger, region: string): Promise<any> {
+interface TokenData {
+    tokenValue: string;
+    lifetime: number;
+}
+
+// Provides token data for the OAuth bearer token callback.
+export async function oauthBearerTokenProvider(logger: Logger, region: string): Promise<TokenData> {
     logger.info("Generating MSK IAM token for region: " + region);
     
     try {
