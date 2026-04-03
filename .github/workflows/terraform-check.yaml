@@ -69,7 +69,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix: ${{ fromJson(needs.discover-modules.outputs.matrix) }}
-      max-parallel: 1
+      max-parallel: 10
     defaults:
       run:
         working-directory: ${{ matrix.path }}
@@ -96,7 +96,8 @@ jobs:
             echo "::error::No required_version constraint found for module '${{ matrix.name }}'"
             exit 1
           else
-            echo "::notice::${{ matrix.name }} Constraint found: $constraint"            
+            echo "::notice::${{ matrix.name }} Constraint found: $constraint" 
+            # Trim whitespace and set output           
             echo "tf_version=$(echo "$constraint" | xargs)" >> "$GITHUB_OUTPUT"
           fi
 
