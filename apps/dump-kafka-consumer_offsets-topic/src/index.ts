@@ -43,7 +43,6 @@ async function runConsumer() {
     const stop = async () => {
         logger.info('Shutting down...');
         await consumer.disconnect();
-        process.exit(0);
     };
     process.on('SIGINT', stop);
     process.on('SIGTERM', stop);
