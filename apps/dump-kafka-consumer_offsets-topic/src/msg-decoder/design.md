@@ -4,7 +4,7 @@
 This package has to perform the task of transforming a class ```EachMessagePayload``` object
 into an object of class ```ConsumerOffsetMsg```.
 
-## Class diagram and 
+## Class diagram
 ```mermaid
 classDiagram
     direction LR
