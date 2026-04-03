@@ -11,7 +11,7 @@ classDiagram
 
     class IConsumerOffsetMsgDecoder {
         <<interface>>
-        +decodeMsg(EachMessagePayload msg) ConsumerOffsetMsg
+        +decodeMsg( Batch batch, KafkaMessage msg ) ConsumerOffsetMsg
     }
     IConsumerOffsetMsgDecoder .. RawConsumerOffsetTopicMsg: transform from
     IConsumerOffsetMsgDecoder .. ConsumerOffsetMsg: transform to
@@ -27,7 +27,7 @@ classDiagram
     class ConsumerOffsetMsgDecoder {
         -readonly decodersFactory ConsumerOffsetMsgDecodersFactory
 
-        +decodeMsg(EachMessagePayload msg) ConsumerOffsetMsg 
+        +decodeMsg( Batch batch, KafkaMessage msg ) ConsumerOffsetMsg 
         -inferMsgKind(EachMessagePayload msg) ConsumerOffsetMsgKind 
         -decodeBaseInformation(EachMessagePayload msg) ConsumerOffsetMsg
     }
