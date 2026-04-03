@@ -1,5 +1,5 @@
 {
-  "name": "msk-iam-client",
+  "name": "interop-infra-dump-kafka-consumer_offsets-topic",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
