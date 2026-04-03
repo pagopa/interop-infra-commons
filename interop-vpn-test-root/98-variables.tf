@@ -1,4 +1,3 @@
-
 variable "aws_region" {
   description = "AWS region"
   type        = string
@@ -12,8 +11,8 @@ variable "app_name" {
 }
 
 variable "env" {
-  type        = string
   description = "Environment name"
+  type        = string
 }
 
 variable "tags" {
@@ -22,40 +21,14 @@ variable "tags" {
   default     = {}
 }
 
-variable "name_prefix_override" {
-  description = "Override for the base resource name prefix."
-  type        = string
-  default     = null
-}
-
-variable "endpoint_name_prefix_override" {
-  description = "Override for the endpoint resource name prefix."
-  type        = string
-  default     = null
-}
-
-variable "enable_mutual_cert_vpn" {
-  description = "Create the mutual-cert VPN endpoint."
-  type        = bool
-  default     = true
-}
-
-variable "enable_saml_vpn" {
-  description = "Create the SAML VPN endpoint."
-  type        = bool
-  default     = false
-}
-
-variable "mutual_cert_vpn_type" {
-  description = "VPN type used by the mutual-cert module instance."
+variable "vpn_type" {
+  description = "VPN authentication mode."
   type        = string
   default     = "mutual-cert"
-}
-
-variable "saml_vpn_type" {
-  description = "VPN type used by the SAML module instance."
-  type        = string
-  default     = "saml"
+  validation {
+    condition     = contains(["mutual-cert", "saml"], var.vpn_type)
+    error_message = "vpn_type must be 'mutual-cert' or 'saml'."
+  }
 }
 
 variable "create_test_network" {
@@ -83,51 +56,74 @@ variable "subnet_cidr" {
 }
 
 variable "vpn_client_cidr" {
-  description = "Mutual-cert client CIDR"
+  description = "VPN client CIDR"
   type        = string
   default     = "10.100.0.0/22"
 }
 
-variable "vpn_saml_client_cidr" {
-  description = "SAML client CIDR"
-  type        = string
-  default     = "10.101.0.0/22"
-}
-
-variable "mutual_cert_subnet_ids" {
-  description = "Subnet IDs for the mutual-cert endpoint."
+variable "subnet_ids" {
+  description = "Subnet IDs for the VPN endpoint."
   type        = list(string)
   default     = []
+
+  validation {
+    condition     = !var.create_network_associations || var.create_test_network || length(var.subnet_ids) > 0
+    error_message = "subnet_ids must contain at least one subnet ID when create_test_network is false."
+  }
 }
 
-variable "saml_subnet_ids" {
-  description = "Subnet IDs for the SAML endpoint."
-  type        = list(string)
-  default     = []
-}
-
-variable "keycloak_realm" {
-  description = "Keycloak realm for SAML metadata fetch."
-  type        = string
-  default     = ""
+variable "create_network_associations" {
+  description = "Create subnet associations for the VPN endpoint."
+  type        = bool
+  default     = true
 }
 
 variable "saml_metadata_xml" {
   description = "Raw SAML metadata XML."
   type        = string
   default     = ""
+
+  validation {
+    condition = (
+      var.vpn_type != "saml" ||
+      !var.create_saml_provider ||
+      try(trimspace(var.saml_metadata_xml), "") != "" ||
+      var.saml_metadata_url != null
+    )
+    error_message = "When vpn_type is 'saml' and create_saml_provider is true, provide saml_metadata_xml or saml_metadata_url."
+  }
+}
+
+variable "saml_metadata_url" {
+  description = "URL used to fetch SAML metadata XML when saml_metadata_xml is empty."
+  type        = string
+  default     = null
 }
 
 variable "create_saml_provider" {
   description = "Create the IAM SAML provider."
   type        = bool
   default     = true
+
+  validation {
+    condition     = var.vpn_type == "saml" || var.create_saml_provider
+    error_message = "create_saml_provider can be set to false only when vpn_type is 'saml'."
+  }
 }
 
-variable "external_saml_provider_arn" {
-  description = "Existing IAM SAML provider ARN."
+variable "existing_saml_provider_arn" {
+  description = "ARN of an existing IAM SAML provider."
   type        = string
   default     = null
+
+  validation {
+    condition = (
+      var.vpn_type != "saml" ||
+      var.create_saml_provider ||
+      var.existing_saml_provider_arn != null
+    )
+    error_message = "existing_saml_provider_arn must be provided when vpn_type is 'saml' and create_saml_provider is false."
+  }
 }
 
 variable "dns_servers" {
@@ -179,7 +175,13 @@ variable "external_security_group_ids" {
 }
 
 variable "security_group_name" {
-  description = "Override for the security group name."
+  description = "Security group name."
+  type        = string
+  default     = null
+}
+
+variable "security_group_tag_name" {
+  description = "Name tag value for the security group."
   type        = string
   default     = null
 }
@@ -215,7 +217,13 @@ variable "external_log_group_name" {
 }
 
 variable "log_group_name" {
-  description = "Override for the log group name."
+  description = "CloudWatch log group name."
+  type        = string
+  default     = null
+}
+
+variable "log_group_tag_name" {
+  description = "Name tag value for the CloudWatch log group."
   type        = string
   default     = null
 }
@@ -232,105 +240,33 @@ variable "self_service_portal" {
   default     = "disabled"
 }
 
-variable "cert_validity_hours" {
-  description = "Certificate validity in hours."
-  type        = number
-  default     = 8760
+variable "server_certificate_arn" {
+  description = "ACM server certificate ARN."
+  type        = string
+  nullable    = false
 }
 
-variable "admin_key_version" {
-  description = "Admin key write-only version."
-  type        = number
-  default     = 1
-}
-
-variable "admin_cert_version" {
-  description = "Admin cert write-only version."
-  type        = number
-  default     = 1
-}
-
-variable "external_server_certificate_arn" {
-  description = "Existing ACM server certificate ARN."
+variable "client_ca_certificate_arn" {
+  description = "ACM client CA certificate ARN."
   type        = string
   default     = null
-}
 
-variable "external_client_ca_certificate_arn" {
-  description = "Existing ACM client CA certificate ARN."
-  type        = string
-  default     = null
-}
-
-variable "external_client_ca_cert_pem" {
-  description = "External client CA certificate PEM used to locally sign admin client certificates."
-  type        = string
-  default     = null
-}
-
-variable "external_client_ca_private_key_pem" {
-  description = "External client CA private key PEM used to locally sign admin client certificates."
-  type        = string
-  default     = null
-  sensitive   = true
-}
-
-variable "external_client_admin_key_secret_arn" {
-  description = "ARN of an existing Secrets Manager secret containing the client admin private key PEM."
-  type        = string
-  default     = null
-}
-
-variable "external_server_key_secret_arn" {
-  description = "ARN of an existing Secrets Manager secret containing the server private key PEM."
-  type        = string
-  default     = null
-}
-
-variable "create_secrets" {
-  description = "Create Secrets Manager secrets."
-  type        = bool
-  default     = true
-}
-
-variable "secret_recovery_window_days" {
-  description = "Recovery window in days for Secrets Manager secrets on deletion. Use 0 for immediate deletion in test environments."
-  type        = number
-  default     = 0
-}
-
-variable "secret_name_prefix" {
-  description = "Secrets Manager name prefix."
-  type        = string
-  default     = null
-}
-
-variable "server_ca_common_name" {
-  description = "Server CA certificate common name."
-  type        = string
-  default     = null
-}
-
-variable "server_common_name" {
-  description = "Server certificate common name."
-  type        = string
-  default     = null
-}
-
-variable "client_ca_common_name" {
-  description = "Client CA certificate common name."
-  type        = string
-  default     = null
-}
-
-variable "client_admin_common_name" {
-  description = "Admin client certificate common name."
-  type        = string
-  default     = null
+  validation {
+    condition = (
+      var.vpn_type == "mutual-cert" ? var.client_ca_certificate_arn != null : var.client_ca_certificate_arn == null
+    )
+    error_message = "client_ca_certificate_arn must be provided only for vpn_type = 'mutual-cert'."
+  }
 }
 
 variable "endpoint_description" {
-  description = "Override for the VPN endpoint description."
+  description = "VPN endpoint description."
+  type        = string
+  default     = null
+}
+
+variable "vpn_endpoint_tag_name" {
+  description = "Name tag value for the VPN endpoint."
   type        = string
   default     = null
 }
@@ -341,26 +277,26 @@ variable "authorization_target_network_cidr" {
   default     = null
 }
 
-variable "mutual_cert_authorization_rule_description" {
-  description = "Description for the mutual-cert authorization rule."
-  type        = string
-  default     = "Allow all cert-authenticated clients to access VPC"
-}
-
-variable "saml_authorization_rule_description" {
-  description = "Description for the SAML authorization rule."
+variable "authorization_rule_description" {
+  description = "Description for the authorization rule created for the selected vpn_type."
   type        = string
   default     = null
 }
 
 variable "saml_provider_name" {
-  description = "Override for the IAM SAML provider name."
+  description = "IAM SAML provider name."
+  type        = string
+  default     = null
+}
+
+variable "saml_provider_tag_name" {
+  description = "Name tag value for the IAM SAML provider."
   type        = string
   default     = null
 }
 
 variable "saml_group" {
-  description = "Allowed SAML group."
+  description = "SAML group ID allowed through the VPN."
   type        = string
   default     = ""
 }
