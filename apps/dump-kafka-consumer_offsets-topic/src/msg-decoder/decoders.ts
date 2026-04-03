@@ -259,13 +259,15 @@ export class ConsumerOffsetMsgDecoder implements IConsumerOffsetMsgDecoder {
     }
 
     const version = msg.key.readInt16BE(0);
-    
-    if (version === 0 || version === 1) {
-      return ConsumerOffsetMsgKind.OFFSET_COMMIT;
-    } else if (version === 2) {
-      return ConsumerOffsetMsgKind.GROUP_METADATA;
+    if( version > 4 ) {
+      return ConsumerOffsetMsgKind.UNKNOWN;
     }
 
-    return ConsumerOffsetMsgKind.UNKNOWN;
+    const groupName = readKafkaString(msg.key, 2);
+    if( groupName.nextOffset < msg.key.length ) {
+      return ConsumerOffsetMsgKind.OFFSET_COMMIT;
+    } else {
+      return ConsumerOffsetMsgKind.GROUP_METADATA;
+    }
   }
 }
