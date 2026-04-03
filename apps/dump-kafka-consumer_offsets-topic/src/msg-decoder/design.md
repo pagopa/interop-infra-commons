@@ -1,8 +1,8 @@
 
 # ```msg-decoder``` package design
 
-This package has to perform the task of transforming a class ```EachMessagePayload``` object
-into an object of class ```ConsumerOffsetMsg```.
+This package has to perform the task of transforming a ```KafkaMessage```, together
+with its containing ```Batch```, into an object of class ```ConsumerOffsetMsg```.
 
 ## Class diagram
 ```mermaid
