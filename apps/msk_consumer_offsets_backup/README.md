@@ -18,6 +18,9 @@ The container is configured with the following __environment variables__:
    persistent storage (currently S3) and commit kafka consumer group offsets.
  - __SAVING_BATCH_SECONDS__: maximum number of seconds between two persistent storage (currently S3) 
    saving and kafka consumer group offsets.
+ - __TOPIC_STARTING_OFFSET__: The offset where to start to read ``__consumer_offsets`` topic; it can 
+   be `earliest` or `latest`. Used only if the consumer group ``CONSUMER_GROUP_NAME`` is not 
+   already present in the msk cluster. The default is `earliest`.
  
  # Implementation
  Read [design.md file](./src/design.md)
