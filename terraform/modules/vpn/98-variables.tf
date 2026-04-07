@@ -190,7 +190,7 @@ variable "security_group_tag_name" {
 variable "security_group_description" {
   description = "Security group description."
   type        = string
-  default     = null
+  default     = "Security group for Client VPN endpoint"
 }
 
 variable "egress_ipv4_cidr" {
@@ -202,7 +202,7 @@ variable "egress_ipv4_cidr" {
 variable "egress_rule_description" {
   description = "Description for the default egress rule."
   type        = string
-  default     = null
+  default     = "Allow all outbound traffic"
 }
 
 variable "create_log_group" {

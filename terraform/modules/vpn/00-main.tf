@@ -25,22 +25,16 @@ locals {
   security_group_ids = var.create_security_group ? [aws_security_group.vpn[0].id] : var.external_security_group_ids
   log_group_name     = var.connection_log_enabled ? (var.create_log_group ? one(aws_cloudwatch_log_group.vpn[*].name) : var.external_log_group_name) : null
 
-  resolved_endpoint_description          = var.endpoint_description != null ? var.endpoint_description : "${var.vpn_type} auth"
-  resolved_security_group_name           = var.security_group_name != null ? var.security_group_name : "${local.endpoint_base_name}-vpn"
-  resolved_security_group_tag_name       = var.security_group_tag_name != null ? var.security_group_tag_name : "${local.endpoint_base_name}-vpn-sg"
-  resolved_security_group_description    = var.security_group_description != null ? var.security_group_description : "Security group for Client VPN endpoint"
-  resolved_log_group_name                = var.log_group_name != null ? var.log_group_name : "/aws/vpn/${local.endpoint_base_name}"
-  resolved_log_group_tag_name            = var.log_group_tag_name != null ? var.log_group_tag_name : "${local.endpoint_base_name}-vpn-logs"
-  resolved_endpoint_tag_name             = var.vpn_endpoint_tag_name != null ? var.vpn_endpoint_tag_name : "${local.endpoint_base_name}-vpn-endpoint"
-  resolved_saml_provider_name            = var.saml_provider_name != null ? var.saml_provider_name : "${local.base_name}-saml-provider"
-  resolved_saml_provider_tag_name        = var.saml_provider_tag_name != null ? var.saml_provider_tag_name : "${local.base_name}-saml-provider"
-  resolved_egress_rule_description       = var.egress_rule_description != null ? var.egress_rule_description : "Allow all outbound traffic"
-  resolved_authorization_rule_description = var.authorization_rule_description != null ? var.authorization_rule_description : (
-    local.is_mutual_cert ? "Allow all cert-authenticated clients to access VPC" : (
-      var.saml_group != "" ? "Allow ${var.saml_group} SAML group to access VPC" : "Allow all SAML-authenticated clients to access VPC"
-    )
-  )
-  authorization_target_network_cidr      = var.authorization_target_network_cidr != null ? var.authorization_target_network_cidr : var.vpc_cidr
+  endpoint_desc    = coalesce(var.endpoint_description, "${var.vpn_type} auth")
+  sg_name          = coalesce(var.security_group_name, "${local.endpoint_base_name}-vpn")
+  sg_tag_name      = coalesce(var.security_group_tag_name, "${local.endpoint_base_name}-vpn-sg")
+  cw_name          = coalesce(var.log_group_name, "/aws/vpn/${local.endpoint_base_name}")
+  cw_tag_name      = coalesce(var.log_group_tag_name, "${local.endpoint_base_name}-vpn-logs")
+  endpoint_tag     = coalesce(var.vpn_endpoint_tag_name, "${local.endpoint_base_name}-vpn-endpoint")
+  saml_name        = coalesce(var.saml_provider_name, "${local.base_name}-saml-provider")
+  saml_tag_name    = coalesce(var.saml_provider_tag_name, "${local.base_name}-saml-provider")
+  authz_desc       = coalesce(var.authorization_rule_description, local.is_mutual_cert ? "Allow all cert-authenticated clients to access VPC" : (var.saml_group != "" ? "Allow ${var.saml_group} SAML group to access VPC" : "Allow all SAML-authenticated clients to access VPC"))
+  authz_cidr       = coalesce(var.authorization_target_network_cidr, var.vpc_cidr)
 }
 
 check "saml_metadata_xml_required" {

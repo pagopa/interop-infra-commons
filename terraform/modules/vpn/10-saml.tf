@@ -9,7 +9,7 @@ locals {
 
 resource "aws_iam_saml_provider" "idp" {
   count                  = local.is_saml && var.create_saml_provider ? 1 : 0
-  name                   = local.resolved_saml_provider_name
+  name                   = local.saml_name
   saml_metadata_document = local.saml_metadata
-  tags                   = merge(var.tags, { Name = local.resolved_saml_provider_tag_name })
+  tags                   = merge(var.tags, { Name = local.saml_tag_name })
 }
