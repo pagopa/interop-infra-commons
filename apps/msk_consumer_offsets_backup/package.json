@@ -1,5 +1,5 @@
 {
-  "name": "interop-infra-dump-kafka-consumer_offsets-topic",
+  "name": "msk_consumer_offsets_backup",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",

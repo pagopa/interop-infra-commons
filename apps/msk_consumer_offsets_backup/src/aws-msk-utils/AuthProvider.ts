@@ -20,7 +20,7 @@ export async function oauthBearerTokenProvider(logger: Logger, region: string): 
         logger.debug(`Token fetched from AWS expires at ${lifetime}`,);
         return { tokenValue, lifetime };
     } catch (err) {
-        logger.error("Errore generazione token IAM:" + (err as Error)?.message + "\n" + (err as Error)?.stack );
+        logger.error("Error generating token IAM:" + (err as Error)?.message + "\n" + (err as Error)?.stack );
         throw err;
     }
 }

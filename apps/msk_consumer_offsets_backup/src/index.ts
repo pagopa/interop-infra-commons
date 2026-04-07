@@ -13,7 +13,7 @@ const logger: Logger = pino();
 async function runConsumer() {
 
   try {
-    logger.info(`- BootstrapServers: ${config.kafkaBootstrapServers}`); 
+    logger.info(`- CONFIGS: ${JSON.stringify( config, null, 2)}`); 
 
     logger.info(`--- Starting kafka cluster connection, ...`);
     const kafka = new KafkaJS.Kafka({
@@ -25,9 +25,9 @@ async function runConsumer() {
       //'broker.address.family': 'v4',
       //'debug': 'broker,security,protocol',
       'oauthbearer_token_refresh_cb': async (args: any) => {
-        logger.debug("Richiesto nuovo token IAM...");
+        logger.debug("New IAM token request ...");
         const tokenData = await oauthBearerTokenProvider(logger, config.awsRegion);
-        logger.debug("Token IAM generato con successo.");
+        logger.debug("IAM Token  generated successfully.");
         return tokenData;
       }
     });
@@ -36,7 +36,7 @@ async function runConsumer() {
     const consumer = kafka.consumer({
       'group.id': config.consumerGroupName,
       'enable.auto.commit': false,
-      'auto.offset.reset': 'earliest'
+      'auto.offset.reset': config.topicStartingOffset
     });
 
     logger.info(`  ... configure shutdown hook, ...`);
