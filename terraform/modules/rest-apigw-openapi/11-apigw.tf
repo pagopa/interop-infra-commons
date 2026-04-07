@@ -34,7 +34,7 @@ resource "aws_api_gateway_rest_api" "this" {
 
   body               = var.openapi_s3_bucket_name != null && var.openapi_s3_object_key != null ? aws_s3_object.openapi[0].content : data.external.openapi_integration.result.integrated_openapi_yaml
   put_rest_api_mode  = "overwrite"
-  binary_media_types = ["multipart/form-data"]
+  binary_media_types = toset(var.binary_media_types)
 
   disable_execute_api_endpoint = var.disable_execute_api_endpoint
 
@@ -44,22 +44,28 @@ resource "aws_api_gateway_rest_api" "this" {
 }
 
 resource "aws_api_gateway_deployment" "this" {
+  depends_on = [aws_api_gateway_rest_api.this, aws_api_gateway_gateway_response.missing_auth_token_404_problem]
+
   rest_api_id = aws_api_gateway_rest_api.this.id
 
   triggers = {
-    redeployment = sha1(jsonencode([
+    redeployment = sha1(jsonencode(compact([
       aws_api_gateway_rest_api.this.body,
       var.vpc_link_id,
       var.domain_name,
-      var.service_prefix
-    ]))
+      var.service_prefix,
+      # TODO: uncomment when a redeploy on auth-server is allowed
+      # "${var.remap_missing_auth_token_to_404_problem}",
+      # try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_type, null),
+      # try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].status_code, null),
+      # try(jsonencode(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_templates), null)
+    ])))
   }
 
   lifecycle {
     create_before_destroy = true
   }
 }
-
 
 resource "aws_api_gateway_stage" "env" {
   deployment_id = aws_api_gateway_deployment.this.id
@@ -122,4 +128,29 @@ resource "aws_wafv2_web_acl_association" "this" {
 
   resource_arn = aws_api_gateway_stage.env.arn
   web_acl_arn  = var.web_acl_arn
+}
+
+resource "aws_api_gateway_gateway_response" "missing_auth_token_404_problem" {
+  count = var.remap_missing_auth_token_to_404_problem ? 1 : 0
+
+  rest_api_id = aws_api_gateway_rest_api.this.id
+
+  response_type = "MISSING_AUTHENTICATION_TOKEN"
+  status_code   = "404"
+
+  response_templates = {
+    "application/json" = jsonencode({
+      "type"          = "about:blank"
+      "title"         = "Not found"
+      "status"        = 404
+      "detail"        = "Path not found"
+      "correlationId" = "$context.extendedRequestId"
+      "errors" = [
+        {
+          "code"   = "000-9999"
+          "detail" = "Path not found"
+        }
+      ]
+    })
+  }
 }

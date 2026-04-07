@@ -50,7 +50,9 @@ def integrate_path(path_uri, path_data, api_version, use_service_prefix):
             parameters = path_data[method]["parameters"]
             path_params = list(set(path_params + [param.get("name") for param in parameters if param.get("in") == "path"]))
 
-        path_data[method]["x-amazon-apigateway-integration"] = generate_apigw_integration(path_uri, path_params, api_version, use_service_prefix)
+        # skip script integration if already present
+        if "x-amazon-apigateway-integration" not in path_data[method]:
+            path_data[method]["x-amazon-apigateway-integration"] = generate_apigw_integration(path_uri, path_params, api_version, use_service_prefix)
 
     return path_data
 
@@ -66,10 +68,10 @@ def integrate_openapi(openapi, api_version, use_service_prefix):
 
 def maintenance_integration(maintenance_openapi_path):
     integrated_openapi = ''
-    
+
     with open(maintenance_openapi_path, mode="r", encoding="utf-8") as f:
-        integrated_openapi = yaml.load(f, Loader=yaml.FullLoader)  
-    
+        integrated_openapi = yaml.load(f, Loader=yaml.FullLoader)
+
     return integrated_openapi
 
 def default_integration(input_file, type, api_version, use_service_prefix, swagger_file, openapi):
@@ -102,7 +104,7 @@ def default_integration(input_file, type, api_version, use_service_prefix, swagg
             swagger_paths = copy.deepcopy(swagger_openapi.get("paths", {}))
             #Append the content of the swagger_paths to the bottom of the paths object into the integrated_openapi variable
             integrated_openapi['paths'].update(swagger_paths)
-    
+
     return integrated_openapi
 
 
