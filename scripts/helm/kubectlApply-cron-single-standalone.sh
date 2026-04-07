@@ -169,8 +169,9 @@ fi
 HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-cron-single.sh"
 APPLY_CMD="kubectl apply --show-managed-fields=false -f -"
 
-"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS | $APPLY_CMD
 
 if [[ "$argocd_plugin" == "true" ]]; then
-  restoreOutput
+  restoreOutput --force
 fi
+
+"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS | $APPLY_CMD
