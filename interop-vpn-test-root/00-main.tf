@@ -37,9 +37,9 @@ data "http" "saml_metadata" {
 locals {
   is_saml = var.vpn_type == "saml"
 
-  resolved_vpc_id     = var.create_test_network ? aws_vpc.main[0].id : var.vpn_vpc_id
+  resolved_vpc_id     = var.create_networking_resources ? aws_vpc.main[0].id : var.vpn_vpc_id
   endpoint_subnet_ids = !var.create_network_associations ? [] : (
-    length(var.subnet_ids) > 0 ? var.subnet_ids : (var.create_test_network ? [aws_subnet.main[0].id] : [])
+    length(var.subnet_ids) > 0 ? var.subnet_ids : (var.create_networking_resources ? [aws_subnet.main[0].id] : [])
   )
 
   saml_metadata_xml = var.saml_metadata_xml != "" ? var.saml_metadata_xml : (
@@ -49,7 +49,7 @@ locals {
 
 check "external_vpc_id_required" {
   assert {
-    condition     = var.create_test_network || var.vpn_vpc_id != null
-    error_message = "vpn_vpc_id must be provided when create_test_network is false."
+    condition     = var.create_networking_resources || var.vpn_vpc_id != null
+    error_message = "vpn_vpc_id must be provided when create_networking_resources is false."
   }
 }

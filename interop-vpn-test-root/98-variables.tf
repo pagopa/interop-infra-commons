@@ -31,14 +31,14 @@ variable "vpn_type" {
   }
 }
 
-variable "create_test_network" {
-  description = "Create the test VPC/subnet/IGW/route table in this root."
+variable "create_networking_resources" {
+  description = "If true, creates VPC/subnet/IGW/route table in this root. Set to false to use an existing VPC."
   type        = bool
   default     = true
 }
 
 variable "vpn_vpc_id" {
-  description = "Existing VPC ID to use when create_test_network is false."
+  description = "Existing VPC ID to use when create_networking_resources is false."
   type        = string
   default     = null
 }
@@ -67,8 +67,8 @@ variable "subnet_ids" {
   default     = []
 
   validation {
-    condition     = !var.create_network_associations || var.create_test_network || length(var.subnet_ids) > 0
-    error_message = "subnet_ids must contain at least one subnet ID when create_test_network is false."
+    condition     = !var.create_network_associations || var.create_networking_resources || length(var.subnet_ids) > 0
+    error_message = "subnet_ids must contain at least one subnet ID when create_networking_resources is false."
   }
 }
 

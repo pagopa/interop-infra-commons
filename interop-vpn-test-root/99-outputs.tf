@@ -5,7 +5,7 @@ output "vpc_id" {
 
 output "subnet_id" {
   description = "ID della subnet di test creata dal root, se presente"
-  value       = var.create_test_network ? aws_subnet.main[0].id : null
+  value       = var.create_networking_resources ? aws_subnet.main[0].id : null
 }
 
 output "endpoint_id" {

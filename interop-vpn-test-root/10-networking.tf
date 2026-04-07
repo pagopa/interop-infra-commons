@@ -1,6 +1,6 @@
 
 resource "aws_vpc" "main" {
-  count = var.create_test_network ? 1 : 0
+  count = var.create_networking_resources ? 1 : 0
 
   cidr_block           = var.vpc_cidr
   enable_dns_hostnames = true
@@ -9,7 +9,7 @@ resource "aws_vpc" "main" {
 }
 
 resource "aws_subnet" "main" {
-  count = var.create_test_network ? 1 : 0
+  count = var.create_networking_resources ? 1 : 0
 
   vpc_id                  = aws_vpc.main[0].id
   cidr_block              = var.subnet_cidr
@@ -19,14 +19,14 @@ resource "aws_subnet" "main" {
 }
 
 resource "aws_internet_gateway" "main" {
-  count = var.create_test_network ? 1 : 0
+  count = var.create_networking_resources ? 1 : 0
 
   vpc_id = aws_vpc.main[0].id
   tags   = { Name = format("%s-%s-igw", var.app_name, var.env) }
 }
 
 resource "aws_route_table" "main" {
-  count = var.create_test_network ? 1 : 0
+  count = var.create_networking_resources ? 1 : 0
 
   vpc_id = aws_vpc.main[0].id
   route {
@@ -37,7 +37,7 @@ resource "aws_route_table" "main" {
 }
 
 resource "aws_route_table_association" "main" {
-  count = var.create_test_network ? 1 : 0
+  count = var.create_networking_resources ? 1 : 0
 
   subnet_id      = aws_subnet.main[0].id
   route_table_id = aws_route_table.main[0].id

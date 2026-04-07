@@ -1,4 +1,5 @@
 module "vpn" {
+  # source = "git::https://github.com/pagopa/interop-infra-commons.git//terraform/modules/vpn?ref=<branch-or-tag>"
   source = "../terraform/modules/vpn"
 
   app_name = var.app_name
