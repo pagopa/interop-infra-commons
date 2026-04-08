@@ -1,15 +1,15 @@
 resource "aws_cloudwatch_metric_alarm" "apigw_5xx" {
   count = var.create_cloudwatch_alarm ? 1 : 0
 
-  alarm_name        = format("%s-apigw-5xx", local.rest_apigw_name)
-  alarm_description = format("%s 5xx errors", local.rest_apigw_name)
+  alarm_name        = format("%s-apigw-5xx", var.rest_apigw_name)
+  alarm_description = format("%s 5xx errors", var.rest_apigw_name)
 
   alarm_actions = var.maintenance_mode ? [] : [var.sns_topic_arn]
 
   metric_name = "5XXError"
   namespace   = "AWS/ApiGateway"
   dimensions = {
-    ApiName = local.rest_apigw_name
+    ApiName = var.rest_apigw_name
   }
 
   comparison_operator = "GreaterThanOrEqualToThreshold"
@@ -25,8 +25,8 @@ resource "aws_cloudwatch_metric_alarm" "apigw_5xx" {
 resource "aws_cloudwatch_metric_alarm" "apigw_4xx" {
   count = var.create_cloudwatch_alarm_4xx ? 1 : 0
 
-  alarm_name        = format("%s-apigw-4xx", local.rest_apigw_name)
-  alarm_description = format("%s 4xx errors", local.rest_apigw_name)
+  alarm_name        = format("%s-apigw-4xx", var.rest_apigw_name)
+  alarm_description = format("%s 4xx errors", var.rest_apigw_name)
 
   alarm_actions = var.maintenance_mode ? [] : [var.sns_topic_arn]
 
@@ -56,7 +56,7 @@ resource "aws_cloudwatch_metric_alarm" "apigw_4xx" {
       namespace   = "AWS/ApiGateway"
 
       dimensions = {
-        ApiName = local.rest_apigw_name
+        ApiName = var.rest_apigw_name
       }
     }
   }
@@ -73,7 +73,7 @@ resource "aws_cloudwatch_metric_alarm" "apigw_4xx" {
       namespace   = "AWS/ApiGateway"
 
       dimensions = {
-        ApiName = local.rest_apigw_name
+        ApiName = var.rest_apigw_name
       }
     }
   }
@@ -82,8 +82,8 @@ resource "aws_cloudwatch_metric_alarm" "apigw_4xx" {
 resource "aws_cloudwatch_metric_alarm" "apigw_4xx_low_requests" {
   count = var.additional_4xx_alarm_config != null ? 1 : 0
 
-  alarm_name        = format("%s-apigw-4xx-low-requests", local.rest_apigw_name)
-  alarm_description = format("%s 4xx errors low requests", local.rest_apigw_name)
+  alarm_name        = format("%s-apigw-4xx-low-requests", var.rest_apigw_name)
+  alarm_description = format("%s 4xx errors low requests", var.rest_apigw_name)
 
   alarm_actions = var.maintenance_mode ? [] : [var.sns_topic_arn]
 
@@ -113,7 +113,7 @@ resource "aws_cloudwatch_metric_alarm" "apigw_4xx_low_requests" {
       namespace   = "AWS/ApiGateway"
 
       dimensions = {
-        ApiName = local.rest_apigw_name
+        ApiName = var.rest_apigw_name
       }
     }
   }
@@ -130,7 +130,7 @@ resource "aws_cloudwatch_metric_alarm" "apigw_4xx_low_requests" {
       namespace   = "AWS/ApiGateway"
 
       dimensions = {
-        ApiName = local.rest_apigw_name
+        ApiName = var.rest_apigw_name
       }
     }
   }
@@ -139,9 +139,39 @@ resource "aws_cloudwatch_metric_alarm" "apigw_4xx_low_requests" {
 resource "aws_cloudwatch_dashboard" "this" {
   count = var.create_cloudwatch_dashboard ? 1 : 0
 
-  dashboard_name = replace(format("apigw-%s", local.rest_apigw_name), ".", "-")
+  dashboard_name = replace(format("apigw-%s", var.rest_apigw_name), ".", "-")
   dashboard_body = templatefile("${path.module}/apigw-dashboard.tpl.json", {
     Region    = data.aws_region.current.name
-    ApiGwName = local.rest_apigw_name
+    ApiGwName = var.rest_apigw_name
   })
+}
+
+resource "aws_cloudwatch_query_definition" "apigw_5xx" {
+  count = var.create_cloudwatch_queries && var.web_acl_arn != null && data.aws_cloudwatch_log_group.this.arn != null ? 1 : 0
+  
+  name = "APIGW-${title(var.rest_apigw_name)}-5xx"
+
+  log_group_names = [data.aws_cloudwatch_log_group.this.name]
+
+  query_string = <<-EOT
+    fields @timestamp, @message
+    | filter apigwId = "${aws_api_gateway_rest_api.this.id}"
+    | filter status like /5./
+    | sort @timestamp desc
+  EOT
+}
+
+resource "aws_cloudwatch_query_definition" "apigw_waf_block" {
+  count = var.create_cloudwatch_queries && var.web_acl_arn != null && data.aws_cloudwatch_log_group.this.arn != null ? 1 : 0
+
+  name = "APIGW-${title(var.rest_apigw_name)}-WAF-Block"
+
+  log_group_names = [data.aws_cloudwatch_log_group.this.name]
+
+  query_string = <<-EOT
+    fields @timestamp, @message
+    | filter apigwId = "${aws_api_gateway_rest_api.this.id}"
+    | filter wafStatus != "200"
+    | sort @timestamp desc
+  EOT
 }
