@@ -88,3 +88,10 @@ check "client_ca_certificate_arn_constraints" {
     error_message = "client_ca_certificate_arn can be set only when vpn_type is 'mutual-cert'."
   }
 }
+
+check "network_association_requires_subnets" {
+  assert {
+    condition     = !var.create_network_associations || length(local.subnet_ids_by_index) > 0
+    error_message = "create_network_associations is true but subnet_ids is empty. Provide at least one subnet ID."
+  }
+}

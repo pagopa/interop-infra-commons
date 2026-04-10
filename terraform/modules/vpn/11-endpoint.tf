@@ -13,6 +13,7 @@ resource "aws_vpc_security_group_egress_rule" "vpn_all" {
   ip_protocol       = "-1"
   cidr_ipv4         = var.egress_ipv4_cidr
   description       = var.egress_rule_description
+  tags              = var.tags
 }
 
 resource "aws_cloudwatch_log_group" "vpn" {

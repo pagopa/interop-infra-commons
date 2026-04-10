@@ -68,7 +68,7 @@ variable "subnet_ids" {
 
   validation {
     condition     = !var.create_network_associations || var.create_networking_resources || length(var.subnet_ids) > 0
-    error_message = "subnet_ids must contain at least one subnet ID when create_networking_resources is false."
+    error_message = "subnet_ids must contain at least one subnet ID when create_network_associations is true and create_networking_resources is false."
   }
 }
 
