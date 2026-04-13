@@ -9,9 +9,9 @@ variable "env" {
 }
 
 variable "tags" {
-  type        = map(any)
+  type        = map(string)
   description = "Tags applied to all resources that support them"
   default = {
-    "CreatedBy" : "Terraform",
+    "CreatedBy" = "Terraform",
   }
 }

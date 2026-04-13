@@ -8,7 +8,7 @@ shift 2
 other=$@
 
 if [ -z "$action" ]; then
-  echo "Missed action: init, apply, plan"
+  echo "Missing action: init, apply, plan"
   exit 0
 fi
 
