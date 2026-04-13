@@ -9,12 +9,12 @@ other=$@
 
 if [ -z "$action" ]; then
   echo "Missing action: init, apply, plan"
-  exit 0
+  exit 1
 fi
 
 if [ -z "$env" ]; then
   echo "env should be: dev, uat or prod."
-  exit 0
+  exit 1
 fi
 
 function tf_summarize() {
