@@ -28,6 +28,7 @@ function tf_summarize() {
     tf-summarize ${other:+"$other"} "${plan_file}"
   else
     echo "tf-summarize binary not found"
+    rm "$plan_file"
     exit 1
   fi
 
