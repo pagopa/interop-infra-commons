@@ -21,14 +21,16 @@ variable "tags" {
   default     = {}
 }
 
-variable "vpn_type" {
-  description = "VPN authentication mode."
-  type        = string
-  default     = "mutual-cert"
-  validation {
-    condition     = contains(["mutual-cert", "saml"], var.vpn_type)
-    error_message = "vpn_type must be 'mutual-cert' or 'saml'."
-  }
+variable "create_mutual_cert_vpn" {
+  description = "Create the mutual-cert VPN endpoint."
+  type        = bool
+  default     = true
+}
+
+variable "create_saml_vpn" {
+  description = "Create the SAML VPN endpoint."
+  type        = bool
+  default     = false
 }
 
 variable "create_networking_resources" {
@@ -73,14 +75,9 @@ variable "subnet_ids" {
 }
 
 variable "create_network_associations" {
-  description = "Create subnet associations for the VPN endpoint in mutual-cert mode."
+  description = "Create subnet associations for the mutual-cert VPN endpoint."
   type        = bool
   default     = true
-
-  validation {
-    condition     = var.vpn_type == "mutual-cert" || var.create_network_associations
-    error_message = "create_network_associations can be set to false only when vpn_type is 'mutual-cert'."
-  }
 }
 
 variable "saml_metadata_xml" {
@@ -90,12 +87,12 @@ variable "saml_metadata_xml" {
 
   validation {
     condition = (
-      var.vpn_type != "saml" ||
+      !var.create_saml_vpn ||
       !var.create_saml_provider ||
       try(trimspace(var.saml_metadata_xml), "") != "" ||
       var.saml_metadata_url != null
     )
-    error_message = "When vpn_type is 'saml' and create_saml_provider is true, provide saml_metadata_xml or saml_metadata_url."
+    error_message = "When create_saml_vpn is true and create_saml_provider is true, provide saml_metadata_xml or saml_metadata_url."
   }
 }
 
@@ -109,11 +106,6 @@ variable "create_saml_provider" {
   description = "Create the IAM SAML provider."
   type        = bool
   default     = true
-
-  validation {
-    condition     = var.vpn_type == "saml" || var.create_saml_provider
-    error_message = "create_saml_provider can be set to false only when vpn_type is 'saml'."
-  }
 }
 
 variable "existing_saml_provider_arn" {
@@ -123,11 +115,11 @@ variable "existing_saml_provider_arn" {
 
   validation {
     condition = (
-      var.vpn_type != "saml" ||
+      !var.create_saml_vpn ||
       var.create_saml_provider ||
       var.existing_saml_provider_arn != null
     )
-    error_message = "existing_saml_provider_arn must be provided when vpn_type is 'saml' and create_saml_provider is false."
+    error_message = "existing_saml_provider_arn must be provided when create_saml_vpn is true and create_saml_provider is false."
   }
 }
 
@@ -252,26 +244,36 @@ variable "server_certificate_arn" {
 }
 
 variable "client_ca_certificate_arn" {
-  description = "ACM client CA certificate ARN."
+  description = "ACM client CA certificate ARN. Required when create_mutual_cert_vpn is true."
   type        = string
   default     = null
 
   validation {
-    condition = (
-      var.vpn_type == "mutual-cert" ? var.client_ca_certificate_arn != null : var.client_ca_certificate_arn == null
-    )
-    error_message = "client_ca_certificate_arn must be provided only for vpn_type = 'mutual-cert'."
+    condition     = !var.create_mutual_cert_vpn || var.client_ca_certificate_arn != null
+    error_message = "client_ca_certificate_arn must be provided when create_mutual_cert_vpn is true."
   }
 }
 
-variable "endpoint_description" {
-  description = "VPN endpoint description."
+variable "mutual_cert_endpoint_description" {
+  description = "Description for the mutual-cert VPN endpoint."
   type        = string
   default     = null
 }
 
-variable "vpn_endpoint_tag_name" {
-  description = "Name tag value for the VPN endpoint."
+variable "mutual_cert_endpoint_tag_name" {
+  description = "Name tag value for the mutual-cert VPN endpoint."
+  type        = string
+  default     = null
+}
+
+variable "saml_endpoint_description" {
+  description = "Description for the SAML VPN endpoint."
+  type        = string
+  default     = null
+}
+
+variable "saml_endpoint_tag_name" {
+  description = "Name tag value for the SAML VPN endpoint."
   type        = string
   default     = null
 }
@@ -282,8 +284,14 @@ variable "authorization_target_network_cidr" {
   default     = null
 }
 
-variable "authorization_rule_description" {
-  description = "Description for the authorization rule created for the selected vpn_type."
+variable "mutual_cert_authorization_rule_description" {
+  description = "Description for the mutual-cert authorization rule."
+  type        = string
+  default     = null
+}
+
+variable "saml_authorization_rule_description" {
+  description = "Description for the SAML authorization rule."
   type        = string
   default     = null
 }
