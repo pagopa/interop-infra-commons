@@ -1,0 +1,15 @@
+# Local .terraform directories
+**/.terraform/
+
+# .tfstate files
+*.tfstate
+*.tfstate.*
+
+# Crash log files
+crash.log
+
+# Ignore any .tfvars that are not the expected ones (backend.tfvars and terraform.tfvars)
+# used to handle environment specific variables and backend configuration
+*.tfvars
+!backend.tfvars
+!terraform.tfvars
