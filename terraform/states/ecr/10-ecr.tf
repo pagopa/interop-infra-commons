@@ -13,7 +13,7 @@ locals {
 resource "aws_ecr_repository" "app" {
   for_each = toset(concat(local.computed_repository_names, local.custom_repository_names))
 
-  image_tag_mutability = contains(["test", "prod"], var.env) ? "IMMUTABLE" : "MUTABLE"
+  image_tag_mutability = contains(["dev"], var.env) ? "MUTABLE" : "IMMUTABLE"
   name                 = each.key
 }
 
