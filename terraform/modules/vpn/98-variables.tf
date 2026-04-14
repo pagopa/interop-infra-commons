@@ -14,12 +14,20 @@ variable "tags" {
   default     = {}
 }
 
-variable "vpn_type" {
-  description = "VPN authentication mode: 'mutual-cert' or 'saml'"
-  type        = string
+variable "use_saml_auth" {
+  description = "Use SAML federated authentication."
+  type        = bool
+  default     = false
+}
+
+variable "use_mutual_auth" {
+  description = "Use mutual-cert (certificate-based) authentication."
+  type        = bool
+  default     = true
+
   validation {
-    condition     = contains(["mutual-cert", "saml"], var.vpn_type)
-    error_message = "vpn_type must be 'mutual-cert' or 'saml'."
+    condition     = var.use_saml_auth != var.use_mutual_auth
+    error_message = "Exactly one of use_saml_auth and use_mutual_auth must be true."
   }
 }
 
@@ -44,14 +52,9 @@ variable "subnet_ids" {
 }
 
 variable "create_network_associations" {
-  description = "Create subnet associations for the VPN endpoint in mutual-cert mode."
+  description = "Create subnet associations for the VPN endpoint."
   type        = bool
   default     = true
-
-  validation {
-    condition     = var.vpn_type == "mutual-cert" || var.create_network_associations
-    error_message = "create_network_associations can be set to false only when vpn_type is 'mutual-cert'."
-  }
 }
 
 variable "vpn_client_cidr" {
@@ -67,11 +70,11 @@ variable "saml_metadata_xml" {
 
   validation {
     condition = (
-      var.vpn_type != "saml" ||
+      !var.use_saml_auth ||
       !var.create_saml_provider ||
       try(trimspace(var.saml_metadata_xml), "") != ""
     )
-    error_message = "saml_metadata_xml must be provided when vpn_type is 'saml' and create_saml_provider is true."
+    error_message = "saml_metadata_xml must be provided when use_saml_auth is true and create_saml_provider is true."
   }
 }
 
@@ -87,8 +90,8 @@ variable "create_saml_provider" {
   default     = true
 
   validation {
-    condition     = var.vpn_type == "saml" || var.create_saml_provider
-    error_message = "create_saml_provider can be set to false only when vpn_type is 'saml'."
+    condition     = var.use_saml_auth || var.create_saml_provider
+    error_message = "create_saml_provider can be set to false only when use_saml_auth is true."
   }
 }
 
@@ -99,11 +102,11 @@ variable "existing_saml_provider_arn" {
 
   validation {
     condition = (
-      var.vpn_type != "saml" ||
+      !var.use_saml_auth ||
       var.create_saml_provider ||
       var.existing_saml_provider_arn != null
     )
-    error_message = "existing_saml_provider_arn must be provided when vpn_type is 'saml' and create_saml_provider is false."
+    error_message = "existing_saml_provider_arn must be provided when use_saml_auth is true and create_saml_provider is false."
   }
 }
 
@@ -242,9 +245,9 @@ variable "client_ca_certificate_arn" {
 
   validation {
     condition = (
-      var.vpn_type == "mutual-cert" ? var.client_ca_certificate_arn != null : var.client_ca_certificate_arn == null
+      var.use_mutual_auth ? var.client_ca_certificate_arn != null : var.client_ca_certificate_arn == null
     )
-    error_message = "client_ca_certificate_arn must be provided only for vpn_type = 'mutual-cert'."
+    error_message = "client_ca_certificate_arn must be provided when use_mutual_auth is true, and must be null when use_saml_auth is true."
   }
 }
 
@@ -267,7 +270,7 @@ variable "authorization_target_network_cidr" {
 }
 
 variable "authorization_rule_description" {
-  description = "Description for the authorization rule created for the selected vpn_type."
+  description = "Description for the authorization rule."
   type        = string
   default     = null
 }

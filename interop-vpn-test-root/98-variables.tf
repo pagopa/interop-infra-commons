@@ -21,16 +21,21 @@ variable "tags" {
   default     = {}
 }
 
-variable "create_mutual_cert_vpn" {
-  description = "Create the mutual-cert VPN endpoint."
-  type        = bool
-  default     = true
-}
-
-variable "create_saml_vpn" {
-  description = "Create the SAML VPN endpoint."
+variable "use_saml_auth" {
+  description = "Use SAML federated authentication."
   type        = bool
   default     = false
+}
+
+variable "use_mutual_auth" {
+  description = "Use mutual-cert (certificate-based) authentication."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = var.use_saml_auth != var.use_mutual_auth
+    error_message = "Exactly one of use_saml_auth and use_mutual_auth must be true."
+  }
 }
 
 variable "create_networking_resources" {
@@ -75,7 +80,7 @@ variable "subnet_ids" {
 }
 
 variable "create_network_associations" {
-  description = "Create subnet associations for the mutual-cert VPN endpoint."
+  description = "Create subnet associations for the VPN endpoint."
   type        = bool
   default     = true
 }
@@ -87,12 +92,12 @@ variable "saml_metadata_xml" {
 
   validation {
     condition = (
-      !var.create_saml_vpn ||
+      !var.use_saml_auth ||
       !var.create_saml_provider ||
       try(trimspace(var.saml_metadata_xml), "") != "" ||
       var.saml_metadata_url != null
     )
-    error_message = "When create_saml_vpn is true and create_saml_provider is true, provide saml_metadata_xml or saml_metadata_url."
+    error_message = "When use_saml_auth is true and create_saml_provider is true, provide saml_metadata_xml or saml_metadata_url."
   }
 }
 
@@ -115,11 +120,11 @@ variable "existing_saml_provider_arn" {
 
   validation {
     condition = (
-      !var.create_saml_vpn ||
+      !var.use_saml_auth ||
       var.create_saml_provider ||
       var.existing_saml_provider_arn != null
     )
-    error_message = "existing_saml_provider_arn must be provided when create_saml_vpn is true and create_saml_provider is false."
+    error_message = "existing_saml_provider_arn must be provided when use_saml_auth is true and create_saml_provider is false."
   }
 }
 
@@ -244,36 +249,24 @@ variable "server_certificate_arn" {
 }
 
 variable "client_ca_certificate_arn" {
-  description = "ACM client CA certificate ARN. Required when create_mutual_cert_vpn is true."
+  description = "ACM client CA certificate ARN. Required when use_mutual_auth is true."
   type        = string
   default     = null
 
   validation {
-    condition     = !var.create_mutual_cert_vpn || var.client_ca_certificate_arn != null
-    error_message = "client_ca_certificate_arn must be provided when create_mutual_cert_vpn is true."
+    condition     = !var.use_mutual_auth || var.client_ca_certificate_arn != null
+    error_message = "client_ca_certificate_arn must be provided when use_mutual_auth is true."
   }
 }
 
-variable "mutual_cert_endpoint_description" {
-  description = "Description for the mutual-cert VPN endpoint."
+variable "endpoint_description" {
+  description = "Description for the VPN endpoint."
   type        = string
   default     = null
 }
 
-variable "mutual_cert_endpoint_tag_name" {
-  description = "Name tag value for the mutual-cert VPN endpoint."
-  type        = string
-  default     = null
-}
-
-variable "saml_endpoint_description" {
-  description = "Description for the SAML VPN endpoint."
-  type        = string
-  default     = null
-}
-
-variable "saml_endpoint_tag_name" {
-  description = "Name tag value for the SAML VPN endpoint."
+variable "vpn_endpoint_tag_name" {
+  description = "Name tag value for the VPN endpoint."
   type        = string
   default     = null
 }
@@ -284,14 +277,8 @@ variable "authorization_target_network_cidr" {
   default     = null
 }
 
-variable "mutual_cert_authorization_rule_description" {
-  description = "Description for the mutual-cert authorization rule."
-  type        = string
-  default     = null
-}
-
-variable "saml_authorization_rule_description" {
-  description = "Description for the SAML authorization rule."
+variable "authorization_rule_description" {
+  description = "Description for the authorization rule."
   type        = string
   default     = null
 }

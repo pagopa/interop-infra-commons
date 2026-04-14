@@ -10,10 +10,11 @@ terraform {
 }
 
 locals {
-  is_mutual_cert      = var.vpn_type == "mutual-cert"
-  is_saml             = var.vpn_type == "saml"
+  is_saml             = var.use_saml_auth
+  is_mutual_cert      = var.use_mutual_auth
+  auth_label          = var.use_saml_auth ? "saml" : "mutual-cert"
   base_name           = format("%s-%s", var.app_name, var.env)
-  endpoint_base_name  = format("%s-%s", local.base_name, var.vpn_type)
+  endpoint_base_name  = format("%s-%s", local.base_name, local.auth_label)
   dns_servers         = var.dns_servers != null ? var.dns_servers : [cidrhost(var.vpc_cidr, 2)]
   subnet_ids_by_index = { for idx, subnet_id in var.subnet_ids : tostring(idx) => subnet_id }
   saml_metadata_xml   = try(trimspace(var.saml_metadata_xml), "")
@@ -25,7 +26,7 @@ locals {
   security_group_ids = var.create_security_group ? [aws_security_group.vpn[0].id] : var.external_security_group_ids
   log_group_name     = var.connection_log_enabled ? (var.create_log_group ? one(aws_cloudwatch_log_group.vpn[*].name) : var.external_log_group_name) : null
 
-  endpoint_desc    = coalesce(var.endpoint_description, "${var.vpn_type} auth")
+  endpoint_desc    = coalesce(var.endpoint_description, "${local.auth_label} auth")
   sg_name          = coalesce(var.security_group_name, "${local.endpoint_base_name}-vpn")
   sg_tag_name      = coalesce(var.security_group_tag_name, "${local.endpoint_base_name}-vpn-sg")
   cw_name          = coalesce(var.log_group_name, "/aws/vpn/${local.endpoint_base_name}")
@@ -40,14 +41,14 @@ locals {
 check "saml_metadata_xml_required" {
   assert {
     condition     = !local.is_saml || !var.create_saml_provider || local.saml_metadata_xml != ""
-    error_message = "saml_metadata_xml must be provided when vpn_type is 'saml' and create_saml_provider is true."
+    error_message = "saml_metadata_xml must be provided when use_saml_auth is true and create_saml_provider is true."
   }
 }
 
 check "existing_saml_provider_required" {
   assert {
     condition     = local.is_saml || var.create_saml_provider
-    error_message = "create_saml_provider can be set to false only when vpn_type is 'saml'."
+    error_message = "create_saml_provider can be set to false only when use_saml_auth is true."
   }
 
   assert {
@@ -80,12 +81,12 @@ check "server_certificate_arn_required" {
 check "client_ca_certificate_arn_constraints" {
   assert {
     condition     = !local.is_mutual_cert || var.client_ca_certificate_arn != null
-    error_message = "client_ca_certificate_arn must be provided when vpn_type is 'mutual-cert'."
+    error_message = "client_ca_certificate_arn must be provided when use_mutual_auth is true."
   }
 
   assert {
     condition     = local.is_mutual_cert || var.client_ca_certificate_arn == null
-    error_message = "client_ca_certificate_arn can be set only when vpn_type is 'mutual-cert'."
+    error_message = "client_ca_certificate_arn can be set only when use_mutual_auth is true."
   }
 }
 

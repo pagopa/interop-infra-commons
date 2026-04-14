@@ -8,9 +8,9 @@ tags = {
 }
 
 # ─── Authentication mode ─────────────────────────────────────────────────────
-# Toggle which endpoint(s) to deploy in this state.
-create_mutual_cert_vpn = true
-create_saml_vpn        = false
+# Exactly one must be true (XOR).
+use_mutual_auth = true
+use_saml_auth   = false
 
 # ─── Networking ───────────────────────────────────────────────────────────────
 # Set create_networking_resources = false and vpn_vpc_id = "<id>" to use an existing VPC.
@@ -19,21 +19,16 @@ vpn_vpc_id                  = null
 vpc_cidr                    = "10.0.0.0/16"
 subnet_cidr                 = "10.0.1.0/24"
 
-# Set create_network_associations = false to create the mutual-cert endpoint without subnet associations.
-# SAML always requires subnet associations (hardcoded true).
+# Set create_network_associations = false to create the endpoint without subnet associations.
 create_network_associations = true
 vpn_client_cidr             = "10.100.0.0/22"
 subnet_ids                  = []
 
-# ─── Mutual-cert endpoint ─────────────────────────────────────────────────────
-# client_ca_certificate_arn required (in addition to server_certificate_arn).
+# ─── Mutual-cert settings ─────────────────────────────────────────────────────
+# client_ca_certificate_arn required when use_mutual_auth = true.
 client_ca_certificate_arn = null
 
-mutual_cert_endpoint_tag_name              = null
-mutual_cert_endpoint_description           = null
-mutual_cert_authorization_rule_description = null
-
-# ─── SAML endpoint ────────────────────────────────────────────────────────────
+# ─── SAML settings ────────────────────────────────────────────────────────────
 # Provide saml_metadata_xml or saml_metadata_url (fetched at plan time).
 # Set create_saml_provider = false and existing_saml_provider_arn = "<arn>" to reuse an existing one.
 create_saml_provider       = true
@@ -44,9 +39,10 @@ saml_group                 = ""
 saml_provider_name         = null
 saml_provider_tag_name     = null
 
-saml_endpoint_tag_name              = null
-saml_endpoint_description           = null
-saml_authorization_rule_description = null
+# ─── Endpoint naming ──────────────────────────────────────────────────────────
+vpn_endpoint_tag_name          = null
+endpoint_description           = null
+authorization_rule_description = null
 
 # ─── Shared endpoint settings ─────────────────────────────────────────────────
 # server_certificate_arn is always required (TLS for the VPN tunnel, independent of auth type).

@@ -8,24 +8,14 @@ output "subnet_id" {
   value       = var.create_networking_resources ? aws_subnet.main[0].id : null
 }
 
-output "mutual_cert_endpoint_id" {
-  description = "Client VPN endpoint ID (mutual-cert). Null if create_mutual_cert_vpn is false."
-  value       = one(module.vpn_mutual_cert[*].endpoint_id)
+output "endpoint_id" {
+  description = "Client VPN endpoint ID."
+  value       = module.vpn.endpoint_id
 }
 
-output "mutual_cert_endpoint_dns" {
-  description = "DNS del VPN endpoint (mutual-cert). Null if create_mutual_cert_vpn is false."
-  value       = one(module.vpn_mutual_cert[*].endpoint_dns)
-}
-
-output "saml_endpoint_id" {
-  description = "Client VPN endpoint ID (saml). Null if create_saml_vpn is false."
-  value       = one(module.vpn_saml[*].endpoint_id)
-}
-
-output "saml_endpoint_dns" {
-  description = "DNS del VPN endpoint (saml). Null if create_saml_vpn is false."
-  value       = one(module.vpn_saml[*].endpoint_dns)
+output "endpoint_dns" {
+  description = "DNS del VPN endpoint."
+  value       = module.vpn.endpoint_dns
 }
 
 output "subnet_ids" {
@@ -35,15 +25,15 @@ output "subnet_ids" {
 
 output "server_certificate_arn" {
   description = "ARN ACM del certificato server"
-  value       = coalesce(one(module.vpn_mutual_cert[*].server_certificate_arn), one(module.vpn_saml[*].server_certificate_arn))
+  value       = module.vpn.server_certificate_arn
 }
 
 output "client_ca_arn" {
-  description = "ARN ACM del client CA. Null if create_mutual_cert_vpn is false."
-  value       = one(module.vpn_mutual_cert[*].client_ca_arn)
+  description = "ARN ACM del client CA. Null when use_saml_auth is true."
+  value       = module.vpn.client_ca_arn
 }
 
 output "saml_provider_arn" {
-  description = "ARN del SAML provider IAM. Null if create_saml_vpn is false."
-  value       = one(module.vpn_saml[*].saml_provider_arn)
+  description = "ARN del SAML provider IAM. Null when use_mutual_auth is true."
+  value       = module.vpn.saml_provider_arn
 }
