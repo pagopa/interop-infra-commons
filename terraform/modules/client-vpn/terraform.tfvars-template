@@ -1,0 +1,70 @@
+# ─── Core ────────────────────────────────────────────────────────────────────
+aws_region = ""    # string — AWS region
+app_name   = ""             # string — used as resource name prefix, e.g. "interop-vpn"
+env        = ""             # string — environment label, e.g. "dev", "uat", "prod"
+
+tags = {                     # map(string) — applied to all resources
+  Owner = ""
+}
+
+# ─── Authentication mode ─────────────────────────────────────────────────────
+# Exactly one must be true.
+use_mutual_auth = true    # bool
+use_saml_auth   = false   # bool
+
+# ─── Networking (existing) ───────────────────────────────────────────────────
+# VPC and subnets must already exist.
+vpc_id          = ""                # string — e.g. "vpc-0a1b2c3d4e5f"
+vpc_cidr        = ""                # string — e.g. "10.0.0.0/16"; used for authorization rules and default DNS
+subnet_ids      = []                # list(string) — e.g. ["subnet-abc123"]; required when create_network_associations = true
+vpn_client_cidr = ""   # string — assigned to VPN clients, must not overlap with vpc_cidr
+# Set create_network_associations = false to create the endpoint without subnet associations.
+create_network_associations = true  # bool
+
+# ─── Certificates ────────────────────────────────────────────────────────────
+# server_certificate_arn is always required (TLS for the VPN tunnel, independent of auth type).
+server_certificate_arn = ""    # string — e.g. "arn:aws:acm:eu-west-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+# client_ca_certificate_arn required when use_mutual_auth = true, must be null when use_saml_auth = true.
+client_ca_certificate_arn = null  # string | null — e.g. "arn:aws:acm:eu-west-1:123456789012:certificate/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+
+# ─── SAML settings ───────────────────────────────────────────────────────────
+# Only relevant when use_saml_auth = true.
+# Provide saml_metadata_xml with the raw XML from the IdP.
+# Set create_saml_provider = false and existing_saml_provider_arn = "<arn>" to reuse an existing one.
+saml_metadata_xml          = ""    # string — raw IdP metadata XML
+create_saml_provider       = true  # bool
+existing_saml_provider_arn = null  # string | null — e.g. "arn:aws:iam::123456789012:saml-provider/MyProvider"
+saml_group                 = ""    # string — IdP group allowed through VPN; "" = allow all authenticated users
+saml_provider_name         = null  # string | null — auto-generated if null
+saml_provider_tag_name     = null  # string | null
+
+# ─── Endpoint naming ─────────────────────────────────────────────────────────
+vpn_endpoint_tag_name          = null  # string | null — e.g. "vpn-prod"
+endpoint_description           = null  # string | null — e.g. "VPN endpoint for prod"
+authorization_rule_description = null  # string | null — e.g. "Allow authenticated clients"
+
+# ─── Endpoint settings ───────────────────────────────────────────────────────
+dns_servers                       = null        # list(string) | null — e.g. ["8.8.8.8"]; null = AmazonProvidedDNS
+split_tunnel                      = true        # bool — true = only VPC traffic via VPN; false = all traffic
+transport_protocol                = "udp"       # string — "udp" | "tcp"
+vpn_port                          = 443         # number — 443 | 1194
+session_timeout_hours             = 8           # number — 8 | 10 | 12 | 24
+self_service_portal               = "disabled"  # string — "enabled" | "disabled"
+authorization_target_network_cidr = null        # string | null — e.g. "10.0.0.0/16"; null = uses vpc_cidr
+
+# ─── Security group ──────────────────────────────────────────────────────────
+create_security_group       = true             # bool — set false to use existing SGs via external_security_group_ids
+external_security_group_ids = []               # list(string) — e.g. ["sg-0a1b2c3d"]
+security_group_name         = null             # string | null — auto-generated if null
+security_group_tag_name     = null             # string | null
+security_group_description  = "Security group for Client VPN endpoint"  # string
+egress_ipv4_cidr            = "0.0.0.0/0"      # string — CIDR for the default egress rule
+egress_rule_description     = "Allow all outbound traffic"  # string
+
+# ─── CloudWatch logging ─────────────────────────────────────────────────────
+connection_log_enabled        = false  # bool — enable VPN connection logging
+cloudwatch_log_retention_days = 30     # number — days to retain logs
+create_log_group              = false  # bool — set false to use an existing log group
+external_log_group_name       = null   # string | null — e.g. "/aws/vpn/my-vpn"; required if create_log_group = false and connection_log_enabled = true
+log_group_name                = null   # string | null — auto-generated if null
+log_group_tag_name            = null   # string | null
