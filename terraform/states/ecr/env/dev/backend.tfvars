@@ -1,4 +1,4 @@
 bucket       = "terraform-backend-505630707203"
-key          = "dev-es1/pagopa/interop-infra-commons/ecr-repos.tfstate"
+key          = "dev/interop-infra-commons/ecr-repos.tfstate"
 region       = "eu-central-1"
 use_lockfile = true
