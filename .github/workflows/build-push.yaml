@@ -1,0 +1,161 @@
+name: "Build & Push"
+
+on:
+  push:
+    branches:
+      - develop
+    tags:
+      - "*"
+    paths:
+      - "apps/**"
+      - "!apps/*/scripts/**"
+      - ".github/workflows/build-push.yaml"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  setup:
+    name: Determine environment
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.env.outputs.environment }}
+      env_name: ${{ steps.env.outputs.env_name }}
+    steps:
+      - id: env
+        run: |
+          echo "environment=ecr" >> "$GITHUB_OUTPUT"
+          echo "env_name=dev" >> "$GITHUB_OUTPUT"
+  
+  terraform:
+    name: Terraform Apply
+    needs: setup
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@692973e3d937129bcbf40652eb9f2f61becf3332 # v4
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
+          role-session-name: interop-infra-commons-${{ github.run_number }}
+
+      - name: Read terraform version
+        working-directory: terraform/states/ecr
+        run: |
+          echo "TERRAFORM_VERSION=$(cat ./.terraform-version)" >> $GITHUB_ENV
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@5e8dbf3c6d9deaf4193ca7a8fb23f2ac83bb6c85 # v4
+        with:
+          terraform_version: ${{ env.TERRAFORM_VERSION }}
+
+      - name: Terraform Apply
+        working-directory: terraform/states/ecr
+        env:
+          ENV: ${{ needs.setup.outputs.env_name }}
+        run: |
+          terraform fmt -check -recursive
+          ./terraform.sh apply "$ENV" -auto-approve
+  
+  find_dockerfiles:
+    name: Find Dockerfiles
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      packages: ${{ steps.set_packages_output.outputs.packages }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Find packages
+        id: set_packages_output
+        run: |
+          PACKAGES=$(find apps -type f -path "*/Dockerfile" | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')
+          echo "packages=$PACKAGES" >> $GITHUB_OUTPUT
+
+  build_push_image:
+    name: ${{ matrix.package }}
+    needs: [setup, terraform, find_dockerfiles]
+    runs-on: ubuntu-latest
+    environment: ${{ needs.setup.outputs.environment }}
+    permissions:
+      contents: read
+      id-token: write
+    strategy:
+      fail-fast: false
+      matrix:
+        package: ${{ fromJson(needs.find_dockerfiles.outputs.packages) }}
+    env:
+        DOCKER_BUILD_SUMMARY: "false"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@8df5847569e6427dd6c4fb1cf565c83acfa8afa7 # v6
+        with:
+          aws-region: ${{ vars.AWS_REGION }}
+          role-to-assume: ${{ vars.IAM_ROLE_ARN }}
+          role-session-name: interop-infra-commons-${{ github.run_number }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076 # v2
+
+      - name: Normalize ref name
+        id: norm_ref
+        run: |
+          set -euo pipefail
+
+          NORM_REF="$(echo ${{ github.ref_name }} | sed -e 's/\//-/g')"
+          echo "NORM_REF=$NORM_REF" >> $GITHUB_ENV
+
+      - name: (branch) Docker metadata
+        id: meta_branch
+        if: ${{ github.ref_type == 'branch' }}
+        uses: docker/metadata-action@a60f0f62b5c12316066c8db464bfb2faafd7907b
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/interop-infra-${{ matrix.package }}
+          flavor: |
+            latest=false
+            prefix=
+            suffix=
+          tags: |
+            type=raw,value=${{ env.NORM_REF }}
+
+      - name: (tag) Docker metadata
+        id: meta_tag
+        if: ${{ github.ref_type == 'tag' }}
+        uses: docker/metadata-action@a60f0f62b5c12316066c8db464bfb2faafd7907b
+        with:
+          images: ${{ steps.login-ecr.outputs.registry }}/interop-infra-${{ matrix.package }}
+          flavor: |
+            latest=false
+            prefix=
+            suffix=
+          tags: |
+            type=ref,event=tag
+
+      - name: Build and push Docker image
+        id: build_push
+        uses: docker/build-push-action@8c1e8f8e5bf845ba3773a14f3967965548a2341e
+        with:
+          context: apps/${{ matrix.package }}
+          file: apps/${{ matrix.package }}/Dockerfile
+          build-args: |
+            NODE_REGISTRY=${{ vars.NODE_REGISTRY }}
+            NODE_HEAP_SIZE=4096
+          push: true
+          tags: ${{ github.ref_type == 'branch' && steps.meta_branch.outputs.tags || steps.meta_tag.outputs.tags }}
+          labels: ${{ github.ref_type == 'branch' && steps.meta_branch.outputs.labels || steps.meta_tag.outputs.labels }}
