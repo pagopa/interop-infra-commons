@@ -8,7 +8,20 @@ import { ConsumerOffsetMessageHandler } from "./ConsumerOffsetsMessageHandler";
 import { config } from "./Config";
 
 const INTERNAL_TOPIC = "__consumer_offsets";
-const logger: Logger = pino();
+
+const JSON_PINO_CONFIG = {
+  timestamp: pino.stdTimeFunctions.isoTime
+}
+
+const TEXT_PINO_CONFIG = {
+  timestamp: pino.stdTimeFunctions.isoTime,
+  transport: {
+    target: 'pino-pretty'
+  },
+}
+
+const PINO_CONFIG = config.jsonLogs ? JSON_PINO_CONFIG : TEXT_PINO_CONFIG;
+const logger: Logger = pino( PINO_CONFIG );
 
 async function runConsumer() {
 
