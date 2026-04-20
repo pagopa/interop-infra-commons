@@ -20,7 +20,7 @@ const TEXT_PINO_CONFIG = {
   },
 }
 
-const PINO_CONFIG = config.jsonLog ? JSON_PINO_CONFIG : TEXT_PINO_CONFIG;
+const PINO_CONFIG = config.jsonLogs ? JSON_PINO_CONFIG : TEXT_PINO_CONFIG;
 const logger: Logger = pino( PINO_CONFIG );
 
 async function runConsumer() {

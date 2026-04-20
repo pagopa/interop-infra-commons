@@ -12,7 +12,7 @@ const zodConfigObject = z
     TOPIC_STARTING_OFFSET: z
       .union([z.literal("earliest"), z.literal("latest")])
       .default("earliest"),
-    JSON_LOG: z.stringbool().default( false )
+    JSON_LOGS: z.stringbool().default( false )
   })
   .transform((c) => ({
     kafkaBootstrapServers: c.KAFKA_BOOTSTRAP_SERVERS,
@@ -23,7 +23,7 @@ const zodConfigObject = z
     savingBatchSize: c.SAVING_BATCH_SIZE,
     savingBatchSeconds: c.SAVING_BATCH_SECONDS,
     topicStartingOffset: c.TOPIC_STARTING_OFFSET,
-    jsonLog: c.JSON_LOG
+    jsonLogs: c.JSON_LOGS
   }));
 
 export type ConsumersOffsetsDumperConfig = z.infer<typeof zodConfigObject>;
