@@ -21,6 +21,8 @@ The container is configured with the following __environment variables__:
  - __TOPIC_STARTING_OFFSET__: The offset where to start to read ``__consumer_offsets`` topic; it can 
    be `earliest` or `latest`. Used only if the consumer group ``CONSUMER_GROUP_NAME`` is not 
    already present in the msk cluster. The default is `earliest`.
+ - __JSON_LOG__: If `true` the log are written in json format; simple text lines otherwise. 
+   Default is `false`: log as simple text lines.
  
  # Implementation
  Read [design.md file](./src/design.md)
