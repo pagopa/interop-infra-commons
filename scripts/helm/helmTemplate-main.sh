@@ -1,7 +1,6 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Running helm template process"
 
 PROJECT_DIR=${PROJECT_DIR:-$(pwd)}
 ROOT_DIR=$PROJECT_DIR
