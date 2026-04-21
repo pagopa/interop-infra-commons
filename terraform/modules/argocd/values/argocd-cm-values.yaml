@@ -521,6 +521,7 @@ configs:
 
       -- Snapshot rollout counters
       local desired = (obj.spec and obj.spec.replicas) or 1
+      local replicas = (obj.status and obj.status.replicas) or 0
       local updated = (obj.status and obj.status.updatedReplicas) or 0
       local ready   = (obj.status and obj.status.readyReplicas) or 0
       local available  = (obj.status and obj.status.availableReplicas) or 0
@@ -531,6 +532,14 @@ configs:
       -- UI: keeps yellow while waiting for the new generation to be picked up
       if observed < generation then
         hs.message="waiting for controller to observe new generation"; 
+        return hs
+      end
+
+      -- Rollout may still be running with surge pods:
+      -- even when updated/available reached desired, old replicas can still be terminating.
+      -- Keep Progressing until extra replicas are gone.
+      if replicas > desired then
+        hs.message = "old replicas pending termination (" .. tostring(replicas - desired) .. ")"
         return hs
       end
 
@@ -557,6 +566,12 @@ configs:
       -- UI: yellow with a counter of updated vs desired
       if updated < desired then
         hs.message = "updatedReplicas " .. tostring(updated) .. "/" .. tostring(desired);
+        return hs
+      end
+
+      -- Updated pods exist but not all are available yet -> Progressing
+      if available < updated then
+        hs.message = "availableReplicas " .. tostring(available) .. "/" .. tostring(updated);
         return hs
       end
 
