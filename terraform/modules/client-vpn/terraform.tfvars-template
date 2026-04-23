@@ -12,7 +12,7 @@ tags = {                     # map(string) — applied to all resources
 use_mutual_auth = true    # bool
 use_saml_auth   = false   # bool
 
-# ─── Networking (existing) ───────────────────────────────────────────────────
+# ─── Networking ──────────────────────────────────────────────────────────────
 # VPC and subnets must already exist.
 vpc_id          = ""                # string — e.g. "vpc-0a1b2c3d4e5f"
 vpc_cidr        = ""                # string — e.g. "10.0.0.0/16"; used for authorization rules and default DNS
