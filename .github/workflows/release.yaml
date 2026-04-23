@@ -1,0 +1,41 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Create GitHub release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        with:
+          fetch-depth: 0
+
+      - name: Semantic release
+        id: semantic_release
+        # Computes the next semantic version and publishes the GitHub release
+        uses: codfish/semantic-release-action@ee5b4afec556c3bf8b9f0b9cd542aade9e486033
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Release published
+        if: steps.semantic_release.outputs.new-release-published == 'true'
+        # Prints the version created by semantic-release
+        run: echo "Published v${{ steps.semantic_release.outputs.release-version }}"
+
+      - name: No release published
+        if: steps.semantic_release.outputs.new-release-published != 'true'
+        # Makes the workflow outcome explicit when no version bump is needed
+        run: echo "No release published"
