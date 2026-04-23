@@ -1,0 +1,313 @@
+variable "aws_region" {
+  description = "AWS region."
+  type        = string
+  default     = "eu-west-1"
+}
+
+variable "app_name" {
+  description = "Application / project name used as base for resource naming."
+  type        = string
+}
+
+variable "env" {
+  description = "Environment name."
+  type        = string
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources."
+  type        = map(string)
+  default     = {}
+}
+
+# ─── Authentication mode ─────────────────────────────────────────────────────
+
+variable "use_saml_auth" {
+  description = "Use SAML federated authentication."
+  type        = bool
+  default     = false
+}
+
+variable "use_mutual_auth" {
+  description = "Use mutual-cert (certificate-based) authentication."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = var.use_saml_auth != var.use_mutual_auth
+    error_message = "Exactly one of use_saml_auth and use_mutual_auth must be true."
+  }
+}
+
+# ─── Networking ─────────────────────────────────────────────────────────────
+
+variable "vpc_id" {
+  description = "VPC ID to associate with the VPN endpoint."
+  type        = string
+  nullable    = false
+}
+
+variable "vpc_cidr" {
+  description = "CIDR block of the VPC (used for authorization rules and default DNS)."
+  type        = string
+  nullable    = false
+}
+
+variable "subnet_ids" {
+  description = "Subnet IDs to associate with the VPN endpoint."
+  type        = list(string)
+  default     = []
+
+  validation {
+    condition     = !var.create_network_associations || length(var.subnet_ids) > 0
+    error_message = "subnet_ids must contain at least one subnet ID when create_network_associations is true."
+  }
+}
+
+variable "create_network_associations" {
+  description = "Create subnet associations for the VPN endpoint."
+  type        = bool
+  default     = true
+}
+
+variable "vpn_client_cidr" {
+  description = "CIDR block for VPN client addresses (must not overlap with VPC CIDR)."
+  type        = string
+  default     = "10.200.0.0/16"
+}
+
+# ─── Certificates ────────────────────────────────────────────────────────────
+
+variable "server_certificate_arn" {
+  description = "ACM server certificate ARN (always required for TLS tunnel)."
+  type        = string
+  nullable    = false
+}
+
+variable "client_ca_certificate_arn" {
+  description = "ACM client CA certificate ARN. Required when use_mutual_auth is true."
+  type        = string
+  default     = null
+
+  validation {
+    condition = (
+      var.use_mutual_auth ? var.client_ca_certificate_arn != null : var.client_ca_certificate_arn == null
+    )
+    error_message = "client_ca_certificate_arn must be provided when use_mutual_auth is true, and must be null when use_saml_auth is true."
+  }
+}
+
+# ─── SAML settings ───────────────────────────────────────────────────────────
+
+variable "saml_metadata_xml" {
+  description = "Raw XML SAML metadata from the IdP."
+  type        = string
+  default     = ""
+
+  validation {
+    condition = (
+      !var.use_saml_auth ||
+      !var.create_saml_provider ||
+      try(trimspace(var.saml_metadata_xml), "") != ""
+    )
+    error_message = "saml_metadata_xml must be provided when use_saml_auth is true and create_saml_provider is true."
+  }
+}
+
+variable "create_saml_provider" {
+  description = "Create the IAM SAML provider."
+  type        = bool
+  default     = true
+
+  validation {
+    condition     = var.use_saml_auth || var.create_saml_provider
+    error_message = "create_saml_provider can be set to false only when use_saml_auth is true."
+  }
+}
+
+variable "existing_saml_provider_arn" {
+  description = "ARN of an existing IAM SAML provider."
+  type        = string
+  default     = null
+
+  validation {
+    condition = (
+      !var.use_saml_auth ||
+      var.create_saml_provider ||
+      var.existing_saml_provider_arn != null
+    )
+    error_message = "existing_saml_provider_arn must be provided when use_saml_auth is true and create_saml_provider is false."
+  }
+}
+
+variable "saml_group" {
+  description = "SAML group ID allowed through the VPN. Empty = allow all authenticated users."
+  type        = string
+  default     = ""
+}
+
+variable "saml_provider_name" {
+  description = "IAM SAML provider name."
+  type        = string
+  default     = null
+}
+
+variable "saml_provider_tag_name" {
+  description = "Name tag value for the IAM SAML provider."
+  type        = string
+  default     = null
+}
+
+# ─── Endpoint settings ───────────────────────────────────────────────────────
+
+variable "endpoint_description" {
+  description = "Description for the VPN endpoint."
+  type        = string
+  default     = null
+}
+
+variable "vpn_endpoint_tag_name" {
+  description = "Name tag value for the VPN endpoint."
+  type        = string
+  default     = null
+}
+
+variable "dns_servers" {
+  description = "DNS server IPs for VPN clients. null = AmazonProvidedDNS (VPC base +2)."
+  type        = list(string)
+  default     = null
+}
+
+variable "split_tunnel" {
+  description = "Enable split tunnel (only VPC traffic through the VPN)."
+  type        = bool
+  default     = true
+}
+
+variable "transport_protocol" {
+  description = "Transport protocol."
+  type        = string
+  default     = "udp"
+
+  validation {
+    condition     = contains(["udp", "tcp"], var.transport_protocol)
+    error_message = "transport_protocol must be 'udp' or 'tcp'."
+  }
+}
+
+variable "vpn_port" {
+  description = "Port for the VPN endpoint."
+  type        = number
+  default     = 443
+
+  validation {
+    condition     = contains([443, 1194], var.vpn_port)
+    error_message = "vpn_port must be 443 or 1194."
+  }
+}
+
+variable "session_timeout_hours" {
+  description = "Maximum VPN session duration in hours."
+  type        = number
+  default     = 8
+}
+
+variable "self_service_portal" {
+  description = "Self-service portal status."
+  type        = string
+  default     = "disabled"
+}
+
+variable "authorization_target_network_cidr" {
+  description = "CIDR used by authorization rules. null = uses vpc_cidr."
+  type        = string
+  default     = null
+}
+
+variable "authorization_rule_description" {
+  description = "Description for the authorization rule."
+  type        = string
+  default     = null
+}
+
+# ─── Security group ──────────────────────────────────────────────────────────
+
+variable "create_security_group" {
+  description = "Create the VPN security group."
+  type        = bool
+  default     = true
+}
+
+variable "external_security_group_ids" {
+  description = "Existing security group IDs. Used when create_security_group is false."
+  type        = list(string)
+  default     = []
+}
+
+variable "security_group_name" {
+  description = "Security group name."
+  type        = string
+  default     = null
+}
+
+variable "security_group_tag_name" {
+  description = "Name tag value for the security group."
+  type        = string
+  default     = null
+}
+
+variable "security_group_description" {
+  description = "Security group description."
+  type        = string
+  default     = "Security group for Client VPN endpoint"
+}
+
+variable "egress_ipv4_cidr" {
+  description = "IPv4 CIDR allowed in the default egress rule."
+  type        = string
+  default     = "0.0.0.0/0"
+}
+
+variable "egress_rule_description" {
+  description = "Description for the default egress rule."
+  type        = string
+  default     = "Allow all outbound traffic"
+}
+
+# ─── CloudWatch logging ─────────────────────────────────────────────────────
+
+variable "connection_log_enabled" {
+  description = "Enable VPN connection logging to CloudWatch."
+  type        = bool
+  default     = true
+}
+
+variable "cloudwatch_log_retention_days" {
+  description = "CloudWatch log retention in days."
+  type        = number
+  default     = 30
+}
+
+variable "create_log_group" {
+  description = "Create the CloudWatch log group."
+  type        = bool
+  default     = true
+}
+
+variable "external_log_group_name" {
+  description = "Existing CloudWatch log group name."
+  type        = string
+  default     = null
+}
+
+variable "log_group_name" {
+  description = "CloudWatch log group name."
+  type        = string
+  default     = null
+}
+
+variable "log_group_tag_name" {
+  description = "Name tag value for the CloudWatch log group."
+  type        = string
+  default     = null
+}
