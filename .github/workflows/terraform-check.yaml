@@ -38,6 +38,11 @@ jobs:
           matrix_entries="[]"
 
           while IFS= read -r module_dir; do
+            # Skip empty module folders
+            if [ -z "$(find "$module_dir" -mindepth 1 -print -quit)" ]; then
+              continue
+            fi
+
             module_name=$(basename "$module_dir")
 
             matrix_entries=$(echo "$matrix_entries" | jq -c \
