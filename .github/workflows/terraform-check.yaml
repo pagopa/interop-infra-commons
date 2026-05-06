@@ -15,6 +15,7 @@ on:
 
 env:
   TFLINT_VERSION: "v0.61.0"
+  TF_PLUGIN_CACHE_DIR: /home/runner/.terraform.d/plugin-cache
 
 permissions:
   contents: read
@@ -28,20 +29,6 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Terraform dir init
-        run: mkdir -p /home/runner/.terraform.d/plugin-cache
-
-      - name: Restore Terraform plugin cache
-        id: cache-restore-tf-plugins
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          path: |
-            /home/runner/.terraform.d/plugin-cache
-          key: tf-${{ runner.os }}-terraform-1.x-v1
-          restore-keys: |
-            tf-${{ runner.os }}-
-            tf-
 
       - name: Build module matrix
         id: build-matrix
@@ -101,13 +88,17 @@ jobs:
             echo "tf_version=$(echo "$constraint" | xargs)" >> "$GITHUB_OUTPUT"
           fi
 
+      - name: Ensure plugin cache dir exists
+        run: mkdir -p /home/runner/.terraform.d/plugin-cache
+
       - name: Terraform cache
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
         with:
           path: |
             /home/runner/.terraform.d/plugin-cache
-          key: tf-${{ runner.os }}-terraform-1.x-v1
+          key: tf-${{ runner.os }}-${{ steps.compute-tf-version.outputs.tf_version }}-v1
           restore-keys: |
+            tf-${{ runner.os }}-${{ steps.compute-tf-version.outputs.tf_version }}-
             tf-${{ runner.os }}-
             tf-
 
@@ -172,8 +163,6 @@ jobs:
     if: always()
     needs: terraform-checks
     runs-on: ubuntu-24.04
-    permissions:
-      contents: read
     steps:
       - name: Check matrix jobs status
         run: |
