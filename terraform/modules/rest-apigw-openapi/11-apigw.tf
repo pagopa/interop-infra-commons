@@ -49,11 +49,10 @@ resource "aws_api_gateway_deployment" "this" {
       var.vpc_link_id,
       var.domain_name,
       var.service_prefix,
-      # TODO: uncomment when a redeploy on auth-server is allowed
-      # "${var.remap_missing_auth_token_to_404_problem}",
-      # try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_type, null),
-      # try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].status_code, null),
-      # try(jsonencode(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_templates), null)
+      "${var.remap_missing_auth_token_to_404_problem}",
+      try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_type, null),
+      try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].status_code, null),
+      try(jsonencode(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_templates), null)
     ])))
   }
 
