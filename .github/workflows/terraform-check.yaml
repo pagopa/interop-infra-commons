@@ -1,5 +1,5 @@
 name: Terraform Checks
-run-name: "${{ github.ref_name }} - Interop Infra Commons Terraform Checks"
+run-name: "Terraform Checks - ${{ github.ref_name }}"
 
 on:
   pull_request:
