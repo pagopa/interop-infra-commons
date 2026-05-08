@@ -5,13 +5,6 @@ on:
   pull_request:
     paths:
       - "terraform/modules/**"
-  push:
-    branches:
-      - '**'
-      - '!main'
-    paths:
-      - "terraform/modules/**"
-  workflow_dispatch:
 
 env:
   TFLINT_VERSION: "v0.61.0"
