@@ -104,8 +104,6 @@ jobs:
           key: tf-${{ runner.os }}-${{ steps.compute-tf-version.outputs.tf_version }}-v1
           restore-keys: |
             tf-${{ runner.os }}-${{ steps.compute-tf-version.outputs.tf_version }}-
-            tf-${{ runner.os }}-
-            tf-
 
       - name: "Setup Terraform ${{ steps.compute-tf-version.outputs.tf_version }}"
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
