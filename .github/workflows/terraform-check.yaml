@@ -140,6 +140,8 @@ jobs:
       - name: Init TFLint
         run: |
           # AWS Tflint rules: https://github.com/terraform-linters/tflint-ruleset-aws/blob/master/docs/rules/README.md
+          # Use module-local .tflint.hcl when present; otherwise copy the repo-level config
+          # into the module folder so `tflint --init` can download the required plugins.
 
           if [ -f .tflint.hcl ] || [ -f "$GITHUB_WORKSPACE/.tflint.hcl" ]; then
             if [ ! -f .tflint.hcl ] && [ -f "$GITHUB_WORKSPACE/.tflint.hcl" ]; then
