@@ -88,7 +88,7 @@ jobs:
             echo "::error::No required_version constraint found for module '${{ matrix.name }}'"
             exit 1
           else
-            echo "::notice::${{ matrix.name }} Constraint found: $constraint" 
+            echo "${{ matrix.name }} Constraint found: $constraint"
             # Trim whitespace and set output           
             echo "tf_version=$(echo "$constraint" | xargs)" >> "$GITHUB_OUTPUT"
           fi
@@ -174,4 +174,4 @@ jobs:
             echo "::error title=Terraform CI Gate::One or more Terraform module checks failed (result: $result)"
             exit 1
           fi
-          echo "::notice title=Terraform CI Gate::All Terraform module checks passed."
+          echo "Terraform CI Gate: all Terraform module checks passed."
