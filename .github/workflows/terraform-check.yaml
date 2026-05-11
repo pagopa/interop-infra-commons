@@ -133,6 +133,11 @@ jobs:
 
           mkdir -p "${{ env.TFLINT_PLUGIN_DIR }}"
 
+          # Check if .tflint.hcl exists in the module directory or the repo root. 
+          # If it exists in the repo root but not in the module directory, 
+          # copy it to the module directory. 
+          # Then run `tflint --init` to initialize TFLint with the configuration file, 
+          # which will download the required plugins based on the configuration.
           if [ -f .tflint.hcl ] || [ -f "$GITHUB_WORKSPACE/.tflint.hcl" ]; then
             if [ ! -f .tflint.hcl ] && [ -f "$GITHUB_WORKSPACE/.tflint.hcl" ]; then
               cp "$GITHUB_WORKSPACE/.tflint.hcl" .
