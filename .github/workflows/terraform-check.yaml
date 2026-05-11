@@ -69,23 +69,9 @@ jobs:
         run: |
           set -euo pipefail
 
-          # grep:
-          #  -h Suppress the prefixing of file names on output. 
-          #  -r Recursive search
-          # sed:
-          #  -E Extended regex: The regex captures the version string in required_version = "x.y.z"
-          constraint=$(grep -rh --include='*.tf' 'required_version' . 2>/dev/null \
-            | sed -E 's/.*required_version *= *"([^"]+)".*/\1/' \
-            | head -1 || true)
-
-          if [ -z "$constraint" ]; then
-            echo "::error::No required_version constraint found for module '${{ matrix.name }}'"
-            exit 1
-          else
-            echo "${{ matrix.name }} Constraint found: $constraint"
-            # Trim whitespace and set output           
-            echo "tf_version=$(echo "$constraint" | xargs)" >> "$GITHUB_OUTPUT"
-          fi
+          constraint=$("$GITHUB_WORKSPACE/scripts/terraform/compute-tf-version.sh" "$GITHUB_WORKSPACE/${{ matrix.path }}")
+          echo "${{ matrix.name }} Constraint found: $constraint"
+          echo "tf_version=$(echo "$constraint" | xargs)" >> "$GITHUB_OUTPUT"
 
       - name: Ensure plugin cache dir exists
         run: mkdir -p "${{ env.TF_PLUGIN_CACHE_DIR }}"
