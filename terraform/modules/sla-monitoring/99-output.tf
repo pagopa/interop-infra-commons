@@ -61,9 +61,9 @@ output "dashboard_names" {
 output "alarm_names" {
   description = "The names of the CloudWatch alarms"
   value = [
-    aws_cloudwatch_metric_alarm.sla-p90-response-time.alarm_name,
-    aws_cloudwatch_metric_alarm.sla-request-count.alarm_name,
-    aws_cloudwatch_metric_alarm.sla-error-rate.alarm_name,
+    aws_cloudwatch_metric_alarm.sla_p90_response_time.alarm_name,
+    aws_cloudwatch_metric_alarm.sla_request_count.alarm_name,
+    aws_cloudwatch_metric_alarm.sla_error_rate.alarm_name,
     aws_cloudwatch_metric_alarm.sla-endpoint-p90-response-time[*].alarm_name,
     aws_cloudwatch_metric_alarm.sla-endpoint-request-count[*].alarm_name,
     aws_cloudwatch_metric_alarm.sla-endpoint-error-rate[*].alarm_name
