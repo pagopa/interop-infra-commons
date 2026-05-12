@@ -1,8 +1,3 @@
-variable "env" {
-  type        = string
-  description = "Environment name"
-}
-
 variable "ses_iam_policy_name" {
   description = "Name of the IAM policy to be created"
   type        = string
@@ -32,12 +27,6 @@ variable "allowed_recipients_regex" {
 
 variable "allowed_from_addresses_literal" {
   description = "List of addresses that are allowed to be used as 'FROM address' when sending emails. It must contain the exact literals that make each FROM adress (e.g. noreply@dev.interop.pagopa.it)"
-  type        = list(string)
-  default     = null
-}
-
-variable "allowed_from_addresses_regex" {
-  description = "List of addresses that are allowed to be used as 'FROM address' when sending emails. It can contain regex with wildcards (e.g. *-reports@dev.interop.pagopa.it)"
   type        = list(string)
   default     = null
 }
