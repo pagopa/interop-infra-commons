@@ -100,7 +100,7 @@ resource "aws_cloudwatch_metric_alarm" "sla_error_rate" {
 }
 
 # Single Endpoint Alarms
-resource "aws_cloudwatch_metric_alarm" "sla-endpoint-p90-response-time" {
+resource "aws_cloudwatch_metric_alarm" "sla_endpoint_p90_response_time" {
   count               = var.apigw_single_endpoint_name != "" ? 1 : 0
   alarm_name          = "sla-${var.env}-${var.apigw_single_endpoint_name}-token-high-latency"
   comparison_operator = "GreaterThanThreshold"
@@ -137,7 +137,7 @@ resource "aws_cloudwatch_metric_alarm" "sla-endpoint-p90-response-time" {
   alarm_actions = var.alarm_actions
 }
 
-resource "aws_cloudwatch_metric_alarm" "sla-endpoint-request-count" {
+resource "aws_cloudwatch_metric_alarm" "sla_endpoint_request_count" {
   count               = var.apigw_single_endpoint_name != "" ? 1 : 0
   alarm_name          = "sla-${var.env}-${var.apigw_single_endpoint_name}-token-low-requests"
   comparison_operator = "LessThanThreshold"
@@ -160,7 +160,7 @@ resource "aws_cloudwatch_metric_alarm" "sla-endpoint-request-count" {
   alarm_actions = var.alarm_actions
 }
 
-resource "aws_cloudwatch_metric_alarm" "sla-endpoint-error-rate" {
+resource "aws_cloudwatch_metric_alarm" "sla_endpoint_error_rate" {
   count               = var.apigw_single_endpoint_name != "" ? 1 : 0
   alarm_name          = "sla-${var.env}-${var.apigw_single_endpoint_name}-token-high-error-rate"
   comparison_operator = "GreaterThanThreshold"

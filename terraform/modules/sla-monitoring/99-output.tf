@@ -64,8 +64,8 @@ output "alarm_names" {
     aws_cloudwatch_metric_alarm.sla_p90_response_time.alarm_name,
     aws_cloudwatch_metric_alarm.sla_request_count.alarm_name,
     aws_cloudwatch_metric_alarm.sla_error_rate.alarm_name,
-    aws_cloudwatch_metric_alarm.sla-endpoint-p90-response-time[*].alarm_name,
-    aws_cloudwatch_metric_alarm.sla-endpoint-request-count[*].alarm_name,
-    aws_cloudwatch_metric_alarm.sla-endpoint-error-rate[*].alarm_name
+    aws_cloudwatch_metric_alarm.sla_endpoint_p90_response_time[*].alarm_name,
+    aws_cloudwatch_metric_alarm.sla_endpoint_request_count[*].alarm_name,
+    aws_cloudwatch_metric_alarm.sla_endpoint_error_rate[*].alarm_name
   ]
 }
