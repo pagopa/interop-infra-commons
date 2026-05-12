@@ -10,7 +10,7 @@ variable "kind" {
 # COMMON VARIABLES
 ################################################################################
 variable "tags" {
-  type = map(any)
+  type        = map(any)
   description = "Tags to apply to the resources created by this module"
   default = {
     CreatedBy = "Terraform"
