@@ -210,7 +210,7 @@ variable "remap_missing_auth_token_to_404_problem" {
 variable "templating_map" {
   description = "Map of strings for OpenAPI templating"
   type        = map(string)
-  default     = {}
+  default     = null
 }
 
 variable "disable_execute_api_endpoint" {

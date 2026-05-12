@@ -10,7 +10,7 @@ locals {
 }
 
 resource "local_file" "templated_openapi" {
-  count    = var.templating_map != {} ? 1 : 0
+  count    = var.templating_map != null ? 1 : 0
 
   content  = templatefile(local.openapi_abs_path, var.templating_map)
   filename = replace(local.openapi_abs_path, ".yaml", "_templated.yaml")
@@ -18,7 +18,7 @@ resource "local_file" "templated_openapi" {
 
 data "external" "openapi_integration" {
   program = concat(["python3", "${path.module}/scripts/openapi_integration.py",
-    "-i", (var.templating_map != {} ? local_file.templated_openapi[0].filename : local.openapi_abs_path)],
+    "-i", (var.templating_map != null ? local_file.templated_openapi[0].filename : local.openapi_abs_path)],
   local.type_options, local.api_version_options, local.service_prefix_options, local.swagger_options, local.maintenance_options)
 }
 
