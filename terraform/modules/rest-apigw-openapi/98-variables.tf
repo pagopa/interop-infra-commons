@@ -144,8 +144,7 @@ variable "additional_4xx_alarm_config" {
     datapoints           = number
     min_requests         = number
   })
-  nullable = true
-  default  = null
+  default = null
 }
 
 variable "alarm_4xx_threshold_percentage" {
