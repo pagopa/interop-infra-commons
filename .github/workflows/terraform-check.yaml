@@ -32,8 +32,8 @@ jobs:
           matrix_entries="[]"
 
           while IFS= read -r module_dir; do
-            # Skip empty module folders
-            if [ -z "$(find "$module_dir" -mindepth 1 -print -quit)" ]; then
+            # Skip folders that do not contain Terraform files.
+            if [ -z "$(find "$module_dir" -type f -name '*.tf' -print -quit)" ]; then
               continue
             fi
 
