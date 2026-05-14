@@ -72,6 +72,7 @@ jobs:
           constraint=$("$GITHUB_WORKSPACE/scripts/terraform/compute-tf-version.sh" "$GITHUB_WORKSPACE/${{ matrix.path }}")
           echo "${{ matrix.name }} Constraint found: $constraint"
           echo "tf_version=$(echo "$constraint" | xargs)" >> "$GITHUB_OUTPUT"
+          echo "tf_version_hash=$(echo "$constraint" | xargs | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
       - name: Ensure plugin cache dir exists
         run: mkdir -p "${{ env.TF_PLUGIN_CACHE_DIR }}"
@@ -81,7 +82,7 @@ jobs:
         with:
           path: |
             ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: tf-${{ runner.os }}-${{ steps.compute-tf-version.outputs.tf_version }}
+          key: tf-${{ runner.os }}-${{ steps.compute-tf-version.outputs.tf_version_hash }}
 
       - name: "Setup Terraform ${{ steps.compute-tf-version.outputs.tf_version }}"
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
