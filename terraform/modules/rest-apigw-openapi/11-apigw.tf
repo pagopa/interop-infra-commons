@@ -1,5 +1,5 @@
 locals {
-  openapi_abs_path       = abspath(var.openapi_relative_path)
+  openapi_abs_path = abspath(var.openapi_relative_path)
 
   type_options           = var.api_version != null ? ["-t", var.type] : []
   api_version_options    = var.api_version != null ? ["-v", var.api_version] : []
@@ -10,7 +10,7 @@ locals {
 }
 
 resource "local_file" "templated_openapi" {
-  count    = var.templating_map != {} ? 1 : 0
+  count = var.templating_map != {} ? 1 : 0
 
   content  = templatefile(local.openapi_abs_path, var.templating_map)
   filename = replace(local.openapi_abs_path, ".yaml", "_templated.yaml")

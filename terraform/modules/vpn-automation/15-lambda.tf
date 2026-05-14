@@ -29,7 +29,7 @@ resource "aws_iam_policy" "vpn_clients_s3_bucket_access" {
         ]
         Resource = [
           "${module.vpn_automation_bucket.s3_bucket_arn}/vpn/*",
-          "${module.vpn_automation_bucket.s3_bucket_arn}"
+          module.vpn_automation_bucket.s3_bucket_arn
         ]
       }
     ]
@@ -49,7 +49,7 @@ resource "aws_iam_policy" "vpn_clients_vpn_endpoint_access" {
           "ec2:ExportClientVpnClientConfiguration"
         ]
         Resource = [
-          "${var.client_vpn_endpoint_arn}"
+          var.client_vpn_endpoint_arn
         ]
       }
     ]
@@ -187,4 +187,3 @@ resource "aws_lambda_function" "vpn_clients_updater_lambda" {
     local_mount_path = local.efs_mount_path
   }
 }
-
