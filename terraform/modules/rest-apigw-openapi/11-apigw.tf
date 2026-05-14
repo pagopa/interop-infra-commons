@@ -10,7 +10,7 @@ locals {
 }
 
 resource "local_file" "templated_openapi" {
-  count    = var.templating_map != null ? 1 : 0
+  count = var.templating_map != null ? 1 : 0
 
   content  = templatefile(local.openapi_abs_path, var.templating_map)
   filename = replace(local.openapi_abs_path, ".yaml", "_templated.yaml")
