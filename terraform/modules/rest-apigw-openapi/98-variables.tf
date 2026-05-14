@@ -12,6 +12,11 @@ variable "type" {
   }
 }
 
+variable "rest_apigw_name" {
+  description = "Name of the REST API Gateway"
+  type        = string
+}
+
 variable "api_name" {
   description = "Name of the API"
   type        = string
@@ -57,8 +62,8 @@ variable "web_acl_arn" {
   default     = null
 }
 
-variable "access_log_group_arn" {
-  description = "ARN of the log group where to store APIGW access logs"
+variable "access_log_group_name" {
+  description = "Name of the log group where to store APIGW access logs"
   type        = string
   default     = null
 }
@@ -89,6 +94,12 @@ variable "create_cloudwatch_alarm_4xx" {
 variable "create_cloudwatch_dashboard" {
   description = "If true, a CloudWatch dashboard is created for the current API Gateway"
   type        = bool
+}
+
+variable "create_cloudwatch_queries" {
+  description = "If true, CloudWatch queries are created for the current API Gateway"
+  type        = bool
+  default     = true
 }
 
 variable "sns_topic_arn" {
@@ -198,7 +209,7 @@ variable "remap_missing_auth_token_to_404_problem" {
 variable "templating_map" {
   description = "Map of strings for OpenAPI templating"
   type        = map(string)
-  default     = {}
+  default     = null
 }
 
 variable "disable_execute_api_endpoint" {
@@ -207,8 +218,8 @@ variable "disable_execute_api_endpoint" {
   default     = true
 }
 
-variable "enable_base_path_mapping" {
-  description = "Enable 'Custom Domain Name' base path mapping"
-  type        = bool
-  default     = true
+variable "base_path_mapping" {
+  description = "Custom Domain Name base path mapping"
+  type        = string
+  default     = null
 }
