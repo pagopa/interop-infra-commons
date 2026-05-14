@@ -147,11 +147,11 @@ resource "aws_cloudwatch_dashboard" "this" {
 }
 
 resource "aws_cloudwatch_query_definition" "apigw_5xx" {
-  count = var.create_cloudwatch_queries && var.web_acl_arn != null && data.aws_cloudwatch_log_group.this.arn != null ? 1 : 0
+  count = var.create_cloudwatch_queries && var.web_acl_arn != null && data.aws_cloudwatch_log_group.this[0].arn != null ? 1 : 0
   
   name = "APIGW-${title(var.rest_apigw_name)}-5xx"
 
-  log_group_names = [data.aws_cloudwatch_log_group.this.name]
+  log_group_names = [data.aws_cloudwatch_log_group.this[0].name]
 
   query_string = <<-EOT
     fields @timestamp, @message
@@ -162,11 +162,11 @@ resource "aws_cloudwatch_query_definition" "apigw_5xx" {
 }
 
 resource "aws_cloudwatch_query_definition" "apigw_waf_block" {
-  count = var.create_cloudwatch_queries && var.web_acl_arn != null && data.aws_cloudwatch_log_group.this.arn != null ? 1 : 0
+  count = var.create_cloudwatch_queries && var.web_acl_arn != null && data.aws_cloudwatch_log_group.this[0].arn != null ? 1 : 0
 
   name = "APIGW-${title(var.rest_apigw_name)}-WAF-Block"
 
-  log_group_names = [data.aws_cloudwatch_log_group.this.name]
+  log_group_names = [data.aws_cloudwatch_log_group.this[0].name]
 
   query_string = <<-EOT
     fields @timestamp, @message

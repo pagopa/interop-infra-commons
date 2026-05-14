@@ -75,10 +75,10 @@ resource "aws_api_gateway_stage" "env" {
   }
 
   dynamic "access_log_settings" {
-    for_each = var.access_log_group_name != null ? [data.aws_cloudwatch_log_group.this.arn] : []
+    for_each = var.access_log_group_name != null ? [data.aws_cloudwatch_log_group.this[0].arn] : []
 
     content {
-      destination_arn = data.aws_cloudwatch_log_group.this.arn
+      destination_arn = data.aws_cloudwatch_log_group.this[0].arn
       format = jsonencode({
         "apigwId"              = "$context.apiId"
         "requestId"            = "$context.requestId"
