@@ -148,7 +148,7 @@ resource "aws_cloudwatch_dashboard" "this" {
 
 resource "aws_cloudwatch_query_definition" "apigw_5xx" {
   count = var.create_cloudwatch_queries && data.aws_cloudwatch_log_group.this[0].arn != null ? 1 : 0
-  
+
   name = "APIGW-${title(var.rest_apigw_name)}-5xx"
 
   log_group_names = [data.aws_cloudwatch_log_group.this[0].name]
