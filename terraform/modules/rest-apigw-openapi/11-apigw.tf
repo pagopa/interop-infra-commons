@@ -1,5 +1,5 @@
 locals {
-  openapi_abs_path       = abspath(var.openapi_relative_path)
+  openapi_abs_path = abspath(var.openapi_relative_path)
 
   type_options           = var.api_version != null ? ["-t", var.type] : []
   api_version_options    = var.api_version != null ? ["-v", var.api_version] : []
