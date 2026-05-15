@@ -16,8 +16,8 @@ compute_tf_version() {
 
   module_name=$(basename "$module_dir")
 
-  # Find all .tf files in the specified module directory
-  tf_files=$(cd "$module_dir" && find . -type f -name '*.tf' | sort)
+  # Find all module .tf files, excluding downloaded dependencies under .terraform.
+  tf_files=$(cd "$module_dir" && find . -type f -name '*.tf' -not -path './.terraform/*' | sort)
 
   if [ -z "$tf_files" ]; then
     echo "::error::No Terraform files found for module '$module_name'" >&2
