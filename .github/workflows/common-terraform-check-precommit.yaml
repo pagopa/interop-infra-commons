@@ -24,6 +24,7 @@ env:
   INFRA_COMMONS_REPO: pagopa/interop-infra-commons
   INFRA_COMMONS_REF: feature/pin-9552-tf-check-precommit # temporary branch for testing, should be updated to a stable reference (e.g. main or a release tag)
   INFRA_COMMONS_PATH: .terraform-precommit-workflows # destination path for the checked out infra-commons repository within the workflow
+  INFRA_COMMONS_SCRIPTS_RELATIVE_PATH: scripts/terraform
 
 permissions:
   contents: read
@@ -46,18 +47,29 @@ jobs:
           repository: ${{ env.INFRA_COMMONS_REPO }}
           ref: ${{ env.INFRA_COMMONS_REF }}
           path: ${{ env.INFRA_COMMONS_PATH }}
+          fetch-depth: 0
+          sparse-checkout: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
 
       - name: Discover Terraform roots
         id: discover
         env:
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
+          INFRA_COMMONS_SCRIPTS_RELATIVE_PATH: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
           DISCOVERY_MODE: ${{ inputs.discovery_mode }}
           SEARCH_PATH: ${{ inputs.search_path }}
         run: |
           set -euo pipefail
 
+          discovery_script="$INFRA_COMMONS_PATH/$INFRA_COMMONS_SCRIPTS_RELATIVE_PATH/discover-terraform-roots.sh"
+          echo "Discovering Terraform roots using script: $discovery_script"
+
+          if [ ! -x "$discovery_script" ]; then
+            echo "::error::Missing executable script: $discovery_script"
+            exit 1
+          fi
+
           matrix="$(
-            "$INFRA_COMMONS_PATH/scripts/discover-terraform-roots.sh" \
+            "$discovery_script" \
               "$DISCOVERY_MODE" \
               "$SEARCH_PATH"
           )"
@@ -86,22 +98,27 @@ jobs:
           repository: ${{ env.INFRA_COMMONS_REPO }}
           ref: ${{ env.INFRA_COMMONS_REF }}
           path: ${{ env.INFRA_COMMONS_PATH }}
+          fetch-depth: 0
+          sparse-checkout: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
 
       - name: Compute Terraform version
         id: tf-version
+        env:
+          INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
+          INFRA_COMMONS_SCRIPTS_RELATIVE_PATH: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
         run: |
           set -euo pipefail
 
-          script="${{ env.INFRA_COMMONS_PATH }}/scripts/terraform/compute-tf-version.sh"
+          script="$INFRA_COMMONS_PATH/$INFRA_COMMONS_SCRIPTS_RELATIVE_PATH/compute-tf-version.sh"
           root="${{ matrix.path }}"
           tf_version=""
 
-          if [ -x "$script" ]; then
-            tf_version="$("$script" "$GITHUB_WORKSPACE/$root")"
-          else
+          if [ ! -x "$script" ]; then
             echo "::error::Missing executable script: $script"
             exit 1
           fi
+
+          tf_version="$("$script" "$GITHUB_WORKSPACE/$root")"
 
           tf_version="$(echo "$tf_version" | xargs)"
           echo "Terraform version for $root: $tf_version"
