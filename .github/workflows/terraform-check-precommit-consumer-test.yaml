@@ -1,0 +1,54 @@
+# This workflow is a consumer-side test for the reusable Terraform pre-commit workflow.
+#
+# It intentionally behaves like an external repository:
+# - it does not implement Terraform discovery/check logic locally;
+# - it calls the reusable workflow from pagopa/interop-infra-commons via `jobs.<job_id>.uses`;
+# - it only passes repository-specific inputs such as the Terraform root discovery mode and search path.
+#
+# Keep this workflow separate from terraform-check.yaml while validating the reusable workflow contract.
+# Once the reusable workflow is merged and stable, update the `uses` ref from the feature branch to
+# `main` or, preferably, to a version tag.
+
+name: Terraform Checks (pre-commit consumer test)
+run-name: "Terraform Checks pre-commit consumer test - ${{ github.ref_name }}"
+
+on:
+  pull_request:
+    paths:
+      # Re-run when the caller workflow or reusable workflow contract changes.
+      - ".github/workflows/terraform-check-precommit-consumer-test.yaml"
+      - ".github/workflows/common-terraform-check-precommit.yaml"
+
+      # Re-run when the local pre-commit/TFLint configuration changes.
+      - ".pre-commit-config.yaml"
+      - ".tflint.hcl"
+
+      # Match the existing Terraform module workflow trigger.
+      - "terraform/modules/**"
+
+      # Re-run when shared Terraform helper scripts change.
+      - "scripts/terraform/**"
+
+  # Manual trigger for validating the reusable workflow integration without opening a PR.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terraform-checks:
+    name: Terraform checks via reusable pre-commit workflow
+
+    # This is the important part of the test: the workflow is invoked exactly as
+    # a different repository would invoke it. Replace the feature branch with
+    # `main` or a release tag after the reusable workflow is merged.
+    uses: pagopa/interop-infra-commons/.github/workflows/common-terraform-check-precommit.yaml@feature/pin-9552-tf-check-precommit
+    #uses: ./.github/workflows/common-terraform-check-precommit.yaml
+
+    with:
+      # This repository stores reusable Terraform modules as direct children of terraform/modules.
+      discovery_mode: modules
+      search_path: terraform/modules
+
+      # Keep aligned with the existing Terraform check workflow while testing the migration.
+      tflint_version: v0.61.0
