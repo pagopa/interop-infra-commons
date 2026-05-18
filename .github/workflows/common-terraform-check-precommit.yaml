@@ -49,13 +49,17 @@ jobs:
 
       - name: Discover Terraform roots
         id: discover
+        env:
+          INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
+          DISCOVERY_MODE: ${{ inputs.discovery_mode }}
+          SEARCH_PATH: ${{ inputs.search_path }}
         run: |
           set -euo pipefail
 
           matrix="$(
-            ${{ env.INFRA_COMMONS_PATH }}/scripts/discover-terraform-roots.sh \
-              "${{ inputs.discovery_mode }}" \
-              "${{ inputs.search_path }}"
+            "$INFRA_COMMONS_PATH/scripts/discover-terraform-roots.sh" \
+              "$DISCOVERY_MODE" \
+              "$SEARCH_PATH"
           )"
 
           echo "$matrix"
