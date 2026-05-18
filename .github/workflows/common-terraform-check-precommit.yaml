@@ -232,8 +232,10 @@ jobs:
 
     steps:
       - name: Check matrix jobs status
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
         run: |
-          result="${{ needs.checks.result }}"
+          result="$CHECKS_RESULT"
           if [[ "$result" != "success" ]]; then
             echo "::error title=Terraform CI Gate::One or more Terraform checks failed: $result"
             exit 1
