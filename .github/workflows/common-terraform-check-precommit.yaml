@@ -6,11 +6,16 @@ on:
       discovery_mode:
         required: false
         type: string
-        default: auto
+        default: ""
+        # expected values: "modules", "env-roots", "auto", "" (default: "")
       search_path:
         required: false
         type: string
         default: .
+      tfversion:
+        required: false
+        type: string
+        default: "" # if empty, the workflow will attempt to compute the Terraform version for each root using the existing logic in compute-tf-version.sh
       tflint_version:
         required: false
         type: string
@@ -60,6 +65,14 @@ jobs:
         run: |
           set -euo pipefail
 
+          # if discovery mode is empty, set matrix to root dir only defined by search_path input
+          if [ -z "$DISCOVERY_MODE" ]; then
+            echo "No discovery mode specified, defaulting to single root: $SEARCH_PATH"
+            matrix="$(jq -n --arg path "$SEARCH_PATH" --arg name "$(basename "$SEARCH_PATH")" '[{path: $path, name: $name}]')"
+            echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           discovery_script="$INFRA_COMMONS_PATH/$INFRA_COMMONS_SCRIPTS_RELATIVE_PATH/discover-terraform-roots.sh"
           echo "Discovering Terraform roots using script: $discovery_script"
 
@@ -106,10 +119,22 @@ jobs:
         env:
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
           INFRA_COMMONS_SCRIPTS_RELATIVE_PATH: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
+          PROVIDED_TF_VERSION: ${{ inputs.tfversion }}
           ROOT: ${{ matrix.path }}
         run: |
           set -euo pipefail
 
+          # If tfversion input is provided, use it directly without running the discovery script.
+          # This allows the caller workflow to override the Terraform version discovery logic when needed 
+          # (e.g. if the .terraform-version file is missing or if a specific version needs to be enforced for the checks).
+          if [ -n "$PROVIDED_TF_VERSION" ]; then
+            echo "Using provided Terraform version: $PROVIDED_TF_VERSION"
+            echo "tf_version=$PROVIDED_TF_VERSION" >> "$GITHUB_OUTPUT"
+            echo "tf_version_hash=$(echo "$PROVIDED_TF_VERSION" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # If tfversion input is empty, run the discovery script to compute the Terraform version for the current root.
           script="$INFRA_COMMONS_PATH/$INFRA_COMMONS_SCRIPTS_RELATIVE_PATH/compute-tf-version.sh"
           root="$ROOT"
           tf_version=""
@@ -173,13 +198,6 @@ jobs:
 
           root="$ROOT"
           
-          #mapfile -t files < <(
-          #  find "$root" \
-          #    -type f \
-          #    \( -name '*.tf' -o -name '*.tfvars' \) \
-          #    | sort
-          #)
-
           should_run=0
 
           while IFS= read -r roots; do
@@ -191,11 +209,6 @@ jobs:
             fi
           done < <(find "$root" -mindepth 1 -maxdepth 1 -type d | sort)
 
-          #if [ "${#files[@]}" -eq 0 ]; then
-          #  echo "No Terraform files found in $root, skipping."
-          #  exit 0
-          #fi
-          
           if [ "$should_run" -eq 0 ]; then
             echo "No Terraform files found in any subdirectory of $root, skipping."
             exit 0
@@ -221,8 +234,8 @@ jobs:
 
           pre-commit run \
             --config "$config" \
-            --show-diff-on-failure 
-            # --files "${files[@]}"
+            --show-diff-on-failure \
+            -a
 
   gate:
     name: Terraform CI Gate
