@@ -214,7 +214,9 @@ jobs:
           
           escaped_root="$(printf '%s\n' "$root" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
 
-          sed "s#__TERRAFORM_ROOT__#$escaped_root#g" \
+          # substitute the Terraform root path in the pre-commit config template and write the result to the expected pre-commit config location
+          # and also the __GIT_WORKING_DIR__ placeholder with the actual git working dir (which is the root of the repository, i.e. $GITHUB_WORKSPACE) for use in the TFLint config path
+          sed "s#__TERRAFORM_ROOT__#$escaped_root#g; s#__GIT_WORKING_DIR__#$GITHUB_WORKSPACE#g" \
             "$config_tmpl" > "$PRE_COMMIT_CONFIG"
 
           
