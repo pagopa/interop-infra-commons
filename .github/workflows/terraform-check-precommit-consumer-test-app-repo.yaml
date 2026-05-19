@@ -72,9 +72,7 @@ jobs:
     #uses: ./.github/workflows/common-terraform-check-precommit.yaml
 
     with:
-      # This repository stores reusable Terraform modules as direct children of terraform/modules.
-      discovery_mode: modules
-      search_path: terraform/modules
+      search_path: .
 
       # Keep aligned with the existing Terraform check workflow while testing the migration.
       tflint_version: v0.61.0
