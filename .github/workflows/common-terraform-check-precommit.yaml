@@ -197,20 +197,9 @@ jobs:
           set -euo pipefail
 
           root="$ROOT"
-          
-          should_run=0
 
-          while IFS= read -r roots; do
-            # Skip folders that do not contain Terraform files.
-            if [ -z "$(find "$roots" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
-              continue
-            else
-              should_run=1
-            fi
-          done < <(find "$root" -mindepth 1 -maxdepth 1 -type d | sort)
-
-          if [ "$should_run" -eq 0 ]; then
-            echo "No Terraform files found in any subdirectory of $root, skipping."
+          if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
+            echo "No Terraform files found in $root, skipping."
             exit 0
           fi
 
