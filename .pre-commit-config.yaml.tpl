@@ -21,6 +21,7 @@ repos:
         files: ^__TERRAFORM_ROOT__/.*\.(tf)$
         args:
           - --args=-no-color
+          - --tf-init-args=-lockfile=readonly
           - --tf-init-args=-backend=false
           - --tf-init-args=-input=false
           - --tf-init-args=-no-color
