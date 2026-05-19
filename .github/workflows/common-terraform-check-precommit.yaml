@@ -53,7 +53,8 @@ jobs:
           ref: ${{ env.INFRA_COMMONS_REF }}
           path: ${{ env.INFRA_COMMONS_PATH }}
           fetch-depth: 0
-          sparse-checkout: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
+          sparse-checkout: |
+            ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
 
       - name: Discover Terraform roots
         id: discover
@@ -114,7 +115,9 @@ jobs:
           ref: ${{ env.INFRA_COMMONS_REF }}
           path: ${{ env.INFRA_COMMONS_PATH }}
           fetch-depth: 0
-          sparse-checkout: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
+          sparse-checkout: |
+            ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
+            .tflint.hcl
 
       - name: Compute Terraform version
         id: tf-version
@@ -215,8 +218,8 @@ jobs:
           escaped_root="$(printf '%s\n' "$root" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
 
           # substitute the Terraform root path in the pre-commit config template and write the result to the expected pre-commit config location
-          # and also the __GIT_WORKING_DIR__ placeholder with the actual git working dir (which is the root of the repository, i.e. $GITHUB_WORKSPACE) for use in the TFLint config path
-          sed "s#__TERRAFORM_ROOT__#$escaped_root#g; s#__GIT_WORKING_DIR__#$GITHUB_WORKSPACE#g" \
+          # and also the __GIT_WORKING_DIR__ placeholder with the actual git working dir (which is the root of the checked out repository, i.e. $INFRA_COMMONS_PATH) to allow the pre-commit hooks to locate the .tflint.hcl config file
+          sed "s#__TERRAFORM_ROOT__#$escaped_root#g; s#__GIT_WORKING_DIR__#$INFRA_COMMONS_PATH#g" \
             "$config_tmpl" > "$PRE_COMMIT_CONFIG"
 
           
