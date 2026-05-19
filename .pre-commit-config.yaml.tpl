@@ -1,6 +1,6 @@
 # Pre-commit configuration for Terraform code formatting and validation used locally.
 minimum_pre_commit_version: "4"
-fail_fast: true
+fail_fast: false
 repos:
   - repo: https://github.com/antonbabenko/pre-commit-terraform
     rev: v1.105.0
