@@ -52,7 +52,6 @@ jobs:
           repository: ${{ env.INFRA_COMMONS_REPO }}
           ref: ${{ env.INFRA_COMMONS_REF }}
           path: ${{ env.INFRA_COMMONS_PATH }}
-          fetch-depth: 0
           sparse-checkout: |
             ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
 
@@ -114,10 +113,10 @@ jobs:
           repository: ${{ env.INFRA_COMMONS_REPO }}
           ref: ${{ env.INFRA_COMMONS_REF }}
           path: ${{ env.INFRA_COMMONS_PATH }}
-          fetch-depth: 0
           sparse-checkout: |
             ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
             .tflint.hcl
+            .pre-commit-config.yaml.tpl
 
       - name: Compute Terraform version
         id: tf-version
