@@ -36,9 +36,10 @@ permissions:
   contents: read
 
 jobs:
+  
+        
   terraform-checks:
     name: Terraform checks via reusable pre-commit workflow
-
     # This is the important part of the test: the workflow is invoked exactly as
     # a different repository would invoke it. Replace the feature branch with
     # `main` or a release tag after the reusable workflow is merged.
