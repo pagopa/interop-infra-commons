@@ -25,7 +25,7 @@ env:
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
   TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
   PRE_COMMIT_CONFIG: ${{ github.workspace }}/.pre-commit-config.yaml
-  PRE_COMMIT_CONFIG_TMPL: ${{ github.workspace }}/.pre-commit-config.yaml.tpl
+  PRE_COMMIT_CONFIG_TMPL: .pre-commit-config.yaml.tpl
   INFRA_COMMONS_REPO: pagopa/interop-infra-commons
   INFRA_COMMONS_REF: feature/pin-9552-tf-check-precommit # temporary branch for testing, should be updated to a stable reference (e.g. main or a release tag)
   INFRA_COMMONS_PATH: .terraform-precommit-workflows # destination path for the checked out infra-commons repository within the workflow
@@ -195,6 +195,7 @@ jobs:
           ROOT: ${{ matrix.path }}
           PRE_COMMIT_CONFIG_TMPL: ${{ env.PRE_COMMIT_CONFIG_TMPL }}
           PRE_COMMIT_CONFIG: ${{ env.PRE_COMMIT_CONFIG }}
+          INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
         run: |
           set -euo pipefail
 
@@ -205,7 +206,7 @@ jobs:
             exit 0
           fi
 
-          config_tmpl="$PRE_COMMIT_CONFIG_TMPL"
+          config_tmpl="$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG_TMPL"
           if [ ! -f "$config_tmpl" ]; then
             echo "::error::pre-commit config template not found: $config_tmpl"
             exit 1
