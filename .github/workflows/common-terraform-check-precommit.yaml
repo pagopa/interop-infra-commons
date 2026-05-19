@@ -202,6 +202,7 @@ jobs:
           set -euo pipefail
 
           root="$ROOT"
+          infra_commons_abs="$GITHUB_WORKSPACE/$INFRA_COMMONS_PATH"
 
           if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
             echo "No Terraform files found in $root, skipping."
@@ -213,12 +214,18 @@ jobs:
             echo "::error::pre-commit config template not found: $config_tmpl"
             exit 1
           fi
-          
-          escaped_root="$(printf '%s\n' "$root" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
 
-          # substitute the Terraform root path in the pre-commit config template and write the result to the expected pre-commit config location
-          # and also the __GIT_WORKING_DIR__ placeholder with the actual git working dir (which is the root of the checked out repository, i.e. $INFRA_COMMONS_PATH) to allow the pre-commit hooks to locate the .tflint.hcl config file
-          sed "s#__TERRAFORM_ROOT__#$escaped_root#g; s#__GIT_WORKING_DIR__#$INFRA_COMMONS_PATH#g" \
+          tflint_config="$infra_commons_abs/.tflint.hcl"
+          if [ ! -f "$tflint_config" ]; then
+            echo "::error::.tflint.hcl not found in checked out infra-commons path: $tflint_config"
+            exit 1
+          fi
+
+          escaped_root="$(printf '%s\n' "$root" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
+          escaped_git_working_dir="$(printf '%s\n' "$infra_commons_abs" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
+
+          # Substitute Terraform root and an absolute path to infra-commons so hooks can always resolve .tflint.hcl.
+          sed "s#__TERRAFORM_ROOT__#$escaped_root#g; s#__GIT_WORKING_DIR__#$escaped_git_working_dir#g" \
             "$config_tmpl" > "$PRE_COMMIT_CONFIG"
 
           
