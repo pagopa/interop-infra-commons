@@ -200,7 +200,7 @@ jobs:
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
         run: |
           set -euo pipefail
-
+          unset TF_PLUGIN_CACHE_DIR
           root="$ROOT"
           infra_commons_abs="$GITHUB_WORKSPACE/$INFRA_COMMONS_PATH"
 
