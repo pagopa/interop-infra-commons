@@ -203,6 +203,8 @@ jobs:
           rm -rf "$tmp_workspace"
           mkdir -p "$tmp_workspace"
 
+          unset TF_PLUGIN_CACHE_DIR
+
           # Copy the caller repository into a temporary workspace.
           # Terraform init can modify .terraform.lock.hcl here without touching the real GitHub checkout.
           rsync -a \
@@ -250,7 +252,7 @@ jobs:
           # Lockfile updates, if any, happen only in the temporary workspace.
           sed "s#__TERRAFORM_ROOT__#$escaped_root#g; \
                s#__GIT_WORKING_DIR__#$escaped_git_working_dir#g; \
-               s#__TERRAFORM_LOCKFILE_ARG__#$lockfile_arg#g" \
+               s#__TERRAFORM_LOCKFILE_ARG__##g" \
             "$config_tmpl" > "$tmp_config"
 
           # Avoid shared Terraform plugin cache while running Terraform in the temporary workspace.
