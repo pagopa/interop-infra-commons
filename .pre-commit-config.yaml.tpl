@@ -25,6 +25,7 @@ repos:
           - --tf-init-args=-input=false
           - --tf-init-args=-no-color
           - --hook-config=--parallelism-limit=1
+          __TERRAFORM_LOCKFILE_ARG__
 
       - id: terraform_tflint
         name: Terraform TFLint

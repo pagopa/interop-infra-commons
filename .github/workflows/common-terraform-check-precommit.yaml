@@ -221,13 +221,20 @@ jobs:
             exit 1
           fi
 
+          lockfile_arg=""
+
+          if [ -f "$root/.terraform.lock.hcl" ]; then
+            lockfile_arg="- --tf-init-args=-lockfile=readonly"
+          fi
+
           escaped_root="$(printf '%s\n' "$root" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
           escaped_git_working_dir="$(printf '%s\n' "$infra_commons_abs" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
 
           # Substitute Terraform root and an absolute path to infra-commons so hooks can always resolve .tflint.hcl.
-          sed "s#__TERRAFORM_ROOT__#$escaped_root#g; s#__GIT_WORKING_DIR__#$escaped_git_working_dir#g" \
-            "$config_tmpl" > "$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG"
-
+          sed "s#__TERRAFORM_ROOT__#$escaped_root#g;  \
+               s#__GIT_WORKING_DIR__#$escaped_git_working_dir#g; \
+               s#__TERRAFORM_LOCKFILE_ARG__#$lockfile_arg#g" \
+             "$config_tmpl" > "$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG"
           
           config="$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG"
           if [ ! -f "$config" ]; then
