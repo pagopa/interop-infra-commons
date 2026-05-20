@@ -24,7 +24,6 @@ on:
 env:
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
   TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
-  PRE_COMMIT_CONFIG: .pre-commit-config.yaml
   PRE_COMMIT_CONFIG_TMPL: .pre-commit-config.yaml.tpl
   INFRA_COMMONS_REPO: pagopa/interop-infra-commons
   INFRA_COMMONS_REF: feature/pin-9552-tf-check-precommit # temporary branch for testing, should be updated to a stable reference (e.g. main or a release tag)
@@ -43,11 +42,10 @@ jobs:
 
     steps:
       - name: Checkout caller repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 #v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      # checkout the common workflows repo to access the discovery script
       - name: Checkout infra-commons workflow repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 #v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
           repository: ${{ env.INFRA_COMMONS_REPO }}
           ref: ${{ env.INFRA_COMMONS_REF }}
@@ -65,7 +63,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          # if discovery mode is empty, set matrix to root dir only defined by search_path input
           if [ -z "$DISCOVERY_MODE" ]; then
             echo "No discovery mode specified, defaulting to single root: $SEARCH_PATH"
             matrix="$(jq -cn --arg path "$SEARCH_PATH" --arg name "$(basename "$SEARCH_PATH")" '{include:[{path: $path, name: $name}]}')"
@@ -106,7 +103,6 @@ jobs:
       - name: Checkout caller repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      # checkout the common workflows repo to access the Terraform version computation script and the pre-commit config
       - name: Checkout central workflow repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
         with:
@@ -141,7 +137,6 @@ jobs:
           # If tfversion input is empty, run the discovery script to compute the Terraform version for the current root.
           script="$INFRA_COMMONS_PATH/$INFRA_COMMONS_SCRIPTS_RELATIVE_PATH/compute-tf-version.sh"
           root="$ROOT"
-          tf_version=""
 
           if [ ! -x "$script" ]; then
             echo "::error::Missing executable script: $script"
@@ -149,10 +144,9 @@ jobs:
           fi
 
           tf_version="$("$script" "$GITHUB_WORKSPACE/$root")"
-
           tf_version="$(echo "$tf_version" | xargs)"
-          echo "Terraform version for $root: $tf_version"
 
+          echo "Terraform version for $root: $tf_version"
           echo "tf_version=$tf_version" >> "$GITHUB_OUTPUT"
           echo "tf_version_hash=$(echo "$tf_version" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
@@ -196,20 +190,36 @@ jobs:
         env:
           ROOT: ${{ matrix.path }}
           PRE_COMMIT_CONFIG_TMPL: ${{ env.PRE_COMMIT_CONFIG_TMPL }}
-          PRE_COMMIT_CONFIG: ${{ env.PRE_COMMIT_CONFIG }}
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
         run: |
           set -euo pipefail
-          unset TF_PLUGIN_CACHE_DIR
+
           root="$ROOT"
           infra_commons_abs="$GITHUB_WORKSPACE/$INFRA_COMMONS_PATH"
+
+          tmp_workspace="$RUNNER_TEMP/precommit-workspace"
+          tmp_config="$RUNNER_TEMP/pre-commit-terraform.yaml"
+
+          rm -rf "$tmp_workspace"
+          mkdir -p "$tmp_workspace"
+
+          # Copy the caller repository into a temporary workspace.
+          # Terraform init can modify .terraform.lock.hcl here without touching the real GitHub checkout.
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.terraform.d' \
+            --exclude='.tflint.d' \
+            --exclude='**/.terraform' \
+            "$GITHUB_WORKSPACE/" "$tmp_workspace/"
+
+          cd "$tmp_workspace"
 
           if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
             echo "No Terraform files found in $root, skipping."
             exit 0
           fi
 
-          config_tmpl="$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG_TMPL"
+          config_tmpl="$GITHUB_WORKSPACE/$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG_TMPL"
           if [ ! -f "$config_tmpl" ]; then
             echo "::error::pre-commit config template not found: $config_tmpl"
             exit 1
@@ -229,29 +239,56 @@ jobs:
           # the lockfile is not modified during the checks. 
           # The following logic checks for the presence of a .terraform.lock.hcl file in the Terraform root or
           # any of its parent directories and sets the lockfile_arg variable accordingly.
-          if find "$root" -type f -name ".terraform.lock.hcl" -print -quit | grep -q .; then
-            lockfile_arg="- --tf-init-args=-lockfile=readonly"
-          fi
+          #if find "$root" -type f -name ".terraform.lock.hcl" -print -quit | grep -q .; then
+          #  lockfile_arg="- --tf-init-args=-lockfile=readonly"
+          #fi
 
           escaped_root="$(printf '%s\n' "$root" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
           escaped_git_working_dir="$(printf '%s\n' "$infra_commons_abs" | sed 's/[.[\*^$()+?{}|]/\\&/g')"
 
-          # Substitute Terraform root and an absolute path to infra-commons so hooks can always resolve .tflint.hcl.
-          sed "s#__TERRAFORM_ROOT__#$escaped_root#g;  \
+          # Do not use -lockfile=readonly.
+          # Lockfile updates, if any, happen only in the temporary workspace.
+          sed "s#__TERRAFORM_ROOT__#$escaped_root#g; \
                s#__GIT_WORKING_DIR__#$escaped_git_working_dir#g; \
                s#__TERRAFORM_LOCKFILE_ARG__#$lockfile_arg#g" \
-             "$config_tmpl" > "$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG"
-          
-          config="$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG"
-          if [ ! -f "$config" ]; then
-            echo "::error::pre-commit config not found: $config"
-            exit 1
-          fi
+            "$config_tmpl" > "$tmp_config"
 
+          # Avoid shared Terraform plugin cache while running Terraform in the temporary workspace.
+          #unset TF_PLUGIN_CACHE_DIR
+
+          # Create a temporary Git history so we can distinguish lockfile-only changes
+          # from real formatting/configuration changes.
+          git init --quiet
+          git config user.email "ci@example.com"
+          git config user.name "CI"
+          git add .
+          git commit -m "baseline" --quiet
+
+          set +e
           pre-commit run \
-            --config "$config" \
+            --config "$tmp_config" \
             --show-diff-on-failure \
             -a
+          precommit_exit_code=$?
+          set -e
+
+          changed_files="$(git status --porcelain | awk '{print $2}')"
+
+          if [ -n "$changed_files" ]; then
+            echo "Files changed during pre-commit in temporary workspace:"
+            echo "$changed_files"
+          fi
+
+          non_lockfile_changes="$(
+            echo "$changed_files" | grep -vE '(^|/)\.terraform\.lock\.hcl$' || true
+          )"
+
+          if [ "$precommit_exit_code" -ne 0 ] && [ -n "$changed_files" ] && [ -z "$non_lockfile_changes" ]; then
+            echo "Only .terraform.lock.hcl files were modified in the temporary workspace; ignoring these changes."
+            exit 0
+          fi
+
+          exit "$precommit_exit_code"
 
   gate:
     name: Terraform CI Gate
@@ -270,4 +307,4 @@ jobs:
             exit 1
           fi
 
-          echo "Terraform CI Gate: all checks passed."
+          echo "Terraform CI Gate: all Terraform checks passed."
