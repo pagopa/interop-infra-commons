@@ -8,11 +8,6 @@ variable "project_name" {
   type        = string
 }
 
-variable "clients_diff_image_tag" {
-  description = "Image tag for vpn-clients-diff repository"
-  type        = string
-}
-
 variable "clients_updater_image_tag" {
   description = "Image tag for vpn-clients-updater repository"
   type        = string
