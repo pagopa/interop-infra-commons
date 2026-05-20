@@ -24,7 +24,7 @@ on:
 env:
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
   TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
-  PRE_COMMIT_CONFIG: ${{ github.workspace }}/.pre-commit-config.yaml
+  PRE_COMMIT_CONFIG: .pre-commit-config.yaml
   PRE_COMMIT_CONFIG_TMPL: .pre-commit-config.yaml.tpl
   INFRA_COMMONS_REPO: pagopa/interop-infra-commons
   INFRA_COMMONS_REF: feature/pin-9552-tf-check-precommit # temporary branch for testing, should be updated to a stable reference (e.g. main or a release tag)
@@ -226,10 +226,10 @@ jobs:
 
           # Substitute Terraform root and an absolute path to infra-commons so hooks can always resolve .tflint.hcl.
           sed "s#__TERRAFORM_ROOT__#$escaped_root#g; s#__GIT_WORKING_DIR__#$escaped_git_working_dir#g" \
-            "$config_tmpl" > "$PRE_COMMIT_CONFIG"
+            "$config_tmpl" > "$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG"
 
           
-          config="$PRE_COMMIT_CONFIG"
+          config="$INFRA_COMMONS_PATH/$PRE_COMMIT_CONFIG"
           if [ ! -f "$config" ]; then
             echo "::error::pre-commit config not found: $config"
             exit 1
