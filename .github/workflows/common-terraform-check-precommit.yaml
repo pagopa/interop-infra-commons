@@ -223,7 +223,13 @@ jobs:
 
           lockfile_arg=""
 
-          if [ -f "$root/.terraform.lock.hcl" ]; then
+          # In some cases, the .terraform.lock.hcl file might be located in a parent directory of the Terraform root 
+          # (e.g. if the root is a subdirectory of a larger Terraform configuration). 
+          # In those cases, we want to pass the -lockfile=readonly argument to Terraform init to ensure that
+          # the lockfile is not modified during the checks. 
+          # The following logic checks for the presence of a .terraform.lock.hcl file in the Terraform root or
+          # any of its parent directories and sets the lockfile_arg variable accordingly.
+          if find "$root" -type f -name ".terraform.lock.hcl" -print -quit | grep -q .; then
             lockfile_arg="- --tf-init-args=-lockfile=readonly"
           fi
 
