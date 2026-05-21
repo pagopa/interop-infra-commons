@@ -248,8 +248,8 @@ jobs:
             -e PCT_TFPATH=/usr/local/bin/terraform \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
-            run --files $(git ls-files "$root/**") --show-diff-on-failure
-            # run -a --show-diff-on-failure
+            run -a --show-diff-on-failure
+            #run --files $(git ls-files "$root/**") --show-diff-on-failure
   gate:
     name: Terraform CI Gate
     if: always()
