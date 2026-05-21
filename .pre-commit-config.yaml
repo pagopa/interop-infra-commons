@@ -3,7 +3,7 @@ minimum_pre_commit_version: "4"
 fail_fast: false
 repos:
   - repo: https://github.com/antonbabenko/pre-commit-terraform
-    rev: v1.105.0
+    rev: v1.105.0 # sha256:4ef4b8323b27fc263535ad88c9d2f20488fcb3b520258e5e7f0553ed5f6692b5
     hooks:
       - id: terraform_fmt
         name: Terraform fmt

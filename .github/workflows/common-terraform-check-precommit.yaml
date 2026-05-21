@@ -213,10 +213,19 @@ jobs:
             exit 1
           fi
 
+          # Support both tags (e.g. latest, v1.2.3) and digests (sha256:... or raw 64-hex hash).
+          if [[ "$PRECOMMIT_IMAGE_VERSION" =~ ^sha256:[a-fA-F0-9]{64}$ ]]; then
+            image_ref="ghcr.io/antonbabenko/pre-commit-terraform@$PRECOMMIT_IMAGE_VERSION"
+          elif [[ "$PRECOMMIT_IMAGE_VERSION" =~ ^[a-fA-F0-9]{64}$ ]]; then
+            image_ref="ghcr.io/antonbabenko/pre-commit-terraform@sha256:$PRECOMMIT_IMAGE_VERSION"
+          else
+            image_ref="ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION"
+          fi
+
           docker run \
             -v "$(pwd):/lint" \
             -w /lint \
-            ghcr.io/antonbabenko/pre-commit-terraform@$PRECOMMIT_IMAGE_VERSION \
+            "$image_ref" \
             run -a
             # --show-diff-on-failure
             # --config not necessary
