@@ -168,6 +168,9 @@ jobs:
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: ${{ steps.tf-version.outputs.tf_version }}
+          # do not use hashicorp/setup-terraform's built-in wrapper, as it does not support running Terraform from a custom path (e.g. through PCT_TFPATH)
+          # and we want to allow the pre-commit image to use the Terraform binary mounted from the runner
+          terraform_wrapper: false 
 
       - name: Show Terraform version
         run: terraform version
