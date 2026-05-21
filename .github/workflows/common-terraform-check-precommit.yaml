@@ -269,6 +269,8 @@ jobs:
             exit 1
           fi         
 
+          echo $(git ls-files "$root/**")
+
           docker run --rm \
             -v $(pwd):/lint \
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform-custom:ro" \
