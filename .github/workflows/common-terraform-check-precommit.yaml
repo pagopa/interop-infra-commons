@@ -3,11 +3,6 @@ name: Reusable Terraform Pre-Commit Checks
 on:
   workflow_call:
     inputs:
-      discovery_mode:
-        required: false
-        type: string
-        default: ""
-        # expected values: "modules", "env-roots", "auto", "" (default: "")
       search_path:
         required: false
         type: string
@@ -37,71 +32,9 @@ permissions:
   contents: read
 
 jobs:
-  discover:
-    name: Discover Terraform roots
-    runs-on: ubuntu-24.04
-    outputs:
-      matrix: ${{ steps.discover.outputs.matrix }}
-
-    steps:
-      - name: Checkout caller repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-
-      - name: Checkout infra-commons workflow repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          repository: ${{ env.INFRA_COMMONS_REPO }}
-          ref: ${{ env.INFRA_COMMONS_REF }}
-          path: ${{ env.INFRA_COMMONS_PATH }}
-          sparse-checkout: |
-            ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
-
-      # TODO splittare il workflow -> discovery step solo per infra commons, rimuovere dal reusable workflow 
-      - name: Discover Terraform roots
-        id: discover
-        env:
-          INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
-          INFRA_COMMONS_SCRIPTS_RELATIVE_PATH: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
-          DISCOVERY_MODE: ${{ inputs.discovery_mode }}
-          SEARCH_PATH: ${{ inputs.search_path }}
-        run: |
-          set -euo pipefail
-
-          if [ -z "$DISCOVERY_MODE" ]; then
-            echo "No discovery mode specified, defaulting to single root: $SEARCH_PATH"
-            matrix="$(jq -cn --arg path "$SEARCH_PATH" --arg name "$(basename "$SEARCH_PATH")" '{include:[{path: $path, name: $name}]}')"
-            echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          discovery_script="$INFRA_COMMONS_PATH/$INFRA_COMMONS_SCRIPTS_RELATIVE_PATH/discover-terraform-roots.sh"
-          echo "Discovering Terraform roots using script: $discovery_script"
-
-          if [ ! -x "$discovery_script" ]; then
-            echo "::error::Missing executable script: $discovery_script"
-            exit 1
-          fi
-
-          matrix="$(
-            "$discovery_script" \
-              "$DISCOVERY_MODE" \
-              "$SEARCH_PATH"
-          )"
-
-          matrix="$(echo "$matrix" | jq -c '.')"
-
-          echo "$matrix"
-          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
-
   checks:
-    name: "[${{ matrix.name }}] Terraform checks" # TODO check composite w/matrix
-    needs: discover
+    name: "[${{ inputs.search_path }}] Terraform checks" # TODO check composite w/matrix
     runs-on: ubuntu-24.04
-
-    strategy:
-      fail-fast: false
-      max-parallel: 10
-      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
 
     steps:
       - name: Checkout caller repository
@@ -123,7 +56,7 @@ jobs:
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
           INFRA_COMMONS_SCRIPTS_RELATIVE_PATH: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
           PROVIDED_TF_VERSION: ${{ inputs.tfversion }}
-          ROOT: ${{ matrix.path }}
+          ROOT: ${{ inputs.search_path }}
         run: |
           set -euo pipefail
 
@@ -224,29 +157,29 @@ jobs:
           PRECOMMIT_IMAGE: ${{ steps.build-image-ref.outputs.PRECOMMIT_IMAGE_REF_COMPUTED }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
         run: |
-          echo -e "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
-          echo    "+ 1️⃣  SHOW PRECOMMIT VERSION 1️⃣  +"
-          echo -e "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n"
+          set -euo pipefail
 
-          docker run --rm --entrypoint cat "$PRECOMMIT_IMAGE" /usr/bin/tools_versions_info
-
-          echo "Tools baked into pre-commit-terraform image:"
+          echo "+++++++++++++++++++++++++++++++++++++++++++++++"
+          echo "+ Tools baked into pre-commit-terraform image +"
+          echo "+++++++++++++++++++++++++++++++++++++++++++++++"
           docker run --rm \
             --entrypoint cat \
             "$PRECOMMIT_IMAGE" \
             /usr/bin/tools_versions_info
 
-          echo "Terraform binary mounted from runner and used through PCT_TFPATH:"
+          echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+          echo "+ Terraform binary mounted from runner and used through PCT_TFPATH +"
+          echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
           docker run --rm \
-            -v "$TERRAFORM_PATH:/usr/local/bin/terraform-custom:ro" \
-            -e PCT_TFPATH=/usr/local/bin/terraform-custom \
-            --entrypoint /usr/local/bin/terraform-custom \
+            -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
+            -e PCT_TFPATH=/usr/local/bin/terraform \
+            --entrypoint /usr/local/bin/terraform \
             "$PRECOMMIT_IMAGE" \
             version
 
       - name: Run pre-commit on Terraform root
         env:
-          ROOT: ${{ matrix.path }}
+          ROOT: ${{ inputs.search_path }}
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
           PRECOMMIT_IMAGE: ${{ steps.build-image-ref.outputs.PRECOMMIT_IMAGE_REF_COMPUTED }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
@@ -256,7 +189,7 @@ jobs:
           root="$ROOT"
           infra_commons_abs="$GITHUB_WORKSPACE/$INFRA_COMMONS_PATH"
 
-          # unset TF_PLUGIN_CACHE_DIR
+          unset TF_PLUGIN_CACHE_DIR
 
           if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
             echo "No Terraform files found in $root, skipping."
@@ -273,27 +206,10 @@ jobs:
 
           docker run --rm \
             -v $(pwd):/lint \
-            -v "$TERRAFORM_PATH:/usr/local/bin/terraform-custom:ro" \
-            -e PCT_TFPATH=/usr/local/bin/terraform-custom \
+            -v "$tflint_config:/lint/.tflint.hcl:ro" \
+            -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
+            -e PCT_TFPATH=/usr/local/bin/terraform \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
             run --files $(git ls-files "$root/**") --show-diff-on-failure
             # run -a --show-diff-on-failure
-  gate:
-    name: Terraform CI Gate
-    if: always()
-    needs: checks
-    runs-on: ubuntu-24.04
-
-    steps:
-      - name: Check matrix jobs status
-        env:
-          CHECKS_RESULT: ${{ needs.checks.result }}
-        run: |
-          result="$CHECKS_RESULT"
-          if [[ "$result" != "success" ]]; then
-            echo "::error title=Terraform CI Gate::One or more Terraform checks failed: $result"
-            exit 1
-          fi
-
-          echo "Terraform CI Gate: all Terraform checks passed."
