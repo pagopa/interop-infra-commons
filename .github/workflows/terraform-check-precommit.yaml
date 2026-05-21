@@ -239,17 +239,20 @@ jobs:
             exit 1
           fi         
 
-          echo $(git ls-files "$root/**")
+          precommit_config_ci="$GITHUB_WORKSPACE/.pre-commit-config.ci.yaml"
+          sed 's#--args=--config=.tflint.hcl#--args=--config=/lint/.tflint.hcl#' \
+            "$PRECOMMIT_CONFIG" > "$precommit_config_ci"
+
+          mapfile -t files < <(git ls-files "$root/**")
 
           docker run --rm \
-            -v $(pwd):/lint \
+            -v "$GITHUB_WORKSPACE:/lint" \
             -v "$tflint_config:/lint/.tflint.hcl:ro" \
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
             -e PCT_TFPATH=/usr/local/bin/terraform \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
-            run -a --show-diff-on-failure
-            #run --files $(git ls-files "$root/**") --show-diff-on-failure
+            run -c /lint/.pre-commit-config.ci.yaml --files "${files[@]}" --show-diff-on-failure
   gate:
     name: Terraform CI Gate
     if: always()
