@@ -186,14 +186,44 @@ jobs:
             tflint-${{ env.TF_LINT_VERSION }}-
             tflint-
 
-      - name: Install pre-commit
-        run: python -m pip install pre-commit
+      #- name: Install pre-commit
+      #  run: python -m pip install pre-commit
+
+      - name: Build precommit image version
+        id: build-image-ref
+        env:
+          PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
+        run: |
+          echo "Pre-commit image version: $PRECOMMIT_IMAGE_VERSION"
+
+          # Support both tags (e.g. latest, v1.2.3) and digests (sha256:... or raw 64-hex hash).
+          if [[ "$PRECOMMIT_IMAGE_VERSION" =~ ^sha256:[a-fA-F0-9]{64}$ ]]; then
+            image_ref="ghcr.io/antonbabenko/pre-commit-terraform@$PRECOMMIT_IMAGE_VERSION"
+          elif [[ "$PRECOMMIT_IMAGE_VERSION" =~ ^[a-fA-F0-9]{64}$ ]]; then
+            image_ref="ghcr.io/antonbabenko/pre-commit-terraform@sha256:$PRECOMMIT_IMAGE_VERSION"
+          else
+            image_ref="ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION"
+          fi
+
+          echo "Using pre-commit image reference: $image_ref"
+          echo "PRECOMMIT_IMAGE_REF_COMPUTED=$image_ref" >> "$GITHUB_OUTPUT"
+
+      - name: Show precommit version
+        env:
+          PRECOMMIT_IMAGE: ${{ steps.build-image-ref.outputs.PRECOMMIT_IMAGE_REF_COMPUTED }}
+        run: |
+          echo -e "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
+          echo    "+ 1️⃣  SHOW PRECOMMIT VERSION 1️⃣  +"
+          echo -e "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n"
+
+
+          docker run --rm --entrypoint cat "$PRECOMMIT_IMAGE" /usr/bin/tools_versions_info
 
       - name: Run pre-commit on Terraform root
         env:
           ROOT: ${{ matrix.path }}
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
-          PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
+          PRECOMMIT_IMAGE: ${{ steps.build-image-ref.outputs.PRECOMMIT_IMAGE_REF_COMPUTED }}          
         run: |
           set -euo pipefail
 
@@ -211,25 +241,14 @@ jobs:
           if [ ! -f "$tflint_config" ]; then
             echo "::error::.tflint.hcl not found in checked out infra-commons path: $tflint_config"
             exit 1
-          fi
+          fi         
 
-          # Support both tags (e.g. latest, v1.2.3) and digests (sha256:... or raw 64-hex hash).
-          if [[ "$PRECOMMIT_IMAGE_VERSION" =~ ^sha256:[a-fA-F0-9]{64}$ ]]; then
-            image_ref="ghcr.io/antonbabenko/pre-commit-terraform@$PRECOMMIT_IMAGE_VERSION"
-          elif [[ "$PRECOMMIT_IMAGE_VERSION" =~ ^[a-fA-F0-9]{64}$ ]]; then
-            image_ref="ghcr.io/antonbabenko/pre-commit-terraform@sha256:$PRECOMMIT_IMAGE_VERSION"
-          else
-            image_ref="ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION"
-          fi
-
-          docker run \
-            -v "$(pwd):/lint" \
+          docker run --rm \
+            -v $(pwd):/lint \
             -w /lint \
-            "$image_ref" \
-            run -a
-            # --show-diff-on-failure
-            # --config not necessary
-
+            "$PRECOMMIT_IMAGE" \
+            run --files $(git ls-files "$root/**") --show-diff-on-failure
+            # run -a --show-diff-on-failure
   gate:
     name: Terraform CI Gate
     if: always()
