@@ -171,6 +171,14 @@ jobs:
 
       - name: Show Terraform version
         run: terraform version
+      
+      - name: Locate Terraform binary
+        id: terraform-bin
+        run: |
+          set -euo pipefail
+          terraform_path="$(command -v terraform)"
+          echo "terraform_path=$terraform_path" >> "$GITHUB_OUTPUT"
+          terraform version
 
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@6770de8d186019a148cc2b144e8bfa627f7d4aa8
@@ -211,19 +219,34 @@ jobs:
       - name: Show precommit version
         env:
           PRECOMMIT_IMAGE: ${{ steps.build-image-ref.outputs.PRECOMMIT_IMAGE_REF_COMPUTED }}
+          TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
         run: |
           echo -e "\n+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+"
           echo    "+ 1️⃣  SHOW PRECOMMIT VERSION 1️⃣  +"
           echo -e "+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+\n"
 
-
           docker run --rm --entrypoint cat "$PRECOMMIT_IMAGE" /usr/bin/tools_versions_info
+
+          echo "Tools baked into pre-commit-terraform image:"
+          docker run --rm \
+            --entrypoint cat \
+            "$PRECOMMIT_IMAGE" \
+            /usr/bin/tools_versions_info
+
+          echo "Terraform binary mounted from runner and used through PCT_TFPATH:"
+          docker run --rm \
+            -v "$TERRAFORM_PATH:/usr/local/bin/terraform-custom:ro" \
+            -e PCT_TFPATH=/usr/local/bin/terraform-custom \
+            --entrypoint /usr/local/bin/terraform-custom \
+            "$PRECOMMIT_IMAGE" \
+            version
 
       - name: Run pre-commit on Terraform root
         env:
           ROOT: ${{ matrix.path }}
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
-          PRECOMMIT_IMAGE: ${{ steps.build-image-ref.outputs.PRECOMMIT_IMAGE_REF_COMPUTED }}          
+          PRECOMMIT_IMAGE: ${{ steps.build-image-ref.outputs.PRECOMMIT_IMAGE_REF_COMPUTED }}
+          TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
         run: |
           set -euo pipefail
 
@@ -245,6 +268,8 @@ jobs:
 
           docker run --rm \
             -v $(pwd):/lint \
+            -v "$TERRAFORM_PATH:/usr/local/bin/terraform-custom:ro" \
+            -e PCT_TFPATH=/usr/local/bin/terraform-custom \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
             run --files $(git ls-files "$root/**") --show-diff-on-failure
