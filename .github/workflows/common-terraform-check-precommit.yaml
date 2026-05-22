@@ -224,7 +224,7 @@ jobs:
             exit 1
           fi         
 
-          precommit_config_ci="$GITHUB_WORKSPACE/.pre-commit-config.ci.yaml"
+          #precommit_config_ci="$GITHUB_WORKSPACE/.pre-commit-config.ci.yaml"
           #sed 's#--args=--config=.tflint.hcl#--args=--config=/lint/.tflint.hcl#' \
           #  "$PRECOMMIT_CONFIG" > "$precommit_config_ci"
 
@@ -239,4 +239,4 @@ jobs:
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
-            run -c /lint/.pre-commit-config.ci.yaml --files "${files[@]}" --show-diff-on-failure
+            run -c /lint/$PRECOMMIT_CONFIG --files "${files[@]}" --show-diff-on-failure
