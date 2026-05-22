@@ -137,7 +137,7 @@ jobs:
           path: ${{ env.TF_PLUGIN_CACHE_DIR }}
           key: tf-${{ runner.os }}-${{ steps.tf-version.outputs.tf_version_hash }}
 
-      - name: Setup Terraform ${{ steps.tf-version.outputs.tf_version }}
+      - name: Terraform - Setup Terraform ${{ steps.tf-version.outputs.tf_version }}
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
         with:
           terraform_version: ${{ steps.tf-version.outputs.tf_version }}
@@ -145,16 +145,43 @@ jobs:
           # and we want to allow the pre-commit image to use the Terraform binary mounted from the runner
           terraform_wrapper: false 
 
-      - name: Show Terraform version
-        run: terraform version
-      
-      - name: Locate Terraform binary
+      - name: Terraform - Locate Terraform binary
         id: terraform-bin
         run: |
           set -euo pipefail
           terraform_path="$(command -v terraform)"
           echo "terraform_path=$terraform_path" >> "$GITHUB_OUTPUT"
           terraform version
+
+      - name: Terraform - Init
+        env:
+          ROOT: ${{ matrix.path }}
+          TF_VERSION: ${{ steps.tf-version.outputs.tf_version }}
+        run: |
+          set -euo pipefail
+
+          root="$ROOT"
+
+          if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
+            echo "No Terraform files found in $root, skipping Terraform init."
+            exit 0
+          fi
+
+          mapfile -t tf_dirs < <(
+            git ls-files "$root/**/*.tf" \
+              | xargs -r -n1 dirname \
+              | sort -u
+          )
+
+          for dir in "${tf_dirs[@]}"; do
+            echo "Initializing Terraform directory: $dir"
+
+            docker run --rm \
+              -v "$GITHUB_WORKSPACE:/workspace" \
+              -w "/workspace/$dir" \
+              "hashicorp/terraform:$TF_VERSION" \
+              init -backend=false -input=false -no-color
+          done
 
       - name: Setup TFLint
         uses: terraform-linters/setup-tflint@6770de8d186019a148cc2b144e8bfa627f7d4aa8
@@ -170,7 +197,7 @@ jobs:
             tflint-${{ env.TF_LINT_VERSION }}-
             tflint-
 
-      - name: Build precommit image version
+      - name: PreCommit - Build precommit image version
         id: build-image-ref
         env:
           PRECOMMIT_IMAGE_VERSION: ${{ env.PRECOMMIT_IMAGE_VERSION }}
@@ -189,7 +216,7 @@ jobs:
           echo "Using pre-commit image reference: $image_ref"
           echo "PRECOMMIT_IMAGE_REF_COMPUTED=$image_ref" >> "$GITHUB_OUTPUT"
 
-      - name: Show precommit version
+      - name: PreCommit - Show precommit version
         env:
           PRECOMMIT_IMAGE: ${{ steps.build-image-ref.outputs.PRECOMMIT_IMAGE_REF_COMPUTED }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
@@ -235,11 +262,7 @@ jobs:
           if [ ! -f "$tflint_config" ]; then
             echo "::error::.tflint.hcl not found in checked out infra-commons path: $tflint_config"
             exit 1
-          fi         
-
-          precommit_config_ci="$GITHUB_WORKSPACE/.pre-commit-config.ci.yaml"
-          sed 's#--args=--config=.tflint.hcl#--args=--config=/lint/.tflint.hcl#' \
-            "$PRECOMMIT_CONFIG" > "$precommit_config_ci"
+          fi
 
           mapfile -t files < <(git ls-files "$root/**")
 
@@ -252,7 +275,7 @@ jobs:
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
-            run -c /lint/.pre-commit-config.ci.yaml --files "${files[@]}" --show-diff-on-failure
+            run -c /lint/.pre-commit-config.yaml --files "${files[@]}" --show-diff-on-failure
   gate:
     name: Terraform CI Gate
     if: always()
