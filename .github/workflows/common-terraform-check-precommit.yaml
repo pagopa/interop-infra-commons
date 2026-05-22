@@ -204,10 +204,24 @@ jobs:
           sed 's#--args=--config=.tflint.hcl#--args=--config=/lint/.tflint.hcl#' \
             "$PRECOMMIT_CONFIG" > "$precommit_config_ci"
 
-          mapfile -t files < <(git ls-files "$root/**")
+          
+          mapfile -t tf_dirs < <(
+            git ls-files "$root/**/*.tf" \
+              | xargs -r -n1 dirname \
+              | sort -u
+          )
 
-          find "$root" -type d -name ".terraform" -prune -exec rm -rf {} +
-          find "$root" -type f -name ".terraform.lock.hcl" -exec rm -f {} +
+          for dir in "${tf_dirs[@]}"; do
+            echo "Initializing Terraform directory: $dir"
+
+            docker run --rm \
+              -v "$GITHUB_WORKSPACE:/workspace" \
+              -w "/workspace/$dir" \
+              "hashicorp/terraform:${{ steps.tf-version.outputs.tf_version }}" \
+              init -backend=false -input=false -no-color
+          done
+
+          mapfile -t files < <(git ls-files "$root/**")
 
           #-e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
           docker run --rm \
