@@ -207,6 +207,7 @@ jobs:
           mapfile -t files < <(git ls-files "$root/**")
 
           find "$root" -type d -name ".terraform" -prune -exec rm -rf {} +
+          find "$root" -type f -name ".terraform.lock.hcl" -exec rm -f {} +
 
           #-e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
           docker run --rm \
