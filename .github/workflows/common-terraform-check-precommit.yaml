@@ -18,7 +18,6 @@ on:
 
 
 env:
-  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
   TF_LINT_VERSION: "v0.61.0"
   TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
   INFRA_COMMONS_REPO: pagopa/interop-infra-commons
@@ -51,7 +50,6 @@ jobs:
         
       - name: Ensure cache dirs
         run: |
-          mkdir -p "${TF_PLUGIN_CACHE_DIR}"
           mkdir -p "${TFLINT_PLUGIN_DIR}"
 
       - name: Compute Terraform version
@@ -90,11 +88,6 @@ jobs:
           echo "tf_version=$tf_version" >> "$GITHUB_OUTPUT"
           echo "tf_version_hash=$(echo "$tf_version" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
 
-      - name: Cache Terraform plugins
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
-        with:
-          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
-          key: tf-${{ runner.os }}-${{ steps.tf-version.outputs.tf_version_hash }}
 
       - name: Terraform - Setup Terraform ${{ steps.tf-version.outputs.tf_version }}
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -225,7 +218,6 @@ jobs:
 
           mapfile -t files < <(git ls-files "$root/**")
 
-          #-e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/lint" \
             -v "$tflint_config:/lint/.tflint.hcl:ro" \
