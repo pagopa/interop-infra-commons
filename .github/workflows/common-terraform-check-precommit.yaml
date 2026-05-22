@@ -105,9 +105,6 @@ jobs:
           # and we want to allow the pre-commit image to use the Terraform binary mounted from the runner
           terraform_wrapper: false 
 
-      - name: Terraform - Show version
-        run: terraform version
-      
       - name: Terraform - Locate Terraform binary
         id: terraform-bin
         run: |
@@ -115,7 +112,7 @@ jobs:
           terraform_path="$(command -v terraform)"
           echo "terraform_path=$terraform_path" >> "$GITHUB_OUTPUT"
           terraform version
-          
+
       - name: Terraform - Init
         env:
           ROOT: ${{ inputs.search_path }}
