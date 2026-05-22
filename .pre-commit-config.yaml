@@ -8,7 +8,6 @@ repos:
       - id: terraform_fmt
         name: Terraform fmt
         files: \.(tf|tfvars)$
-        #files: ^/.*\.(tf|tfvars)$
         args:
           - --args=-check
           - --args=-diff
@@ -18,7 +17,6 @@ repos:
       - id: terraform_validate
         name: Terraform validate
         files: \.tf$
-        #files: ^/.*\.(tf)$
         args:
           - --args=-no-color
           - --tf-init-args=-backend=false
@@ -29,8 +27,7 @@ repos:
       - id: terraform_tflint
         name: Terraform TFLint
         files: \.tf$
-        #files: ^/.*\.(tf)$
         args:
           - --args=--format=compact
           - --args=--no-color
-          - --args=--config=.tflint.hcl
+          - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
