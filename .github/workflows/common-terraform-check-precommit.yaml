@@ -19,10 +19,7 @@ on:
 env:
   TF_LINT_VERSION: "v0.61.0"
   TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
-  INFRA_COMMONS_REPO: pagopa/interop-infra-commons
-  INFRA_COMMONS_PATH: .terraform-precommit-workflows # destination path for the checked out infra-commons repository within the workflow
-  INFRA_COMMONS_SCRIPTS_RELATIVE_PATH: scripts/terraform
-
+  
 permissions:
   contents: read
 
@@ -42,8 +39,6 @@ jobs:
       - name: Compute Terraform version
         id: tf-version
         env:
-          INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
-          INFRA_COMMONS_SCRIPTS_RELATIVE_PATH: ${{ env.INFRA_COMMONS_SCRIPTS_RELATIVE_PATH }}
           PROVIDED_TF_VERSION: ${{ inputs.tfversion }}
           ROOT: ${{ inputs.search_path }}
         run: |
@@ -149,7 +144,6 @@ jobs:
       - name: Run pre-commit on Terraform root
         env:
           ROOT: ${{ inputs.search_path }}
-          INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
           PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
         run: |
@@ -162,7 +156,7 @@ jobs:
             exit 0
           fi
 
-          tflint_config="$GITHUB_WORKSPACE/$INFRA_COMMONS_PATH/.tflint.hcl"
+          tflint_config="$GITHUB_WORKSPACE/.tflint.hcl"
           tflint_config_option=""
           if [ ! -f "$tflint_config" ]; then
             echo "::warning::.tflint.hcl not found in checked out infra-commons path: $tflint_config"
