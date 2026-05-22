@@ -14,7 +14,7 @@ on:
       precommit_image_version:
         required: false
         type: string
-        default: "latest" # if not provided, the workflow will use the latest version of the pre-commit image from Docker Hub. This allows callers to specify a custom image version if needed (e.g. to test against a specific pre-commit version or to use a custom image with additional tools/plugins pre-installed).
+        default: "v1.105.0" # if not provided, the workflow will use the v1.105.0 version of the pre-commit image from Docker Hub. This allows callers to specify a custom image version if needed (e.g. to test against a specific pre-commit version or to use a custom image with additional tools/plugins pre-installed).
 
 
 env:
@@ -205,6 +205,8 @@ jobs:
             "$PRECOMMIT_CONFIG" > "$precommit_config_ci"
 
           mapfile -t files < <(git ls-files "$root/**")
+
+          find "$root" -type d -name ".terraform" -prune -exec rm -rf {} +
 
           #-e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
           docker run --rm \
