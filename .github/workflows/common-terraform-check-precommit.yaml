@@ -206,12 +206,12 @@ jobs:
 
           mapfile -t files < <(git ls-files "$root/**")
 
+          #-e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/lint" \
             -v "$tflint_config:/lint/.tflint.hcl:ro" \
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
             -e PCT_TFPATH=/usr/local/bin/terraform \
-            #-e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
