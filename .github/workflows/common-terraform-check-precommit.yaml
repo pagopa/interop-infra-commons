@@ -189,8 +189,6 @@ jobs:
           root="$ROOT"
           infra_commons_abs="$GITHUB_WORKSPACE/$INFRA_COMMONS_PATH"
 
-          unset TF_PLUGIN_CACHE_DIR
-
           if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
             echo "No Terraform files found in $root, skipping."
             exit 0
@@ -213,6 +211,8 @@ jobs:
             -v "$tflint_config:/lint/.tflint.hcl:ro" \
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
             -e PCT_TFPATH=/usr/local/bin/terraform \
+            -e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
+            -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
             run -c /lint/.pre-commit-config.ci.yaml --files "${files[@]}" --show-diff-on-failure
