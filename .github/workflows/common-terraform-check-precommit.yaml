@@ -21,7 +21,6 @@ env:
   TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
   TF_LINT_VERSION: "v0.61.0"
   TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
-  PRECOMMIT_CONFIG: ${{ github.workspace }}/.pre-commit-config.yaml # precommit version local to caller repository
   INFRA_COMMONS_REPO: pagopa/interop-infra-commons
   # todo rivedere
   INFRA_COMMONS_REF: feature/pin-9552-tf-check-precommit # temporary branch for testing, should be updated to a stable reference (e.g. main or a release tag)
@@ -224,10 +223,6 @@ jobs:
             exit 1
           fi         
 
-          #precommit_config_ci="$GITHUB_WORKSPACE/.pre-commit-config.ci.yaml"
-          #sed 's#--args=--config=.tflint.hcl#--args=--config=/lint/.tflint.hcl#' \
-          #  "$PRECOMMIT_CONFIG" > "$precommit_config_ci"
-
           mapfile -t files < <(git ls-files "$root/**")
 
           #-e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
@@ -239,4 +234,4 @@ jobs:
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -w /lint \
             "$PRECOMMIT_IMAGE" \
-            run -c /lint/$PRECOMMIT_CONFIG --files "${files[@]}" --show-diff-on-failure
+            run -c /lint/.pre-commit-config.yaml --files "${files[@]}" --show-diff-on-failure
