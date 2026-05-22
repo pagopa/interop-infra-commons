@@ -123,7 +123,7 @@ jobs:
 
       - name: PreCommit - Show precommit version
         env:
-          PRECOMMIT_IMAGE: ${{ inputs.precommit_image_version }}
+          PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
         run: |
           set -euo pipefail
@@ -133,7 +133,7 @@ jobs:
           echo "+++++++++++++++++++++++++++++++++++++++++++++++"
           docker run --rm \
             --entrypoint cat \
-            "$PRECOMMIT_IMAGE" \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
             /usr/bin/tools_versions_info
 
           echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
@@ -143,14 +143,14 @@ jobs:
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
             -e PCT_TFPATH=/usr/local/bin/terraform \
             --entrypoint /usr/local/bin/terraform \
-            "$PRECOMMIT_IMAGE" \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
             version
 
       - name: Run pre-commit on Terraform root
         env:
           ROOT: ${{ inputs.search_path }}
           INFRA_COMMONS_PATH: ${{ env.INFRA_COMMONS_PATH }}
-          PRECOMMIT_IMAGE: ${{ inputs.precommit_image_version }}
+          PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
         run: |
           set -euo pipefail
@@ -179,5 +179,5 @@ jobs:
             -e PCT_TFPATH=/usr/local/bin/terraform \
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -w /lint \
-            "$PRECOMMIT_IMAGE" \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
             run --files "${files[@]}" --show-diff-on-failure
