@@ -1,4 +1,5 @@
-name: Reusable Terraform Pre-Commit Checks
+name: Terraform Static Analysis
+description: Run Terraform static analysis using the pre-commit-terraform image from Docker Hub.
 
 on:
   workflow_call:
@@ -25,7 +26,7 @@ permissions:
 
 jobs:
   checks:
-    name: "[${{ inputs.search_path }}] Terraform checks" # TODO check composite w/matrix
+    name: "[${{ inputs.search_path }}] Terraform Static Analysis"
     runs-on: ubuntu-24.04
 
     steps:
@@ -33,7 +34,11 @@ jobs:
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
       - name: Ensure cache dirs
+        shell: bash
+        env:
+          TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
         run: |
+          set -euo pipefail
           mkdir -p "${TFLINT_PLUGIN_DIR}"
 
       - name: Compute Terraform version
@@ -44,15 +49,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          # If tfversion input is provided, use it directly without running the discovery script.
-          # This allows the caller workflow to override the Terraform version discovery logic when needed 
-          # (e.g. if the .terraform-version file is missing or if a specific version needs to be enforced for the checks).
           if [ -n "$PROVIDED_TF_VERSION" ]; then
             echo "Using provided Terraform version: $PROVIDED_TF_VERSION"
             echo "tf_version=$PROVIDED_TF_VERSION" >> "$GITHUB_OUTPUT"
             echo "tf_version_hash=$(echo "$PROVIDED_TF_VERSION" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
+          echo "::error::tfversion is required"
+          exit 1
 
       - name: Terraform - Setup Terraform ${{ steps.tf-version.outputs.tf_version }}
         uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
@@ -91,7 +96,6 @@ jobs:
               | sort -u
           )
 
-          # tODO check inteorp-infra x moduli
           for dir in "${tf_dirs[@]}"; do
             echo "Initializing Terraform directory: $dir"
 
