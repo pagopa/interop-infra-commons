@@ -1,5 +1,5 @@
-name: Terraform Pre-Commit Checks
-run-name: "Terraform Pre-Commit Checks - ${{ github.ref_name }}"
+name: Common Modules Static Analysis
+run-name: "Common Modules Static Analysis - ${{ github.ref_name }}"
 
 on:
   pull_request:
