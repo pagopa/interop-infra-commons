@@ -1,0 +1,251 @@
+name: Common Modules Static Analysis
+run-name: "Common Modules Static Analysis - ${{ github.ref_name }}"
+
+on:
+  pull_request:
+
+env:
+  DISCOVERY_MODE: modules
+  SEARCH_PATH: terraform/modules
+  PRECOMMIT_IMAGE_VERSION: "v1.105.0"
+  TF_PLUGIN_CACHE_DIR: ${{ github.workspace }}/.terraform.d/plugin-cache
+  TF_LINT_VERSION: "v0.61.0"
+  TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
+  TFLINT_CONFIG: ${{ github.workspace }}/.tflint.hcl
+  INFRA_COMMONS_SCRIPTS_PATH: ${{ github.workspace }}/scripts/terraform
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    name: Discover Terraform roots
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.discover.outputs.matrix }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Discover Terraform roots
+        id: discover
+        env:
+          INFRA_COMMONS_SCRIPTS_PATH: ${{ env.INFRA_COMMONS_SCRIPTS_PATH }}
+          DISCOVERY_MODE: ${{ env.DISCOVERY_MODE }}
+          SEARCH_PATH: ${{ env.SEARCH_PATH }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "$DISCOVERY_MODE" ]; then
+            echo "No discovery mode specified, defaulting to single root: $SEARCH_PATH"
+            matrix="$(jq -cn --arg path "$SEARCH_PATH" --arg name "$(basename "$SEARCH_PATH")" '{include:[{path: $path, name: $name}]}')"
+            echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          discovery_script="$INFRA_COMMONS_SCRIPTS_PATH/discover-terraform-roots.sh"
+          echo "Discovering Terraform roots using script: $discovery_script"
+
+          if [ ! -x "$discovery_script" ]; then
+            echo "::error::Missing executable script: $discovery_script"
+            exit 1
+          fi
+
+          matrix="$(
+            "$discovery_script" \
+              "$DISCOVERY_MODE" \
+              "$SEARCH_PATH"
+          )"
+
+          matrix="$(echo "$matrix" | jq -c '.')"
+
+          echo "$matrix"
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+
+  checks:
+    name: "[${{ matrix.name }}] Terraform checks" # TODO check composite w/matrix
+    needs: discover
+    runs-on: ubuntu-24.04
+
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix: ${{ fromJson(needs.discover.outputs.matrix) }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Compute Terraform version
+        id: tf-version
+        env:
+          INFRA_COMMONS_SCRIPTS_PATH: ${{ env.INFRA_COMMONS_SCRIPTS_PATH }}
+          ROOT: ${{ matrix.path }}
+        run: |
+          set -euo pipefail
+
+          # If tfversion input is empty, run the discovery script to compute the Terraform version for the current root.
+          script="$INFRA_COMMONS_SCRIPTS_PATH/compute-tf-version.sh"
+          root="$ROOT"
+
+          if [ ! -x "$script" ]; then
+            echo "::error::Missing executable script: $script"
+            exit 1
+          fi
+
+          tf_version="$("$script" "$GITHUB_WORKSPACE/$root")"
+          tf_version="$(echo "$tf_version" | xargs)"
+
+          echo "Terraform version for $root: $tf_version"
+          echo "tf_version=$tf_version" >> "$GITHUB_OUTPUT"
+          echo "tf_version_hash=$(echo "$tf_version" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+
+      - name: Ensure cache dirs
+        run: |
+          mkdir -p "${TF_PLUGIN_CACHE_DIR}"
+          mkdir -p "${TFLINT_PLUGIN_DIR}"
+
+      - name: Cache Terraform plugins
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ env.TF_PLUGIN_CACHE_DIR }}
+          key: tf-${{ runner.os }}-${{ steps.tf-version.outputs.tf_version_hash }}
+
+      - name: Terraform - Setup Terraform ${{ steps.tf-version.outputs.tf_version }}
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ steps.tf-version.outputs.tf_version }}
+          # do not use hashicorp/setup-terraform's built-in wrapper, as it does not support running Terraform from a custom path (e.g. through PCT_TFPATH)
+          # and we want to allow the pre-commit image to use the Terraform binary mounted from the runner
+          terraform_wrapper: false 
+
+      - name: Terraform - Locate Terraform binary
+        id: terraform-bin
+        run: |
+          set -euo pipefail
+          terraform_path="$(command -v terraform)"
+          echo "terraform_path=$terraform_path" >> "$GITHUB_OUTPUT"
+          terraform version
+
+      - name: Terraform - Init
+        env:
+          ROOT: ${{ matrix.path }}
+          TF_VERSION: ${{ steps.tf-version.outputs.tf_version }}
+        run: |
+          set -euo pipefail
+
+          root="$ROOT"
+
+          if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
+            echo "No Terraform files found in $root, skipping Terraform init."
+            exit 0
+          fi
+
+          mapfile -t tf_dirs < <(
+            git ls-files "$root/**/*.tf" \
+              | xargs -r -n1 dirname \
+              | sort -u
+          )
+
+          for dir in "${tf_dirs[@]}"; do
+            echo "Initializing Terraform directory: $dir"
+
+            docker run --rm \
+              -v "$GITHUB_WORKSPACE:/workspace" \
+              -w "/workspace/$dir" \
+              "hashicorp/terraform:$TF_VERSION" \
+              init -backend=false -input=false -no-color
+          done
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@6770de8d186019a148cc2b144e8bfa627f7d4aa8
+        with:
+          tflint_version: ${{ env.TF_LINT_VERSION }}
+
+      - name: Cache TFLint plugins
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ env.TFLINT_PLUGIN_DIR }}
+          key: tflint-${{ env.TF_LINT_VERSION }}-${{ hashFiles('**/.tflint.hcl') }}
+          restore-keys: |
+            tflint-${{ env.TF_LINT_VERSION }}-
+            tflint-
+
+      - name: PreCommit - Show precommit version
+        env:
+          PRECOMMIT_IMAGE_VERSION: ${{ env.PRECOMMIT_IMAGE_VERSION }}
+          TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
+        run: |
+          set -euo pipefail
+
+          echo "+++++++++++++++++++++++++++++++++++++++++++++++"
+          echo "+ Tools baked into pre-commit-terraform image +"
+          echo "+++++++++++++++++++++++++++++++++++++++++++++++"
+          docker run --rm \
+            --entrypoint cat \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
+            /usr/bin/tools_versions_info
+
+          echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+          echo "+ Terraform binary mounted from runner and used through PCT_TFPATH +"
+          echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+          docker run --rm \
+            -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
+            -e PCT_TFPATH=/usr/local/bin/terraform \
+            --entrypoint /usr/local/bin/terraform \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
+            version
+
+      - name: Run pre-commit on Terraform root
+        env:
+          ROOT: ${{ matrix.path }}
+          PRECOMMIT_IMAGE_VERSION: ${{ env.PRECOMMIT_IMAGE_VERSION }}
+          TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
+          TFLINT_CONFIG: ${{ env.TFLINT_CONFIG }}
+        run: |
+          set -euo pipefail
+
+          root="$ROOT"
+          
+          if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
+            echo "No Terraform files found in $root, skipping."
+            exit 0
+          fi
+
+          tflint_config="$TFLINT_CONFIG"
+          if [ ! -f "$tflint_config" ]; then
+            echo "::warning::.tflint.hcl not found in checked out infra-commons path: $tflint_config"
+            exit 1
+          fi
+
+          mapfile -t files < <(git ls-files "$root/**")
+
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/lint" \
+            -v "$tflint_config:/lint/.tflint.hcl:ro" \
+            -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
+            -e PCT_TFPATH=/usr/local/bin/terraform \
+            -e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
+            -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
+            -w /lint \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
+            run -c /lint/.pre-commit-config.yaml --files "${files[@]}" --show-diff-on-failure
+  gate:
+    name: Terraform CI Gate
+    if: always()
+    needs: checks
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check matrix jobs status
+        env:
+          CHECKS_RESULT: ${{ needs.checks.result }}
+        run: |
+          result="$CHECKS_RESULT"
+          if [[ "$result" != "success" ]]; then
+            echo "::error title=Terraform CI Gate::One or more Terraform checks failed: $result"
+            exit 1
+          fi
+
+          echo "Terraform CI Gate: all Terraform checks passed."
