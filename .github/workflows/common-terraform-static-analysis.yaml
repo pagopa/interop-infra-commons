@@ -1,0 +1,189 @@
+name: Terraform Static Analysis
+description: Run Terraform static analysis using the pre-commit-terraform image from Docker Hub.
+
+on:
+  workflow_call:
+    inputs:
+      search_path:
+        required: false
+        type: string
+        default: .
+      tfversion:
+        required: true
+        type: string
+      precommit_image_version:
+        required: false
+        type: string
+        default: "v1.105.0" # if not provided, the workflow will use the v1.105.0 version of the pre-commit image from Docker Hub. This allows callers to specify a custom image version if needed (e.g. to test against a specific pre-commit version or to use a custom image with additional tools/plugins pre-installed).
+
+
+env:
+  TF_LINT_VERSION: "v0.61.0"
+  TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
+  
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    name: "[${{ inputs.search_path }}] Terraform Static Analysis"
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout caller repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Checkout infra-commons repository
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          repository: pagopa/interop-infra-commons
+          path: interop-infra-commons
+          sparse-checkout: |
+            .tflint.hcl
+
+      - name: Ensure cache dirs
+        shell: bash
+        env:
+          TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
+        run: |
+          set -euo pipefail
+          mkdir -p "${TFLINT_PLUGIN_DIR}"
+
+      - name: Compute Terraform version
+        id: tf-version
+        env:
+          PROVIDED_TF_VERSION: ${{ inputs.tfversion }}
+          ROOT: ${{ inputs.search_path }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "$PROVIDED_TF_VERSION" ]; then
+            echo "Using provided Terraform version: $PROVIDED_TF_VERSION"
+            echo "tf_version=$PROVIDED_TF_VERSION" >> "$GITHUB_OUTPUT"
+            echo "tf_version_hash=$(echo "$PROVIDED_TF_VERSION" | sha256sum | awk '{print $1}')" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "::error::tfversion is required"
+          exit 1
+
+      - name: Terraform - Setup Terraform ${{ steps.tf-version.outputs.tf_version }}
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: ${{ steps.tf-version.outputs.tf_version }}
+          # do not use hashicorp/setup-terraform's built-in wrapper, as it does not support running Terraform from a custom path (e.g. through PCT_TFPATH)
+          # and we want to allow the pre-commit image to use the Terraform binary mounted from the runner
+          terraform_wrapper: false 
+
+      - name: Terraform - Locate Terraform binary
+        id: terraform-bin
+        run: |
+          set -euo pipefail
+
+          terraform_path="$(command -v terraform)"
+          echo "terraform_path=$terraform_path" >> "$GITHUB_OUTPUT"
+          terraform version
+
+      - name: Terraform - Init
+        env:
+          ROOT: ${{ inputs.search_path }}
+          TF_VERSION: ${{ steps.tf-version.outputs.tf_version }}
+        run: |
+          set -euo pipefail
+
+          root="$ROOT"
+
+          if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
+            echo "No Terraform files found in $root, skipping Terraform init."
+            exit 0
+          fi
+
+          mapfile -t tf_dirs < <(
+            git ls-files "$root/**/*.tf" \
+              | xargs -r -n1 dirname \
+              | sort -u
+          )
+
+          for dir in "${tf_dirs[@]}"; do
+            echo "Initializing Terraform directory: $dir"
+
+            docker run --rm \
+              -v "$GITHUB_WORKSPACE:/workspace" \
+              -w "/workspace/$dir" \
+              "hashicorp/terraform:$TF_VERSION" \
+              init -backend=false -input=false -no-color
+          done
+
+      - name: TFLint - Setup TFLint
+        uses: terraform-linters/setup-tflint@6770de8d186019a148cc2b144e8bfa627f7d4aa8
+        with:
+          tflint_version: ${{ env.TF_LINT_VERSION }}
+
+      - name: TFLint - Cache TFLint plugins
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
+        with:
+          path: ${{ env.TFLINT_PLUGIN_DIR }}
+          key: tflint-${{ env.TF_LINT_VERSION }}-${{ hashFiles('**/.tflint.hcl') }}
+          restore-keys: |
+            tflint-${{ env.TF_LINT_VERSION }}-
+            tflint-
+
+      - name: PreCommit - Show precommit version
+        env:
+          PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
+          TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
+        run: |
+          set -euo pipefail
+
+          echo "+++++++++++++++++++++++++++++++++++++++++++++++"
+          echo "+ Tools baked into pre-commit-terraform image +"
+          echo "+++++++++++++++++++++++++++++++++++++++++++++++"
+          docker run --rm \
+            --entrypoint cat \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
+            /usr/bin/tools_versions_info
+
+          echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+          echo "+ Terraform binary mounted from runner and used through PCT_TFPATH +"
+          echo "++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++"
+          docker run --rm \
+            -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
+            -e PCT_TFPATH=/usr/local/bin/terraform \
+            --entrypoint /usr/local/bin/terraform \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
+            version
+
+      - name: Run pre-commit on Terraform root
+        env:
+          ROOT: ${{ inputs.search_path }}
+          PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
+          TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
+        run: |
+          set -euo pipefail
+
+          root="$ROOT"
+          
+          if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
+            echo "No Terraform files found in $root, skipping."
+            exit 0
+          fi
+
+          tflint_config="$GITHUB_WORKSPACE/interop-infra-commons/.tflint.hcl"
+          tflint_config_option=""
+          if [ ! -f "$tflint_config" ]; then
+            echo "::warning::.tflint.hcl not found in checked out infra-commons path: $tflint_config"
+          else
+            tflint_config_option="-v $tflint_config:/lint/.tflint.hcl:ro"
+          fi
+
+          mapfile -t files < <(git ls-files "$root/**")
+
+          docker run --rm \
+            -v "$GITHUB_WORKSPACE:/lint" \
+            $tflint_config_option \
+            -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
+            -e PCT_TFPATH=/usr/local/bin/terraform \
+            -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
+            -w /lint \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
+            run --files "${files[@]}" --show-diff-on-failure
