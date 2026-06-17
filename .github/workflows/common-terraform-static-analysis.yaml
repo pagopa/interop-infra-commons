@@ -15,6 +15,14 @@ on:
         required: false
         type: string
         default: "v1.105.0" # if not provided, the workflow will use the v1.105.0 version of the pre-commit image from Docker Hub. This allows callers to specify a custom image version if needed (e.g. to test against a specific pre-commit version or to use a custom image with additional tools/plugins pre-installed).
+      minimum_failure_severity:
+        required: true
+        type: choice        
+        options:
+          - error
+          - warning
+          - notice
+        
 
 
 env:
@@ -158,6 +166,7 @@ jobs:
           ROOT: ${{ inputs.search_path }}
           PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
+          MINIMUM_FAILURE_SEVERITY: ${{ inputs.minimum_failure_severity }}
         run: |
           set -euo pipefail
 
@@ -175,6 +184,9 @@ jobs:
           else
             tflint_config_option="-v $tflint_config:/lint/.tflint.hcl:ro"
           fi
+
+          # substitute TFLINT_MINIMUM_FAILURE_SEVERITY in .pre-commit-config.yaml with the value provided in the workflow input
+          sed -i "s/TFLINT_MINIMUM_FAILURE_SEVERITY/${MINIMUM_FAILURE_SEVERITY}/g" "$GITHUB_WORKSPACE/.pre-commit-config.yaml"
 
           mapfile -t files < <(git ls-files "$root/**")
 
