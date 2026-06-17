@@ -17,11 +17,7 @@ on:
         default: "v1.105.0" # if not provided, the workflow will use the v1.105.0 version of the pre-commit image from Docker Hub. This allows callers to specify a custom image version if needed (e.g. to test against a specific pre-commit version or to use a custom image with additional tools/plugins pre-installed).
       minimum_failure_severity:
         required: true
-        type: choice        
-        options:
-          - error
-          - warning
-          - notice
+        type: string
         
 
 
@@ -38,6 +34,23 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      - name: Validate minimum failure severity
+        id: validate-severity
+        env:
+          INPUT_MINIMUM_FAILURE_SEVERITY: ${{ inputs.minimum_failure_severity }}
+        run: |
+          set -euo pipefail
+
+          case "$INPUT_MINIMUM_FAILURE_SEVERITY" in
+            error|warning|notice)
+              echo "minimum_failure_severity=$INPUT_MINIMUM_FAILURE_SEVERITY" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "::error::Invalid minimum_failure_severity: '$INPUT_MINIMUM_FAILURE_SEVERITY'. Allowed values are: error, warning, notice."
+              exit 1
+              ;;
+          esac
+
       - name: Checkout caller repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
@@ -166,7 +179,7 @@ jobs:
           ROOT: ${{ inputs.search_path }}
           PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
-          MINIMUM_FAILURE_SEVERITY: ${{ inputs.minimum_failure_severity }}
+          MINIMUM_FAILURE_SEVERITY: ${{ steps.validate-severity.outputs.minimum_failure_severity }}
         run: |
           set -euo pipefail
 
