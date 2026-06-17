@@ -199,7 +199,7 @@ jobs:
           fi
 
           # substitute TFLINT_MINIMUM_FAILURE_SEVERITY in .pre-commit-config.yaml with the value provided in the workflow input
-          sed -i "s/TFLINT_MINIMUM_FAILURE_SEVERITY/${MINIMUM_FAILURE_SEVERITY}/g" "$GITHUB_WORKSPACE/.pre-commit-config.yaml"
+          sed -i "s/TFLINT_MINIMUM_FAILURE_SEVERITY/${MINIMUM_FAILURE_SEVERITY}/g" "$GITHUB_WORKSPACE/interop-infra-commons/.pre-commit-config.yaml"
 
           mapfile -t files < <(git ls-files "$root/**")
 
