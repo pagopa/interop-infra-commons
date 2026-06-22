@@ -168,7 +168,6 @@ jobs:
 
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/lint" \
-            $tflint_config_option \
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
             -e PCT_TFPATH=/usr/local/bin/terraform \
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
