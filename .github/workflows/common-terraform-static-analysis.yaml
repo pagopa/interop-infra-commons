@@ -33,14 +33,6 @@ jobs:
       - name: Checkout caller repository
         uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
 
-      - name: Checkout infra-commons repository
-        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
-        with:
-          repository: pagopa/interop-infra-commons
-          path: interop-infra-commons
-          sparse-checkout: |
-            .tflint.hcl
-
       - name: Ensure cache dirs
         shell: bash
         env:
@@ -170,14 +162,6 @@ jobs:
           if [ -z "$(find "$root" -type f \( -name '*.tf' -o -name '*.tfvars' \) -print -quit)" ]; then
             echo "No Terraform files found in $root, skipping."
             exit 0
-          fi
-
-          tflint_config="$GITHUB_WORKSPACE/interop-infra-commons/.tflint.hcl"
-          tflint_config_option=""
-          if [ ! -f "$tflint_config" ]; then
-            echo "::warning::.tflint.hcl not found in checked out infra-commons path: $tflint_config"
-          else
-            tflint_config_option="-v $tflint_config:/lint/.tflint.hcl:ro"
           fi
 
           mapfile -t files < <(git ls-files "$root/**")
