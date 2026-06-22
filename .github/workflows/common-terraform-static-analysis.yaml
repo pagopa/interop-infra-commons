@@ -99,10 +99,14 @@ jobs:
           fi
 
           mapfile -t tf_dirs < <(
-            git ls-files "$root/**/*.tf" \
-              | xargs -r -n1 dirname \
+            find "$root" -type d -name env -prune -exec dirname {} \; \
               | sort -u
           )
+
+          if [ "${#tf_dirs[@]}" -eq 0 ]; then
+            echo "No directories containing an env subdirectory found in $root, skipping Terraform init."
+            exit 0
+          fi
 
           for dir in "${tf_dirs[@]}"; do
             echo "Initializing Terraform directory: $dir"
