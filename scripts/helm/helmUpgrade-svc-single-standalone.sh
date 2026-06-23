@@ -242,8 +242,9 @@ UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/microservices/$microservice/$ENV/values.
 UPGRADE_CMD=$UPGRADE_CMD"$ADDITIONAL_VALUES $OUTPUT_REDIRECT"
 
 echo "[SVC-UPGRADE] Executing $microservice upgrade command."
-eval $UPGRADE_CMD
 
 if [[ "$argocd_plugin" == "true" ]]; then
-  restoreOutput
+  restoreOutput --force
 fi
+
+eval $UPGRADE_CMD
