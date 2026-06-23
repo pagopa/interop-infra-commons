@@ -6,14 +6,14 @@ This module read public keys from KMS and generate a JWKS file content
 | Name | Version |
 |------|---------|
 | <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.8 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | ~> 5.100 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.100 |
 | <a name="requirement_external"></a> [external](#requirement\_external) | ~> 2.3 |
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | ~> 5.100 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 5.100 |
 | <a name="provider_external"></a> [external](#provider\_external) | ~> 2.3 |
 
 ## Modules
@@ -24,8 +24,8 @@ No modules.
 
 | Name | Type |
 |------|------|
-| [aws_kms_public_key.well_known_keys](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_public_key) | data source |
-| [external_external.well_known_body_generation](https://registry.terraform.io/providers/hashicorp/external/latest/docs/data-sources/external) | data source |
+| [aws_kms_public_key.input](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/kms_public_key) | data source |
+| [external_external.kms_to_jwks](https://registry.terraform.io/providers/hashicorp/external/latest/docs/data-sources/external) | data source |
 
 ## Inputs
 
@@ -37,5 +37,5 @@ No modules.
 
 | Name | Description |
 |------|-------------|
-| <a name="output_well_known_body"></a> [well\_known\_body](#output\_well\_known\_body) | The plain text body of the well\_known file |
+| <a name="output_jwks_json_string"></a> [jwks\_json\_string](#output\_jwks\_json\_string) | The computed JWKS in JSON string format |
 <!-- END_TF_DOCS -->
