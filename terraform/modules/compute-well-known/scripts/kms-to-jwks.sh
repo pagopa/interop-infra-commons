@@ -8,7 +8,7 @@ usage() {
 }
 
 # Ensure required commands are available
-for cmd in openssl jq xxd; do
+for cmd in openssl jq xxd base64; do
   if ! command -v "$cmd" &>/dev/null; then
     echo "Error: required command '$cmd' not found" >&2
     exit 1
@@ -57,9 +57,10 @@ for ((i=0; i<num_keys; i++)); do
     RSASSA_PSS_SHA_256)        alg="PS256" ;;
     RSASSA_PSS_SHA_384)        alg="PS384" ;;
     RSASSA_PSS_SHA_512)        alg="PS512" ;;
-    ECDSA_SHA_256)             alg="ES256" ;;
-    ECDSA_SHA_384)             alg="ES384" ;;
-    ECDSA_SHA_512)             alg="ES512" ;;
+    ECDSA_SHA_256|ECDSA_SHA_384|ECDSA_SHA_512)
+      echo "Error: ECDSA keys are not supported by this script (RSA-only). Got '$kms_alg'" >&2
+      exit 1
+      ;;
     *) echo "Error: unsupported signing algorithm '$kms_alg'" >&2; exit 1 ;;
   esac
 
@@ -117,9 +118,9 @@ echo "--- Generating Final JWKS Array ---" >&2
 
 # Output the aggregated JWKS to stdout
 if [ ${#jwk_list[@]} -eq 0 ]; then
-  output=$( echo '{"keys": []}' )
+  output='{"keys":[]}'
 else
-  output=$(jq -n '{keys: [ $ARGS.positional[] | fromjson ]}' --args "${jwk_list[@]}" )
+  output=$(jq -cn '{keys: [ $ARGS.positional[] | fromjson ]}' --args "${jwk_list[@]}")
 fi
 
-echo '{ "output": '$(jq -n --arg str "$output" '$str')'}'
+jq -n --arg output "$output" '{output: $output}'
