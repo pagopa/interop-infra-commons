@@ -6,7 +6,9 @@ terraform {
       source  = "hashicorp/aws"
       version = "~> 5.100"
     }
+    external = {
+      source  = "hashicorp/external"
+      version = "~> 2.4"
+    }
   }
 }
-
-data "aws_region" "current" {}
