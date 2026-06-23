@@ -1,4 +1,4 @@
-output "well_known_body" {
-  description = "The plain text body of the well_known file"
-  value       = data.external.well_known_body_generation.result.output
+output "jwks_json_string" {
+  description = "The computed JWKS in JSON string format"
+  value       = data.external.kms_to_jwks.result.output
 }
