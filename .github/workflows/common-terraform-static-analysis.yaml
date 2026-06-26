@@ -155,6 +155,7 @@ jobs:
           ROOT: ${{ inputs.search_path }}
           PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -172,6 +173,7 @@ jobs:
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
             -e PCT_TFPATH=/usr/local/bin/terraform \
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
+            -e GITHUB_TOKEN="$GITHUB_TOKEN" \
             -w /lint \
             "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
             run --files "${files[@]}" --show-diff-on-failure
