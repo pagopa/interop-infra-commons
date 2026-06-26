@@ -114,6 +114,7 @@ jobs:
         uses: terraform-linters/setup-tflint@6770de8d186019a148cc2b144e8bfa627f7d4aa8
         with:
           tflint_version: ${{ env.TF_LINT_VERSION }}
+          github_token: ${{ github.token }}
 
       - name: TFLint - Cache TFLint plugins
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
@@ -154,6 +155,7 @@ jobs:
           ROOT: ${{ inputs.search_path }}
           PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -171,6 +173,7 @@ jobs:
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
             -e PCT_TFPATH=/usr/local/bin/terraform \
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
+            -e GITHUB_TOKEN="$GITHUB_TOKEN" \
             -w /lint \
             "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
             run --files "${files[@]}" --show-diff-on-failure

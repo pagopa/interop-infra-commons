@@ -162,6 +162,7 @@ jobs:
         uses: terraform-linters/setup-tflint@6770de8d186019a148cc2b144e8bfa627f7d4aa8
         with:
           tflint_version: ${{ env.TF_LINT_VERSION }}
+          github_token: ${{ github.token }}
 
       - name: Cache TFLint plugins
         uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830
@@ -203,6 +204,7 @@ jobs:
           PRECOMMIT_IMAGE_VERSION: ${{ env.PRECOMMIT_IMAGE_VERSION }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
           TFLINT_CONFIG: ${{ env.TFLINT_CONFIG }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
 
@@ -226,6 +228,7 @@ jobs:
             -v "$tflint_config:/lint/.tflint.hcl:ro" \
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
             -e PCT_TFPATH=/usr/local/bin/terraform \
+            -e GITHUB_TOKEN="$GITHUB_TOKEN" \
             -e TF_PLUGIN_CACHE_DIR=/lint/.terraform.d/plugin-cache \
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -w /lint \
