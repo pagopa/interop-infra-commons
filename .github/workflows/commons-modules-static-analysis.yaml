@@ -14,9 +14,6 @@ env:
   TFLINT_CONFIG: ${{ github.workspace }}/.tflint.hcl
   INFRA_COMMONS_SCRIPTS_PATH: ${{ github.workspace }}/scripts/terraform
 
-permissions:
-  contents: read
-
 jobs:
   discover:
     name: Discover Terraform roots

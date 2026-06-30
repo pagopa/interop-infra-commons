@@ -20,9 +20,6 @@ on:
 env:
   TF_LINT_VERSION: "v0.61.0"
   TFLINT_PLUGIN_DIR: ${{ github.workspace }}/.tflint.d/plugins
-  
-permissions:
-  contents: read
 
 jobs:
   checks:
