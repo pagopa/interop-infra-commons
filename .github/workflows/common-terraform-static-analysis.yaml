@@ -102,6 +102,7 @@ jobs:
 
             docker run --rm \
               -v "$GITHUB_WORKSPACE:/workspace" \
+              -v /tmp/.terraform-providers:/workspace/.terraform \
               -w "/workspace/$dir" \
               "hashicorp/terraform:$TF_VERSION" \
               init -backend=false -input=false -no-color
@@ -168,6 +169,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/lint" \
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
+            -v /tmp/.terraform-providers:/lint/.terraform \
             -e PCT_TFPATH=/usr/local/bin/terraform \
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -e GITHUB_TOKEN="$GITHUB_TOKEN" \
