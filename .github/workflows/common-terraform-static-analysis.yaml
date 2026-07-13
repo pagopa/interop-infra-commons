@@ -172,18 +172,15 @@ jobs:
           du -sh "$GITHUB_WORKSPACE" 2>/dev/null || echo "Cannot access workspace"
           
           echo ""
-          echo "--- Top 10 largest directories in runner root ---"
-          du -sh / 2>/dev/null | sort -rh | head -20 || echo "Cannot scan root"
-          
-          echo ""
           echo "=========================================="
           echo "DOCKER CONTAINER DISK SPACE"
           echo "=========================================="
           
           docker run --rm \
+            --entrypoint bash \
             -v /tmp/.terraform-providers:/lint/.terraform \
             "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
-            bash -c 'echo "--- Container filesystem ---" && df -h / && echo "" && echo "--- Container /root ---" && du -sh /root 2>/dev/null || echo "No /root yet"'
+            -c 'echo "--- Container filesystem ---" && df -h / && echo "" && echo "--- Container /root ---" && du -sh /root 2>/dev/null || echo "No /root yet"'
 
       - name: Run pre-commit on Terraform root
         env:
