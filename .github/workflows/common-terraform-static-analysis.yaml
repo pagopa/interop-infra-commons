@@ -148,6 +148,43 @@ jobs:
             "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
             version
 
+      - name: Check disk space on runner and Docker container
+        env:
+          PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
+        run: |
+          set -euo pipefail
+
+          echo "=========================================="
+          echo "RUNNER DISK SPACE DIAGNOSTIC"
+          echo "=========================================="
+          
+          echo ""
+          echo "--- Overall filesystem usage ---"
+          df -h /
+          
+          echo ""
+          echo "--- /tmp usage ---"
+          df -h /tmp
+          du -sh /tmp/.terraform-providers 2>/dev/null || echo "No /tmp/.terraform-providers yet"
+          
+          echo ""
+          echo "--- Workspace usage ---"
+          du -sh "$GITHUB_WORKSPACE" 2>/dev/null || echo "Cannot access workspace"
+          
+          echo ""
+          echo "--- Top 10 largest directories in runner root ---"
+          du -sh / 2>/dev/null | sort -rh | head -20 || echo "Cannot scan root"
+          
+          echo ""
+          echo "=========================================="
+          echo "DOCKER CONTAINER DISK SPACE"
+          echo "=========================================="
+          
+          docker run --rm \
+            -v /tmp/.terraform-providers:/lint/.terraform \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
+            bash -c 'echo "--- Container filesystem ---" && df -h / && echo "" && echo "--- Container /root ---" && du -sh /root 2>/dev/null || echo "No /root yet"'
+
       - name: Run pre-commit on Terraform root
         env:
           ROOT: ${{ inputs.search_path }}
