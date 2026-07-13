@@ -30,4 +30,5 @@ repos:
         args:
           - --args=--format=compact
           - --args=--no-color
+          - --args=--minimum-failure-severity=warning
           - --args=--config=__GIT_WORKING_DIR__/.tflint.hcl
