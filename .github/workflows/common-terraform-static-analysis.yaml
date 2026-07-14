@@ -73,6 +73,27 @@ jobs:
           echo "terraform_path=$terraform_path" >> "$GITHUB_OUTPUT"
           terraform version
 
+      - name: Terraform - Free disk space
+        run: |
+          set -euo pipefail
+
+          echo "Disk space before cleanup:"
+          df -h /
+
+          echo ""
+          echo "Removing unnecessary packages and cache..."
+          sudo rm -rf /usr/local/lib/android 2>/dev/null || true
+          sudo rm -rf /usr/share/dotnet 2>/dev/null || true
+          sudo rm -rf /opt/ghc 2>/dev/null || true
+          sudo rm -rf /opt/hostedtoolcache 2>/dev/null || true
+          sudo apt-get clean 2>/dev/null || true
+          sudo apt-get autoclean 2>/dev/null || true
+          docker image prune -a -f 2>/dev/null || true
+
+          echo ""
+          echo "Disk space after cleanup:"
+          df -h /
+
       - name: Terraform - Init
         env:
           ROOT: ${{ inputs.search_path }}
@@ -102,6 +123,7 @@ jobs:
 
             docker run --rm \
               -v "$GITHUB_WORKSPACE:/workspace" \
+              -v /tmp/.terraform-providers:/workspace/.terraform \
               -w "/workspace/$dir" \
               "hashicorp/terraform:$TF_VERSION" \
               init -backend=false -input=false -no-color
@@ -147,6 +169,40 @@ jobs:
             "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
             version
 
+      - name: Check disk space on runner and Docker container
+        env:
+          PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
+        run: |
+          set -euo pipefail
+
+          echo "=========================================="
+          echo "RUNNER DISK SPACE DIAGNOSTIC"
+          echo "=========================================="
+          
+          echo ""
+          echo "--- Overall filesystem usage ---"
+          df -h /
+          
+          echo ""
+          echo "--- /tmp usage ---"
+          df -h /tmp
+          du -sh /tmp/.terraform-providers 2>/dev/null || echo "No /tmp/.terraform-providers yet"
+          
+          echo ""
+          echo "--- Workspace usage ---"
+          du -sh "$GITHUB_WORKSPACE" 2>/dev/null || echo "Cannot access workspace"
+          
+          echo ""
+          echo "=========================================="
+          echo "DOCKER CONTAINER DISK SPACE"
+          echo "=========================================="
+          
+          docker run --rm \
+            --entrypoint bash \
+            -v /tmp/.terraform-providers:/lint/.terraform \
+            "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
+            -c 'echo "--- Container filesystem ---" && df -h / && echo "" && echo "--- Container /root ---" && du -sh /root 2>/dev/null || echo "No /root yet"'
+
       - name: Run pre-commit on Terraform root
         env:
           ROOT: ${{ inputs.search_path }}
@@ -168,6 +224,7 @@ jobs:
           docker run --rm \
             -v "$GITHUB_WORKSPACE:/lint" \
             -v "$TERRAFORM_PATH:/usr/local/bin/terraform:ro" \
+            -v /tmp/.terraform-providers:/lint/.terraform \
             -e PCT_TFPATH=/usr/local/bin/terraform \
             -e TFLINT_PLUGIN_DIR=/lint/.tflint.d/plugins \
             -e GITHUB_TOKEN="$GITHUB_TOKEN" \
