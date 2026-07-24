@@ -134,6 +134,9 @@ jobs:
           name: kube-linter-linux
           path: .tools
 
+      - name: Ensure kube-linter is executable
+        run: chmod +x .tools/kube-linter
+
       - name: Add kube-linter to PATH
         run: echo "$PWD/.tools" >> "$GITHUB_PATH"
         
@@ -189,6 +192,9 @@ jobs:
         with:
           name: kube-linter-linux
           path: .tools
+
+      - name: Ensure kube-linter is executable
+        run: chmod +x .tools/kube-linter
 
       - name: Add kube-linter to PATH
         run: echo "$PWD/.tools" >> "$GITHUB_PATH"
