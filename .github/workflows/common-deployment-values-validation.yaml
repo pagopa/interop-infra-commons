@@ -67,10 +67,95 @@ jobs:
           export PROJECT_DIR=$(pwd)
 
           $SCRIPTS_FOLDER/helmLint-main.sh --debug --environment "$ENVIRONMENT" --output console $OPTIONS -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml
+  
+  workloads_discovery:
+    name: Workloads Discovery
+    runs-on: ubuntu-22.04
+    env:
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+    outputs:
+      microservices: ${{ steps.discovery.outputs.microservices }}
+      cronjobs: ${{ steps.discovery.outputs.cronjobs }}
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - id: discovery
+        run: |
+          echo "microservices=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+          echo "cronjobs=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+
+  template_microservices:
+    name: ${{ matrix.microservice }}
+    needs: [ workloads_discovery ]
+    runs-on: ubuntu-22.04
+    if: ${{ ! contains(needs.workloads_discovery.outputs.microservices, '[]') }}
+    strategy:
+      matrix:
+        microservice: ${{ fromJson(needs.workloads_discovery.outputs.microservices) }}
+      fail-fast: false
+    steps:
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - name: Checkout scripts repository
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        with:
+          repository: pagopa/interop-infra-commons
+          path: interop-infra-commons 
+          fetch-depth: 0
+          sparse-checkout: 'scripts/helm'
+          ref: ${{ inputs.infra_commons_tag }}
+      - name: Helm Template Microservice
+        id: helm_template_ms
+        env:
+          MICROSERVICE_NAME: ${{ matrix.microservice }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          
+          export PROJECT_DIR=$(pwd)
+          
+          $SCRIPTS_FOLDER/helmTemplate-svc-single.sh --disable-templating-lookup --debug --environment "$ENVIRONMENT" --microservice $MICROSERVICE_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console
+      
+  template_cronjobs:
+    name: ${{ matrix.cronjob }}
+    needs: [ workloads_discovery ]
+    runs-on: ubuntu-22.04
+    if: ${{ ! contains(needs.workloads_discovery.outputs.cronjobs, '[]') }}
+    strategy:
+      matrix:
+        cronjob: ${{ fromJson(needs.workloads_discovery.outputs.cronjobs) }}
+      fail-fast: false
+    steps:    
+      - name: Checkout
+        id: checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+      - name: Checkout scripts repository
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        with:
+          repository: pagopa/interop-infra-commons
+          path: interop-infra-commons 
+          fetch-depth: 0
+          sparse-checkout: 'scripts/helm'
+          ref: ${{ inputs.infra_commons_tag }}
+      - name: Helm Chart Template
+        id: helm_template
+        env:
+          CRONJOB_NAME: ${{ matrix.cronjob }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+          
+          export PROJECT_DIR=$(pwd)
+
+          $SCRIPTS_FOLDER/helmTemplate-cron-single.sh --debug --environment "$ENVIRONMENT" --job $CRONJOB_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console
 
   microservices_validation:
     name: Microservices - Template & Lint
+    needs: [workloads_discovery]
     runs-on: ubuntu-22.04
+    if: ${{ ! contains(needs.workloads_discovery.outputs.microservices, '[]') }}
     steps:
       - name: Checkout
         id: checkout
@@ -95,17 +180,9 @@ jobs:
           rm kube-linter-linux.tar.gz
           kube-linter version
 
-      - name: Get Microservices List
-        id: get_microservices
-        env:
-          TARGET_ENVIRONMENT: ${{ inputs.environment }}
-        run: |
-          MICROSERVICES=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | tr '\n' ' ')
-          echo "microservices=$MICROSERVICES" >> $GITHUB_OUTPUT
-
       - name: Microservices Template & Lint
         env:
-          MICROSERVICES: ${{ steps.get_microservices.outputs.microservices }}
+          MICROSERVICES: ${{ needs.workloads_discovery.outputs.microservices }}
         run: |
           set -euo pipefail
 
