@@ -10,11 +10,6 @@ on:
       infra_commons_tag:
         required: false
         type: string
-      strict_kube_linter_checks:
-        description: 'Enable strict kube-linter checks'
-        required: false
-        type: boolean
-
 
 defaults:
   run:
@@ -70,6 +65,7 @@ jobs:
   
   workloads_discovery:
     name: Workloads Discovery
+    needs: [ chart_validation ]
     runs-on: ubuntu-22.04
     env:
       TARGET_ENVIRONMENT: ${{ inputs.environment }}
@@ -85,9 +81,30 @@ jobs:
           echo "microservices=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
           echo "cronjobs=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
 
+  kube_linter_setup:
+    name: Kube-linter Setup
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Download kube-linter binary
+        run: |
+          set -euo pipefail
+          mkdir -p .tools
+          curl -sSLO https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux.tar.gz
+          tar -xzf kube-linter-linux.tar.gz -C .tools kube-linter
+          chmod +x .tools/kube-linter
+          rm kube-linter-linux.tar.gz
+          ./.tools/kube-linter version
+
+      - name: Upload kube-linter artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kube-linter-linux
+          path: .tools/kube-linter
+          if-no-files-found: error
+
   template_microservices:
     name: ${{ matrix.microservice }}
-    needs: [ workloads_discovery ]
+    needs: [ workloads_discovery, kube_linter_setup ]
     runs-on: ubuntu-22.04
     if: ${{ ! contains(needs.workloads_discovery.outputs.microservices, '[]') }}
     strategy:
@@ -98,6 +115,7 @@ jobs:
       - name: Checkout
         id: checkout
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+
       - name: Checkout scripts repository
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
         with:
@@ -106,6 +124,16 @@ jobs:
           fetch-depth: 0
           sparse-checkout: 'scripts/helm'
           ref: ${{ inputs.infra_commons_tag }}
+
+      - name: Download kube-linter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kube-linter-linux
+          path: .tools
+
+      - name: Add kube-linter to PATH
+        run: echo "$PWD/.tools" >> "$GITHUB_PATH"
+        
       - name: Helm Template Microservice
         id: helm_template_ms
         env:
@@ -117,6 +145,18 @@ jobs:
           export PROJECT_DIR=$(pwd)
           
           $SCRIPTS_FOLDER/helmTemplate-svc-single.sh --disable-templating-lookup --debug --environment "$ENVIRONMENT" --microservice $MICROSERVICE_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console
+
+      - name: Microservice Kube-Linter
+        id: microservice_kube_linter
+        env:
+          MICROSERVICE_NAME: ${{ matrix.microservice }}
+          ENVIRONMENT: ${{ inputs.environment }}
+        run: |
+          set -euo pipefail
+
+          export PROJECT_DIR=$(pwd)
+
+          $SCRIPTS_FOLDER/helmTemplate-svc-single.sh --disable-templating-lookup --debug --skip-dep --environment "$ENVIRONMENT" --microservice $MICROSERVICE_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console | kube-linter lint -
       
   template_cronjobs:
     name: ${{ matrix.cronjob }}
@@ -131,6 +171,7 @@ jobs:
       - name: Checkout
         id: checkout
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+
       - name: Checkout scripts repository
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
         with:
@@ -139,6 +180,16 @@ jobs:
           fetch-depth: 0
           sparse-checkout: 'scripts/helm'
           ref: ${{ inputs.infra_commons_tag }}
+
+      - name: Download kube-linter artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: kube-linter-linux
+          path: .tools
+
+      - name: Add kube-linter to PATH
+        run: echo "$PWD/.tools" >> "$GITHUB_PATH"
+        
       - name: Helm Chart Template
         id: helm_template
         env:
@@ -151,191 +202,14 @@ jobs:
 
           $SCRIPTS_FOLDER/helmTemplate-cron-single.sh --debug --environment "$ENVIRONMENT" --job $CRONJOB_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console
 
-  microservices_validation:
-    name: Microservices - Template & Lint
-    needs: [workloads_discovery]
-    runs-on: ubuntu-22.04
-    if: ${{ ! contains(needs.workloads_discovery.outputs.microservices, '[]') }}
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-
-      - name: Checkout scripts repository
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-        with:
-          repository: pagopa/interop-infra-commons
-          path: interop-infra-commons
-          fetch-depth: 0
-          sparse-checkout: 'scripts/helm'
-          ref: ${{ inputs.infra_commons_tag }}
-
-      - name: Kube-linter download
-        run: |
-          set -euo pipefail
-          curl -sSLO https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux.tar.gz
-          tar -xzf kube-linter-linux.tar.gz
-          chmod +x kube-linter
-          sudo mv kube-linter /usr/local/bin/kube-linter
-          rm kube-linter-linux.tar.gz
-          kube-linter version
-
-      - name: Microservices Template & Lint
+      - name: Cronjob Kube-Linter
+        id: cronjob_kube_linter
         env:
-          MICROSERVICES: ${{ needs.workloads_discovery.outputs.microservices }}
+          CRONJOB_NAME: ${{ matrix.cronjob }}
+          ENVIRONMENT: ${{ inputs.environment }}
         run: |
           set -euo pipefail
 
           export PROJECT_DIR=$(pwd)
-          FAILED_MICROSERVICES=""
-          VALIDATION_ERROR_FLAG=0
 
-
-          if [[ -n "$MICROSERVICES" ]]; then
-            set +e
-            for MICROSERVICE_NAME in $MICROSERVICES; do
-              echo "=== Processing microservice: $MICROSERVICE_NAME ==="
-              TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.yaml"
-
-              echo "Templating microservice: $MICROSERVICE_NAME"
-              $SCRIPTS_FOLDER/helmTemplate-svc-single.sh \
-                --debug \
-                --disable-templating-lookup \
-                --environment ${{ inputs.environment }} \
-                --microservice $MICROSERVICE_NAME \
-                -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output $TEMPLATE_OUTPUT_PATH
-
-              if [[ $? -ne 0 ]]; then
-                echo "Template generation failed for microservice: $MICROSERVICE_NAME"
-                FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(template) "
-                VALIDATION_ERROR_FLAG=1
-                continue
-              fi
-
-              echo "Linting microservice: $MICROSERVICE_NAME"
-              kube-linter lint $TEMPLATE_OUTPUT_PATH
-              LINTER_EXIT_CODE=$?
-
-              if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
-                echo "Linting failed for microservice: $MICROSERVICE_NAME"
-                FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
-                if [[ "${{ inputs.strict_kube_linter_checks }}" == "true" ]]; then
-                  VALIDATION_ERROR_FLAG=1
-                fi
-              else
-                echo "Microservice $MICROSERVICE_NAME passed all checks"
-              fi
-
-              echo "=== Completed processing microservice: $MICROSERVICE_NAME ==="
-              echo ""
-            done
-          else
-            echo "No microservices found for environment ${{ inputs.environment }}"
-          fi
-
-          if [[ -n "$FAILED_MICROSERVICES" ]]; then
-            echo "Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
-            if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
-              exit 1
-            fi
-          else
-            echo "All microservices passed validation successfully"
-          fi
-
-  cronjobs_validation:
-    name: Cronjobs - Template & Lint
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout
-        id: checkout
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-
-      - name: Checkout scripts repository
-        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
-        with:
-          repository: pagopa/interop-infra-commons
-          path: interop-infra-commons
-          fetch-depth: 0
-          sparse-checkout: 'scripts/helm'
-          ref: ${{ inputs.infra_commons_tag }}
-
-      - name: Kube-linter download
-        run: |
-          set -euo pipefail
-          curl -sSLO https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux.tar.gz
-          tar -xzf kube-linter-linux.tar.gz
-          chmod +x kube-linter
-          sudo mv kube-linter /usr/local/bin/kube-linter
-          rm kube-linter-linux.tar.gz
-          kube-linter version
-
-      - name: Get Cronjobs List
-        id: get_cronjobs
-        env:
-          TARGET_ENVIRONMENT: ${{ inputs.environment }}
-        run: |
-          CRONJOBS=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | tr '\n' ' ')
-          echo "cronjobs=$CRONJOBS" >> $GITHUB_OUTPUT
-
-      - name: Cronjobs Template & Lint
-        env:
-          CRONJOBS: ${{ steps.get_cronjobs.outputs.cronjobs }}
-        run: |
-          set -euo pipefail
-
-          export PROJECT_DIR=$(pwd)
-          FAILED_CRONJOBS=""
-          VALIDATION_ERROR_FLAG=0
-
-          if [[ -n "$CRONJOBS" ]]; then
-            set +e
-            for CRONJOB_NAME in $CRONJOBS; do
-              echo "=== Processing cronjob: $CRONJOB_NAME ==="
-              TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-cronjob-${CRONJOB_NAME}.yaml"
-
-              echo "Templating cronjob: $CRONJOB_NAME"
-              $SCRIPTS_FOLDER/helmTemplate-cron-single.sh \
-                --debug \
-                --disable-templating-lookup \
-                --environment ${{ inputs.environment }} \
-                --job $CRONJOB_NAME \
-                -i $PROJECT_DIR/commons/${{ inputs.environment }}/images.yaml \
-                --output $TEMPLATE_OUTPUT_PATH
-
-              if [[ $? -ne 0 ]]; then
-                echo "Template generation failed for cronjob: $CRONJOB_NAME"
-                FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(template) "
-                VALIDATION_ERROR_FLAG=1
-                continue
-              fi
-
-              echo "Linting cronjob: $CRONJOB_NAME"
-              kube-linter lint $TEMPLATE_OUTPUT_PATH
-              LINTER_EXIT_CODE=$?
-
-              if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
-                echo "Linting failed for cronjob: $CRONJOB_NAME"
-                FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
-                if [[ "${{ inputs.strict_kube_linter_checks }}" == "true" ]]; then
-                  VALIDATION_ERROR_FLAG=1
-                fi
-              else
-                echo "Cronjob $CRONJOB_NAME passed all checks"
-              fi
-
-              echo "=== Completed processing cronjob: $CRONJOB_NAME ==="
-              echo ""
-            done
-          else
-            echo "No cronjobs found for environment ${{ inputs.environment }}"
-          fi
-
-          if [[ -n "$FAILED_CRONJOBS" ]]; then
-            echo "Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
-            if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
-              exit 1
-            fi
-          else
-            echo "All cronjobs passed validation successfully"
-          fi
+          $SCRIPTS_FOLDER/helmTemplate-cron-single.sh --disable-templating-lookup --debug --skip-dep --environment "$ENVIRONMENT" --job $CRONJOB_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console | kube-linter lint -
