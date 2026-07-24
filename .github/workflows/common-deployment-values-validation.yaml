@@ -10,6 +10,11 @@ on:
       infra_commons_tag:
         required: false
         type: string
+      enable_kube_linter:
+        description: 'Enable Kube-linter validation'
+        required: false
+        type: string
+        default: 'false'
 
 defaults:
   run:
@@ -87,6 +92,7 @@ jobs:
   kube_linter_setup:
     name: Kube-linter Setup
     runs-on: ubuntu-22.04
+    if: ${{ inputs.enable_kube_linter == 'true' }}
     steps:
       - name: Download kube-linter binary
         run: |
@@ -130,16 +136,19 @@ jobs:
 
       - name: Download kube-linter artifact
         uses: actions/download-artifact@v4
+        if: ${{ inputs.enable_kube_linter == 'true' }}
         with:
           name: kube-linter-linux
           path: .tools
 
-      - name: Ensure kube-linter is executable
-        run: chmod +x .tools/kube-linter
+      - name: Setup kube-linter is executable
+        if: ${{ inputs.enable_kube_linter == 'true' }}
+        run: |
+          set -euo pipefail
+          
+          chmod +x .tools/kube-linter
+          echo "$PWD/.tools" >> "$GITHUB_PATH"
 
-      - name: Add kube-linter to PATH
-        run: echo "$PWD/.tools" >> "$GITHUB_PATH"
-        
       - name: Helm Template Microservice
         id: helm_template_ms
         env:
@@ -154,6 +163,7 @@ jobs:
 
       - name: Microservice Kube-Linter
         id: microservice_kube_linter
+        if: ${{ inputs.enable_kube_linter == 'true' }}
         env:
           MICROSERVICE_NAME: ${{ matrix.microservice }}
           ENVIRONMENT: ${{ inputs.environment }}
@@ -188,16 +198,19 @@ jobs:
           ref: ${{ inputs.infra_commons_tag }}
 
       - name: Download kube-linter artifact
+        if: ${{ inputs.enable_kube_linter == 'true' }}
         uses: actions/download-artifact@v4
         with:
           name: kube-linter-linux
           path: .tools
 
-      - name: Ensure kube-linter is executable
-        run: chmod +x .tools/kube-linter
+      - name: Setup kube-linter
+        if: ${{ inputs.enable_kube_linter == 'true' }}
+        run: |
+          set -euo pipefail
 
-      - name: Add kube-linter to PATH
-        run: echo "$PWD/.tools" >> "$GITHUB_PATH"
+          chmod +x .tools/kube-linter
+          echo "$PWD/.tools" >> "$GITHUB_PATH"
         
       - name: Helm Chart Template
         id: helm_template
@@ -213,6 +226,7 @@ jobs:
 
       - name: Cronjob Kube-Linter
         id: cronjob_kube_linter
+        if: ${{ inputs.enable_kube_linter == 'true' }}
         env:
           CRONJOB_NAME: ${{ matrix.cronjob }}
           ENVIRONMENT: ${{ inputs.environment }}
