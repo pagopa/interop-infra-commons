@@ -15,6 +15,11 @@ on:
         required: false
         type: string
         default: 'false'
+      repo_structure_validation_warning_only:
+        description: 'Enable warning only mode for repo structure validation'
+        required: false
+        type: string
+        default: 'false'
 
 defaults:
   run:
@@ -23,8 +28,44 @@ defaults:
 env:
   HELM_SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
   VALIDATION_SCRIPTS_FOLDER: "./interop-infra-commons/scripts/validation"
+  ENABLE_ARGO_TEMPLATE_VALIDATION: false
 
 jobs:
+  repo_structure_validation:
+    name: Repo Structure Validation
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+
+      - name: Checkout scripts repository
+        uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
+        with:
+          repository: pagopa/interop-infra-commons
+          path: interop-infra-commons
+          fetch-depth: 0
+          sparse-checkout: 'scripts/validation'
+          ref: ${{ inputs.infra_commons_tag }}
+          
+      - name: Run repository structure checks
+        env:
+          REPO_STRUCTURE_VALIDATION_WARNING_ONLY: ${{ inputs.repo_structure_validation_warning_only }}
+          ENABLE_ARGO_TEMPLATE_VALIDATION: ${{ env.ENABLE_ARGO_TEMPLATE_VALIDATION }}
+        run: |
+          set -euo pipefail
+
+          WARNING_ONLY_ARG=""
+          if [[ "${REPO_STRUCTURE_VALIDATION_WARNING_ONLY:-false}" == "true" ]]; then
+            WARNING_ONLY_ARG="--warning-only"
+          fi
+
+          echo "Argo template checks flag status: ENABLE_ARGO_TEMPLATE_VALIDATION=${ENABLE_ARGO_TEMPLATE_VALIDATION:-false}"
+          bash "$VALIDATION_SCRIPTS_FOLDER/validate-repo-structure.sh" \
+            --repo-root "${GITHUB_WORKSPACE}" \
+            --target-env "${{ inputs.environment }}" \
+            --legacy-exceptions-file docs/repo-structure-validation-exceptions.txt \
+            ${WARNING_ONLY_ARG}
+            
   chart_validation:
     name: Helm Chart validation
     runs-on: ubuntu-22.04
