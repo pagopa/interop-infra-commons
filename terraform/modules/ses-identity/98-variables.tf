@@ -1,8 +1,3 @@
-variable "env" {
-  type        = string
-  description = "Environment name"
-}
-
 variable "ses_identity_name" {
   description = "Name of the SES Identity to create. It can be either an email address or a domain"
   type        = string

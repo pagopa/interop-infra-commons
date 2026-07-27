@@ -1,5 +1,5 @@
 data "aws_secretsmanager_random_password" "this" {
-  password_length            = var.generated_password_length
+  password_length     = var.generated_password_length
   exclude_punctuation = !var.generated_password_use_special_characters
 }
 

@@ -1,5 +1,5 @@
 locals {
-  openapi_abs_path       = abspath(var.openapi_relative_path)
+  openapi_abs_path = abspath(var.openapi_relative_path)
 
   type_options           = var.api_version != null ? ["-t", var.type] : []
   api_version_options    = var.api_version != null ? ["-v", var.api_version] : []
@@ -10,7 +10,7 @@ locals {
 }
 
 resource "local_file" "templated_openapi" {
-  count    = var.templating_map != {} ? 1 : 0
+  count = var.templating_map != null ? 1 : 0
 
   content  = templatefile(local.openapi_abs_path, var.templating_map)
   filename = replace(local.openapi_abs_path, ".yaml", "_templated.yaml")
@@ -18,19 +18,14 @@ resource "local_file" "templated_openapi" {
 
 data "external" "openapi_integration" {
   program = concat(["python3", "${path.module}/scripts/openapi_integration.py",
-    "-i", (var.templating_map != {} ? local_file.templated_openapi[0].filename : local.openapi_abs_path)],
+    "-i", (var.templating_map != null ? local_file.templated_openapi[0].filename : local.openapi_abs_path)],
   local.type_options, local.api_version_options, local.service_prefix_options, local.swagger_options, local.maintenance_options)
-}
-
-locals {
-  rest_apigw_name = (var.api_version != null ? format("interop-%s-%s-%s", var.api_name, var.api_version, var.env)
-  : format("interop-%s-%s", var.api_name, var.env))
 }
 
 resource "aws_api_gateway_rest_api" "this" {
   depends_on = [data.external.openapi_integration]
 
-  name = local.rest_apigw_name
+  name = var.rest_apigw_name
 
   body               = var.openapi_s3_bucket_name != null && var.openapi_s3_object_key != null ? aws_s3_object.openapi[0].content : data.external.openapi_integration.result.integrated_openapi_yaml
   put_rest_api_mode  = "overwrite"
@@ -54,11 +49,9 @@ resource "aws_api_gateway_deployment" "this" {
       var.vpc_link_id,
       var.domain_name,
       var.service_prefix,
-      # TODO: uncomment when a redeploy on auth-server is allowed
-      # "${var.remap_missing_auth_token_to_404_problem}",
-      # try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_type, null),
-      # try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].status_code, null),
-      # try(jsonencode(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_templates), null)
+      try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_type, null),
+      try(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].status_code, null),
+      try(jsonencode(aws_api_gateway_gateway_response.missing_auth_token_404_problem[0].response_templates), null)
     ])))
   }
 
@@ -81,10 +74,10 @@ resource "aws_api_gateway_stage" "env" {
   }
 
   dynamic "access_log_settings" {
-    for_each = var.access_log_group_arn != null ? [var.access_log_group_arn] : []
+    for_each = var.access_log_group_name != null ? [data.aws_cloudwatch_log_group.this[0].arn] : []
 
     content {
-      destination_arn = var.access_log_group_arn
+      destination_arn = data.aws_cloudwatch_log_group.this[0].arn
       format = jsonencode({
         "apigwId"              = "$context.apiId"
         "requestId"            = "$context.requestId"

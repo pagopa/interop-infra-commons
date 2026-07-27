@@ -3,7 +3,7 @@
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | ~> 1.8.0 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.8.0, < 2.0.0 |
 | <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 5.100.0 |
 
 ## Providers
@@ -27,8 +27,6 @@ No modules.
 | [terraform_data.delete_previous_role](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.delete_role](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
 | [terraform_data.manage_role](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) | resource |
-| [aws_caller_identity.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/caller_identity) | data source |
-| [aws_region.current](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/region) | data source |
 | [aws_secretsmanager_random_password.this](https://registry.terraform.io/providers/hashicorp/aws/latest/docs/data-sources/secretsmanager_random_password) | data source |
 
 ## Inputs
@@ -57,71 +55,5 @@ No modules.
 |------|-------------|
 | <a name="output_secret_arn"></a> [secret\_arn](#output\_secret\_arn) | User credentials secret ARN |
 | <a name="output_secret_id"></a> [secret\_id](#output\_secret\_id) | User credentials secret ID |
-
-### Execution Requirements
-
-The following tools need to be installed on the local machine were the Terraform Apply will be executed:
-* PagoPA VPN
-* [AWS CLI](https://aws.amazon.com/it/cli/)
-* [jq](https://jqlang.github.io/jq/)
-* [psql](https://www.postgresql.org/docs/current/app-psql.html)
-
-### DB Admin credentials
-
-In order to get user credentials, the module input variable "db\_admin\_credentials\_secret\_arn" must be specified;
-it represents the ARN of the AWS Secrets Manager resource where admin credentials are stored in a JSON format, following this naming convention:
-
-```
-{
-  "username": "admin_user",
-  "password": "admin_password"
-}
-```
-
-### Usage example
-
-```
-module "sql_roles" {
-  source       = "./modules/sql-roles"
-  db_admin_credentials_secret_arn = "arn:aws:secretsmanager:eu-central-1:000000000000:secret:dbadmincredentials-PDUERn"
-  db_host                         = "localhost"
-  db_name                         = "db1"
-  username                        = "testUser"
-  enable_sql_statements           = true
-  additional_sql_statements       = <<EOT
-        DO \$\$
-        BEGIN
-        GRANT CREATE ON SCHEMA public TO $USERNAME;
-        END
-        \$\$;
-    EOT
-}
-```
-
-<b>String Escaping</b>
-
-If the script contains special characters (e.g., $, ", or \), you may need to escape them or use a heredoc (<<EOT) to make it easier to handle.
-
-<b>Environment Variables</b>
-
-The input sql script in additional\_sql\_statemets has access to the following environment variables:
-```
-# User password
-PASSWORD
-
-# User username
-USERNAME
-
-# Database name
-DATABASE
-
-# Database port
-DATABASE_PORT
-
-# Database host
-HOST
-
-# DB Admin credentials AWS secret ARN
-ADMIN_CREDENTIALS_SECRET_ARN
-```
+| <a name="output_secret_name"></a> [secret\_name](#output\_secret\_name) | User credentials secret name |
 <!-- END_TF_DOCS -->

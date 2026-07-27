@@ -30,14 +30,14 @@ data "external" "curl_wrapper" {
       condition = (
         (
           (
-            var.destination_path != null 
-            ? ( trimspace(var.destination_path) != "" ? 1 : 0 )
+            var.destination_path != null
+            ? (trimspace(var.destination_path) != "" ? 1 : 0)
             : 0
           )
           +
-          ( 
-            var.file_cache_key != null 
-            ? ( trimspace(var.file_cache_key) != "" ? 1 : 0)
+          (
+            var.file_cache_key != null
+            ? (trimspace(var.file_cache_key) != "" ? 1 : 0)
             : 0
           )
         )

@@ -29,7 +29,7 @@ resource "aws_iam_policy" "vpn_clients_s3_bucket_access" {
         ]
         Resource = [
           "${module.vpn_automation_bucket.s3_bucket_arn}/vpn/*",
-          "${module.vpn_automation_bucket.s3_bucket_arn}"
+          module.vpn_automation_bucket.s3_bucket_arn
         ]
       }
     ]
@@ -49,7 +49,7 @@ resource "aws_iam_policy" "vpn_clients_vpn_endpoint_access" {
           "ec2:ExportClientVpnClientConfiguration"
         ]
         Resource = [
-          "${var.client_vpn_endpoint_arn}"
+          var.client_vpn_endpoint_arn
         ]
       }
     ]
@@ -81,7 +81,7 @@ resource "aws_iam_role" "vpn_clients_updater_lambda" {
 }
 
 data "aws_ec2_managed_prefix_list" "s3" {
-  name = "com.amazonaws.${data.aws_region.current.name}.s3"
+  name = "com.amazonaws.${data.aws_region.current.region}.s3"
 }
 
 resource "aws_security_group" "this_lambda" {
@@ -127,7 +127,7 @@ resource "aws_lambda_function" "vpn_clients_diff_lambda" {
     variables = {
       EASYRSA_PKI_DIR           = local.easyrsa_pki_dir_full_path
       VPN_CLIENTS_BUCKET_NAME   = module.vpn_automation_bucket.s3_bucket_id
-      VPN_CLIENTS_BUCKET_REGION = data.aws_region.current.name
+      VPN_CLIENTS_BUCKET_REGION = data.aws_region.current.region
       VPN_CLIENTS_KEY_NAME      = "vpn/clients.json"
     }
   }
@@ -166,9 +166,9 @@ resource "aws_lambda_function" "vpn_clients_updater_lambda" {
     variables = {
       EASYRSA_PKI_DIR                      = local.easyrsa_pki_dir_full_path
       VPN_ENDPOINT_ID                      = var.vpn_endpoint_id
-      VPN_ENDPOINT_REGION                  = data.aws_region.current.name
+      VPN_ENDPOINT_REGION                  = data.aws_region.current.region
       VPN_SEND_MAIL_TEMPLATE_BUCKET_NAME   = module.vpn_automation_bucket.s3_bucket_id
-      VPN_SEND_MAIL_TEMPLATE_BUCKET_REGION = data.aws_region.current.name
+      VPN_SEND_MAIL_TEMPLATE_BUCKET_REGION = data.aws_region.current.region
       VPN_SEND_MAIL_TEMPLATE_KEY_NAME      = "vpn/send-vpn-credentials.html"
       VPN_SES_CONFIGURATION_SET_NAME       = var.ses_configuration_set_name
       VPN_SES_SENDER                       = var.ses_from_address
@@ -187,4 +187,3 @@ resource "aws_lambda_function" "vpn_clients_updater_lambda" {
     local_mount_path = local.efs_mount_path
   }
 }
-

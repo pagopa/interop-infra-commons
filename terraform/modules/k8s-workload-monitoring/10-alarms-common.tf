@@ -73,7 +73,7 @@ resource "aws_cloudwatch_metric_alarm" "app_errors" {
   count = local.is_app_logs_errors_alarm_required ? 1 : 0
 
   alarm_name        = format("k8s-%s-errors-%s", var.k8s_workload_name, var.k8s_namespace)
-  alarm_description = format("Application errors alarm for %s",  var.k8s_workload_name)
+  alarm_description = format("Application errors alarm for %s", var.k8s_workload_name)
 
   alarm_actions = var.sns_topics_arns
 
