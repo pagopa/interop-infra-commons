@@ -21,7 +21,8 @@ defaults:
     shell: bash
 
 env:
-  SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
+  HELM_SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
+  VALIDATION_SCRIPTS_FOLDER: "./interop-infra-commons/scripts/validation"
 
 jobs:
   chart_validation:
@@ -66,7 +67,7 @@ jobs:
 
           export PROJECT_DIR=$(pwd)
 
-          $SCRIPTS_FOLDER/helmLint-main.sh --debug --environment "$ENVIRONMENT" --output console $OPTIONS -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml
+          $HELM_SCRIPTS_FOLDER/helmLint-main.sh --debug --environment "$ENVIRONMENT" --output console $OPTIONS -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml
   
   workloads_discovery:
     name: Workloads Discovery
@@ -113,7 +114,7 @@ jobs:
 
   template_microservices:
     name: ${{ matrix.microservice }}
-    needs: [ workloads_discovery, kube_linter_setup ]
+    needs: [ workloads_discovery ]
     runs-on: ubuntu-22.04
     if: ${{ ! contains(needs.workloads_discovery.outputs.microservices, '[]') }}
     strategy:
@@ -159,7 +160,7 @@ jobs:
           
           export PROJECT_DIR=$(pwd)
           
-          $SCRIPTS_FOLDER/helmTemplate-svc-single.sh --disable-templating-lookup --debug --environment "$ENVIRONMENT" --microservice $MICROSERVICE_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console
+          $HELM_SCRIPTS_FOLDER/helmTemplate-svc-single.sh --disable-templating-lookup --debug --environment "$ENVIRONMENT" --microservice $MICROSERVICE_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console
 
       - name: Microservice Kube-Linter
         id: microservice_kube_linter
@@ -172,7 +173,7 @@ jobs:
 
           export PROJECT_DIR=$(pwd)
 
-          $SCRIPTS_FOLDER/helmTemplate-svc-single.sh --disable-templating-lookup --debug --skip-dep --environment "$ENVIRONMENT" --microservice $MICROSERVICE_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console | kube-linter lint -
+          $HELM_SCRIPTS_FOLDER/helmTemplate-svc-single.sh --disable-templating-lookup --debug --skip-dep --environment "$ENVIRONMENT" --microservice $MICROSERVICE_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console | kube-linter lint -
       
   template_cronjobs:
     name: ${{ matrix.cronjob }}
@@ -222,7 +223,7 @@ jobs:
           
           export PROJECT_DIR=$(pwd)
 
-          $SCRIPTS_FOLDER/helmTemplate-cron-single.sh --debug --environment "$ENVIRONMENT" --job $CRONJOB_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console
+          $HELM_SCRIPTS_FOLDER/helmTemplate-cron-single.sh --debug --environment "$ENVIRONMENT" --job $CRONJOB_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console
 
       - name: Cronjob Kube-Linter
         id: cronjob_kube_linter
@@ -235,4 +236,4 @@ jobs:
 
           export PROJECT_DIR=$(pwd)
 
-          $SCRIPTS_FOLDER/helmTemplate-cron-single.sh --disable-templating-lookup --debug --skip-dep --environment "$ENVIRONMENT" --job $CRONJOB_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console | kube-linter lint -
+          $HELM_SCRIPTS_FOLDER/helmTemplate-cron-single.sh --disable-templating-lookup --debug --skip-dep --environment "$ENVIRONMENT" --job $CRONJOB_NAME -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml --output console | kube-linter lint -
