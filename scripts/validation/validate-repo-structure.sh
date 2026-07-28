@@ -6,6 +6,7 @@ REPO_ROOT=""
 TARGET_ENV=""
 WARNING_ONLY="false"
 LEGACY_EXCEPTIONS_FILE=""
+ENABLE_ARGOCD_VALIDATION="${ENABLE_ARGOCD_VALIDATION:-false}"
 
 info_count=0
 warning_count=0
@@ -24,6 +25,7 @@ Options:
   --target-env <env>                 Validate a single environment (required)
   --warning-only                     Report issues as warnings without failing
   --legacy-exceptions-file <path>    File with allowed missing paths, one per line
+  --enable-argocd-validation <bool>  Validate ArgoCD structure (true|false) - default: false
   --help                             Show this help
 EOF
 }
@@ -46,6 +48,10 @@ while [[ $# -gt 0 ]]; do
       LEGACY_EXCEPTIONS_FILE="$2"
       shift 2
       ;;
+    --enable-argocd-validation)
+      ENABLE_ARGOCD_VALIDATION="$2"
+      shift 2
+      ;;
     --help)
       usage
       exit 0
@@ -66,6 +72,12 @@ fi
 
 if [[ -z "$TARGET_ENV" ]]; then
   echo "Missing required argument: --target-env"
+  usage
+  exit 2
+fi
+
+if [[ "$ENABLE_ARGOCD_VALIDATION" != "true" && "$ENABLE_ARGOCD_VALIDATION" != "false" ]]; then
+  echo "Invalid value for --enable-argocd-validation: '$ENABLE_ARGOCD_VALIDATION' (allowed: true|false)"
   usage
   exit 2
 fi
@@ -246,7 +258,17 @@ validate_workload_group() {
 validate_workload_group "microservices"
 validate_workload_group "jobs"
 
-# todo argocd 
+# Check 8 (optional): Validate ArgoCD base directory and target environment directory.
+if [[ "$ENABLE_ARGOCD_VALIDATION" == "true" ]]; then
+  argocd_root_dir="argocd"
+  argocd_env_dir="${argocd_root_dir}/${TARGET_ENV}"
+
+  if [[ ! -d "$argocd_root_dir" ]]; then
+    report_issue "$argocd_root_dir" "Missing required ArgoCD root directory"
+  elif [[ ! -d "$argocd_env_dir" ]]; then
+    report_issue "$argocd_env_dir" "Missing required ArgoCD environment directory"
+  fi
+fi
 
 
 summary_msg="Repo structure validation completed. errors=$error_count warnings=$warning_count target_env=$TARGET_ENV"
@@ -260,6 +282,7 @@ echo "$summary_msg"
     echo "- errors: $error_count"
     echo "- warnings: $warning_count"
     echo "- warning_only: $WARNING_ONLY"
+    echo "- enable_argocd_validation: $ENABLE_ARGOCD_VALIDATION"
     echo ""
 
     # Print the list of issues if any
