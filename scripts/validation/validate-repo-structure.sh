@@ -7,6 +7,8 @@ TARGET_ENV=""
 WARNING_ONLY="false"
 LEGACY_EXCEPTIONS_FILE=""
 ENABLE_ARGOCD_VALIDATION="${ENABLE_ARGOCD_VALIDATION:-false}"
+ENABLE_ARGOCD_SCHEMA_VALIDATION="${ENABLE_ARGOCD_SCHEMA_VALIDATION:-true}"
+ARGOCD_CRD_SCHEMA_LOCATION="${ARGOCD_CRD_SCHEMA_LOCATION:-}"
 
 info_count=0
 warning_count=0
@@ -26,6 +28,8 @@ Options:
   --warning-only                     Report issues as warnings without failing
   --legacy-exceptions-file <path>    File with allowed missing paths, one per line
   --enable-argocd-validation <bool>  Validate ArgoCD structure (true|false) - default: false
+  --enable-argocd-schema-validation <bool>  Validate ArgoCD schema with kubeconform (true|false) - default: true
+  --argocd-crd-schema-location <path-or-url> Optional kubeconform schema location for ArgoCD CRDs
   --help                             Show this help
 EOF
 }
@@ -50,6 +54,14 @@ while [[ $# -gt 0 ]]; do
       ;;
     --enable-argocd-validation)
       ENABLE_ARGOCD_VALIDATION="$2"
+      shift 2
+      ;;
+    --enable-argocd-schema-validation)
+      ENABLE_ARGOCD_SCHEMA_VALIDATION="$2"
+      shift 2
+      ;;
+    --argocd-crd-schema-location)
+      ARGOCD_CRD_SCHEMA_LOCATION="$2"
       shift 2
       ;;
     --help)
@@ -78,6 +90,12 @@ fi
 
 if [[ "$ENABLE_ARGOCD_VALIDATION" != "true" && "$ENABLE_ARGOCD_VALIDATION" != "false" ]]; then
   echo "Invalid value for --enable-argocd-validation: '$ENABLE_ARGOCD_VALIDATION' (allowed: true|false)"
+  usage
+  exit 2
+fi
+
+if [[ "$ENABLE_ARGOCD_SCHEMA_VALIDATION" != "true" && "$ENABLE_ARGOCD_SCHEMA_VALIDATION" != "false" ]]; then
+  echo "Invalid value for --enable-argocd-schema-validation: '$ENABLE_ARGOCD_SCHEMA_VALIDATION' (allowed: true|false)"
   usage
   exit 2
 fi
@@ -159,16 +177,52 @@ is_legacy_exception() {
   contains_value "$candidate" "${legacy_exceptions[@]:-}"
 }
 
+# Ensure yq is available before running YAML-dependent validations.
+# Args:
+#   $1: context path used in GitHub annotation
+#   $2: logical component label for clearer error messages
+ensure_yq_available() {
+  local context_path="$1"
+  local component_name="$2"
+
+  if ! command -v yq >/dev/null 2>&1; then
+    report_issue "$context_path" "$component_name requires yq, but the YAML parser is not available (install yq)"
+    return 1
+  fi
+
+  return 0
+}
+
+# Validate YAML syntax for a single file.
 validate_yaml() {
   local file_path="$1"
 
-  if ! command -v yq >/dev/null 2>&1; then
-    report_issue "$file_path" "YAML parser not available (install yq)"
+  if ! ensure_yq_available "$file_path" "YAML validation"; then
     return
   fi
 
   if ! yq eval '.' "$file_path" >/dev/null 2>&1; then
     report_issue "$file_path" "Malformed YAML"
+  fi
+}
+
+
+# Delegate ArgoCD validations to the dedicated script.
+run_argocd_validation() {
+  local validator_script="$1"
+  local -a args=(
+    --repo-root "$REPO_ROOT"
+    --target-env "$TARGET_ENV"
+    --enable-argocd-schema-validation "$ENABLE_ARGOCD_SCHEMA_VALIDATION"
+    --argocd-crd-schema-location "$ARGOCD_CRD_SCHEMA_LOCATION"
+  )
+
+  if [[ "$WARNING_ONLY" == "true" ]]; then
+    args+=( --warning-only )
+  fi
+
+  if ! bash "$validator_script" "${args[@]}"; then
+    report_issue "argocd/${TARGET_ENV}" "ArgoCD validation failed. Check the ArgoCD validation annotations above for details."
   fi
 }
 
@@ -260,13 +314,13 @@ validate_workload_group "jobs"
 
 # Check 8 (optional): Validate ArgoCD base directory and target environment directory.
 if [[ "$ENABLE_ARGOCD_VALIDATION" == "true" ]]; then
-  argocd_root_dir="argocd"
-  argocd_env_dir="${argocd_root_dir}/${TARGET_ENV}"
+  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  ARGOCD_VALIDATOR_SCRIPT="$SCRIPT_DIR/validate-argocd-manifests.sh"
 
-  if [[ ! -d "$argocd_root_dir" ]]; then
-    report_issue "$argocd_root_dir" "Missing required ArgoCD root directory"
-  elif [[ ! -d "$argocd_env_dir" ]]; then
-    report_issue "$argocd_env_dir" "Missing required ArgoCD environment directory"
+  if [[ ! -f "$ARGOCD_VALIDATOR_SCRIPT" ]]; then
+    report_issue "$ARGOCD_VALIDATOR_SCRIPT" "Missing ArgoCD validator script"
+  else
+    run_argocd_validation "$ARGOCD_VALIDATOR_SCRIPT"
   fi
 fi
 
@@ -283,6 +337,8 @@ echo "$summary_msg"
     echo "- warnings: $warning_count"
     echo "- warning_only: $WARNING_ONLY"
     echo "- enable_argocd_validation: $ENABLE_ARGOCD_VALIDATION"
+    echo "- enable_argocd_schema_validation: $ENABLE_ARGOCD_SCHEMA_VALIDATION"
+    echo "- argocd_crd_schema_location: ${ARGOCD_CRD_SCHEMA_LOCATION:-<default>}"
     echo ""
 
     # Print the list of issues if any
