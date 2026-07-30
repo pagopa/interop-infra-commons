@@ -76,7 +76,7 @@ jobs:
           set -euo pipefail
           echo "kubeconform binary: $(command -v kubeconform)"
           echo "kubeconform version:"
-          kubeconform version
+          kubeconform -v
 
       - name: Run repository structure checks
         env:
