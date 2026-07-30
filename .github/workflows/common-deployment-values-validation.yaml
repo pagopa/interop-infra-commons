@@ -15,12 +15,22 @@ on:
         required: false
         type: string
         default: 'false'
+      enable_argocd_schema_validation:
+        description: 'Enable ArgoCD schema validation'
+        required: false
+        type: string
+        default: 'false'
+      enable_argocd_validation:
+        description: 'Enable ArgoCD validation'
+        required: false
+        type: string
+        default: 'false'
       repo_structure_validation_warning_only:
         description: 'Enable warning only mode for repo structure validation'
         required: false
         type: string
         default: 'false'
-
+          
 defaults:
   run:
     shell: bash
@@ -28,7 +38,6 @@ defaults:
 env:
   HELM_SCRIPTS_FOLDER: "./interop-infra-commons/scripts/helm"
   VALIDATION_SCRIPTS_FOLDER: "./interop-infra-commons/scripts/validation"
-  ENABLE_ARGO_TEMPLATE_VALIDATION: false
 
 jobs:
   repo_structure_validation:
@@ -50,7 +59,8 @@ jobs:
       - name: Run repository structure checks
         env:
           REPO_STRUCTURE_VALIDATION_WARNING_ONLY: ${{ inputs.repo_structure_validation_warning_only }}
-          ENABLE_ARGO_TEMPLATE_VALIDATION: ${{ env.ENABLE_ARGO_TEMPLATE_VALIDATION }}
+          ENABLE_ARGOCD_VALIDATION: ${{ inputs.enable_argocd_validation }}
+          ENABLE_ARGOCD_SCHEMA_VALIDATION: ${{ inputs.enable_argocd_schema_validation }}
         run: |
           set -euo pipefail
 
@@ -59,11 +69,12 @@ jobs:
             WARNING_ONLY_ARG="--warning-only"
           fi
 
-          echo "Argo template checks flag status: ENABLE_ARGO_TEMPLATE_VALIDATION=${ENABLE_ARGO_TEMPLATE_VALIDATION:-false}"
           bash "$VALIDATION_SCRIPTS_FOLDER/validate-repo-structure.sh" \
             --repo-root "${GITHUB_WORKSPACE}" \
             --target-env "${{ inputs.environment }}" \
             --legacy-exceptions-file docs/repo-structure-validation-exceptions.txt \
+            --enable-argocd-validation "${ENABLE_ARGOCD_VALIDATION}" \
+            --enable-argocd-schema-validation "${ENABLE_ARGOCD_SCHEMA_VALIDATION}" \
             ${WARNING_ONLY_ARG}
             
   chart_validation:
