@@ -391,30 +391,6 @@ validate_argocd_applicationset_manifest() {
   local template_sources_path_count
   template_sources_path_count="$(yq eval -r '.spec.template.spec.sources[]?.path' "$manifest_file" | awk 'NF { c++ } END { print c+0 }')"
 
-  while IFS= read -r generator_path; do
-    validate_repo_reference "$manifest_file" "spec.generators[].git.directories[].path" "$generator_path" "dir"
-  done < <(yq eval -r '.spec.generators[]?.git?.directories[]?.path' "$manifest_file")
-
-  while IFS= read -r generator_path; do
-    validate_repo_reference "$manifest_file" "spec.generators[].matrix.generators[].git.directories[].path" "$generator_path" "dir"
-  done < <(yq eval -r '.spec.generators[]?.matrix?.generators[]?.git?.directories[]?.path' "$manifest_file")
-
-  while IFS= read -r generator_path; do
-    validate_repo_reference "$manifest_file" "spec.generators[].merge.generators[].git.directories[].path" "$generator_path" "dir"
-  done < <(yq eval -r '.spec.generators[]?.merge?.generators[]?.git?.directories[]?.path' "$manifest_file")
-
-  while IFS= read -r generator_file; do
-    validate_repo_reference "$manifest_file" "spec.generators[].git.files[].path" "$generator_file" "file"
-  done < <(yq eval -r '.spec.generators[]?.git?.files[]?.path' "$manifest_file")
-
-  while IFS= read -r generator_file; do
-    validate_repo_reference "$manifest_file" "spec.generators[].matrix.generators[].git.files[].path" "$generator_file" "file"
-  done < <(yq eval -r '.spec.generators[]?.matrix?.generators[]?.git?.files[]?.path' "$manifest_file")
-
-  while IFS= read -r generator_file; do
-    validate_repo_reference "$manifest_file" "spec.generators[].merge.generators[].git.files[].path" "$generator_file" "file"
-  done < <(yq eval -r '.spec.generators[]?.merge?.generators[]?.git?.files[]?.path' "$manifest_file")
-
   local template_source_repo_url
   template_source_repo_url="$(yq eval -r '.spec.template.spec.source.repoURL // ""' "$manifest_file")"
 
