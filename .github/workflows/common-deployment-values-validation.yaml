@@ -55,7 +55,23 @@ jobs:
           fetch-depth: 0
           sparse-checkout: 'scripts/validation'
           ref: ${{ inputs.infra_commons_tag }}
+      
+      - name: Install kubeconform
+        if: ${{ inputs.enable_argocd_schema_validation }}
+        run: |
+          set -euo pipefail
           
+          echo "Installing kubeconform"
+          
+          mkdir -p .tools
+          curl -sSLo kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+          tar -xzf kubeconform.tar.gz -C .tools kubeconform
+          chmod +x .tools/kubeconform
+          rm kubeconform.tar.gz
+
+          echo "$PWD/.tools" >> "$GITHUB_PATH"
+          kubeconform version
+
       - name: Run repository structure checks
         env:
           REPO_STRUCTURE_VALIDATION_WARNING_ONLY: ${{ inputs.repo_structure_validation_warning_only }}
@@ -64,7 +80,7 @@ jobs:
         run: |
           set -euo pipefail
           echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
-          
+
           ARGS=(
             --repo-root "${GITHUB_WORKSPACE}"
             --target-env "${{ inputs.environment }}"
