@@ -68,8 +68,14 @@ jobs:
           tar -xzf kubeconform.tar.gz -C .tools kubeconform
           chmod +x .tools/kubeconform
           rm kubeconform.tar.gz
-
           echo "$PWD/.tools" >> "$GITHUB_PATH"
+
+      - name: Echo kubeconform version
+        if: ${{ inputs.enable_argocd_schema_validation }}
+        run: |
+          set -euo pipefail
+          echo "kubeconform binary: $(command -v kubeconform)"
+          echo "kubeconform version:"
           kubeconform version
 
       - name: Run repository structure checks
