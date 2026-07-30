@@ -226,6 +226,7 @@ run_argocd_validation() {
   fi
 }
 
+echo "Structure validator: cd to $REPO_ROOT"
 cd "$REPO_ROOT"
 
 # Check 1: Validate the presence of required directories (commons / microservices / jobs).

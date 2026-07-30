@@ -63,7 +63,8 @@ jobs:
           ENABLE_ARGOCD_SCHEMA_VALIDATION: ${{ inputs.enable_argocd_schema_validation }}
         run: |
           set -euo pipefail
-
+          echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
+          
           ARGS=(
             --repo-root "${GITHUB_WORKSPACE}"
             --target-env "${{ inputs.environment }}"
