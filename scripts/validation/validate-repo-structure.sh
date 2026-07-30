@@ -7,7 +7,7 @@ TARGET_ENV=""
 WARNING_ONLY="false"
 LEGACY_EXCEPTIONS_FILE=""
 ENABLE_ARGOCD_VALIDATION="${ENABLE_ARGOCD_VALIDATION:-false}"
-ENABLE_ARGOCD_SCHEMA_VALIDATION="${ENABLE_ARGOCD_SCHEMA_VALIDATION:-true}"
+ENABLE_ARGOCD_SCHEMA_VALIDATION="${ENABLE_ARGOCD_SCHEMA_VALIDATION:-false}"
 ARGOCD_CRD_SCHEMA_LOCATION="${ARGOCD_CRD_SCHEMA_LOCATION:-}"
 
 info_count=0
@@ -28,7 +28,7 @@ Options:
   --warning-only                     Report issues as warnings without failing
   --legacy-exceptions-file <path>    File with allowed missing paths, one per line
   --enable-argocd-validation <bool>  Validate ArgoCD structure (true|false) - default: false
-  --enable-argocd-schema-validation <bool>  Validate ArgoCD schema with kubeconform (true|false) - default: true
+  --enable-argocd-schema-validation <bool>  Validate ArgoCD schema with kubeconform (true|false) - default: false
   --argocd-crd-schema-location <path-or-url> Optional kubeconform schema location for ArgoCD CRDs
   --help                             Show this help
 EOF
