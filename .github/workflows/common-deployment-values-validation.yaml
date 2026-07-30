@@ -13,23 +13,23 @@ on:
       enable_kube_linter:
         description: 'Enable Kube-linter validation'
         required: false
-        type: string
-        default: 'false'
-      enable_argocd_schema_validation:
-        description: 'Enable ArgoCD schema validation'
-        required: false
-        type: string
-        default: 'false'
+        type: boolean
+        default: false
       enable_argocd_validation:
         description: 'Enable ArgoCD validation'
         required: false
-        type: string
-        default: 'false'
+        type: boolean
+        default: false
+      enable_argocd_schema_validation:
+        description: 'Enable ArgoCD schema validation'
+        required: false
+        type: boolean
+        default: false
       repo_structure_validation_warning_only:
         description: 'Enable warning only mode for repo structure validation'
         required: false
-        type: string
-        default: 'false'
+        type: boolean
+        default: false
           
 defaults:
   run:
@@ -64,18 +64,19 @@ jobs:
         run: |
           set -euo pipefail
 
-          WARNING_ONLY_ARG=""
-          if [[ "${REPO_STRUCTURE_VALIDATION_WARNING_ONLY:-false}" == "true" ]]; then
-            WARNING_ONLY_ARG="--warning-only"
+          ARGS=(
+            --repo-root "${GITHUB_WORKSPACE}"
+            --target-env "${{ inputs.environment }}"
+            --legacy-exceptions-file docs/repo-structure-validation-exceptions.txt
+            --enable-argocd-validation "${ENABLE_ARGOCD_VALIDATION}"
+            --enable-argocd-schema-validation "${ENABLE_ARGOCD_SCHEMA_VALIDATION}"
+          )
+
+          if [[ "${REPO_STRUCTURE_VALIDATION_WARNING_ONLY}" == "true" ]]; then
+            ARGS+=(--warning-only)
           fi
 
-          bash "$VALIDATION_SCRIPTS_FOLDER/validate-repo-structure.sh" \
-            --repo-root "${GITHUB_WORKSPACE}" \
-            --target-env "${{ inputs.environment }}" \
-            --legacy-exceptions-file docs/repo-structure-validation-exceptions.txt \
-            --enable-argocd-validation "${ENABLE_ARGOCD_VALIDATION}" \
-            --enable-argocd-schema-validation "${ENABLE_ARGOCD_SCHEMA_VALIDATION}" \
-            ${WARNING_ONLY_ARG}
+          bash "$VALIDATION_SCRIPTS_FOLDER/validate-repo-structure.sh" "${ARGS[@]}"
             
   chart_validation:
     name: Helm Chart validation
@@ -145,7 +146,7 @@ jobs:
   kube_linter_setup:
     name: Kube-linter Setup
     runs-on: ubuntu-22.04
-    if: ${{ inputs.enable_kube_linter == 'true' }}
+    if: ${{ inputs.enable_kube_linter }}
     steps:
       - name: Download kube-linter binary
         run: |
@@ -189,13 +190,13 @@ jobs:
 
       - name: Download kube-linter artifact
         uses: actions/download-artifact@v4
-        if: ${{ inputs.enable_kube_linter == 'true' }}
+        if: ${{ inputs.enable_kube_linter }}
         with:
           name: kube-linter-linux
           path: .tools
 
       - name: Setup kube-linter is executable
-        if: ${{ inputs.enable_kube_linter == 'true' }}
+        if: ${{ inputs.enable_kube_linter }}
         run: |
           set -euo pipefail
           
@@ -216,7 +217,7 @@ jobs:
 
       - name: Microservice Kube-Linter
         id: microservice_kube_linter
-        if: ${{ inputs.enable_kube_linter == 'true' }}
+        if: ${{ inputs.enable_kube_linter }}
         env:
           MICROSERVICE_NAME: ${{ matrix.microservice }}
           ENVIRONMENT: ${{ inputs.environment }}
@@ -251,14 +252,14 @@ jobs:
           ref: ${{ inputs.infra_commons_tag }}
 
       - name: Download kube-linter artifact
-        if: ${{ inputs.enable_kube_linter == 'true' }}
+        if: ${{ inputs.enable_kube_linter }}
         uses: actions/download-artifact@v4
         with:
           name: kube-linter-linux
           path: .tools
 
       - name: Setup kube-linter
-        if: ${{ inputs.enable_kube_linter == 'true' }}
+        if: ${{ inputs.enable_kube_linter }}
         run: |
           set -euo pipefail
 
@@ -279,7 +280,7 @@ jobs:
 
       - name: Cronjob Kube-Linter
         id: cronjob_kube_linter
-        if: ${{ inputs.enable_kube_linter == 'true' }}
+        if: ${{ inputs.enable_kube_linter }}
         env:
           CRONJOB_NAME: ${{ matrix.cronjob }}
           ENVIRONMENT: ${{ inputs.environment }}
