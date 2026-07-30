@@ -468,13 +468,10 @@ validate_argocd_manifests() {
 echo "=================================================="
 echo "Starting ArgoCD validation for environment: $TARGET_ENV"
 echo "=================================================="
-echo "Argocd: cd to $REPO_ROOT"
 cd "$REPO_ROOT"
 
 argocd_root_dir="argocd"
 argocd_env_dir="${argocd_root_dir}/${TARGET_ENV}"
-
-ls -la "$REPO_ROOT"
 
 if [[ ! -d "$argocd_root_dir" ]]; then
   report_issue "$argocd_root_dir" "Missing required ArgoCD root directory"

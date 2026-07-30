@@ -143,15 +143,6 @@ report_issue() {
   issues+=("$file_path: $message")
 }
 
-report_warning() {
-  local file_path="$1"
-  local message="$2"
-  warning_count=$((warning_count + 1))
-  echo "::warning file=${file_path}::${message}"
-  # Also store this warning to print it in the summary at the end of the script.
-  warnings+=("$file_path: $message")
-}
-
 report_info() {
   local file_path="$1"
   local message="$2"
@@ -226,7 +217,6 @@ run_argocd_validation() {
   fi
 }
 
-echo "Structure validator: cd to $REPO_ROOT"
 cd "$REPO_ROOT"
 
 # Check 1: Validate the presence of required directories (commons / microservices / jobs).
