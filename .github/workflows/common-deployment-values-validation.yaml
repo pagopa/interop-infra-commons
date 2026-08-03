@@ -83,13 +83,14 @@ jobs:
           REPO_STRUCTURE_VALIDATION_WARNING_ONLY: ${{ inputs.repo_structure_validation_warning_only }}
           ENABLE_ARGOCD_VALIDATION: ${{ inputs.enable_argocd_validation }}
           ENABLE_ARGOCD_SCHEMA_VALIDATION: ${{ inputs.enable_argocd_schema_validation }}
+          TARGET_ENV: ${{ inputs.environment }}
         run: |
           set -euo pipefail
           echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
 
           ARGS=(
             --repo-root "${GITHUB_WORKSPACE}"
-            --target-env "${{ inputs.environment }}"
+            --target-env "${TARGET_ENV}"
             --legacy-exceptions-file docs/repo-structure-validation-exceptions.txt
             --enable-argocd-validation "${ENABLE_ARGOCD_VALIDATION}"
             --enable-argocd-schema-validation "${ENABLE_ARGOCD_SCHEMA_VALIDATION}"
