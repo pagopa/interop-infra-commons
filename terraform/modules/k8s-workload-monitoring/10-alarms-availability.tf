@@ -7,8 +7,8 @@
 locals {
   # If other workload type need to be included, for example StatefulSet, 
   # modify as follows: (var.kind == "Deployment") -> (var.kind == "Deployment" || var.kind == "StatefulSet")
-  is_pod_availability_alarm_required = var.create_pod_availability_alarm && (var.kind == "Deployment")
-  is_pod_readiness_alarm_required    = var.create_pod_readiness_alarm && (var.kind == "Deployment")
+  is_pod_availability_alarm_required = var.create_pod_availability_alarm && (var.kind == "Deployment" || var.kind == "StatefulSet")
+  is_pod_readiness_alarm_required    = var.create_pod_readiness_alarm && (var.kind == "Deployment" || var.kind == "StatefulSet")
 }
 
 ###############################################################################
