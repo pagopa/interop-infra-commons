@@ -177,12 +177,13 @@ fi
 #DIFF_CMD="KUBECTL_EXTERNAL_DIFF=$SCRIPTS_FOLDER/diff.sh kubectl diff --show-managed-fields=false -f -"
 #eval $HELM_TEMPLATE_CMD" | "$DIFF_CMD
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput --force
+fi
+
 HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-svc-single.sh"
 DIFF_SCRIPT="$SCRIPTS_FOLDER/diff.sh"
 
 "$HELM_TEMPLATE_SCRIPT" -e "$ENV" -m "$microservice" $OPTIONS | \
  KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -
 
-if [[ "$argocd_plugin" == "true" ]]; then
-  restoreOutput
-fi
