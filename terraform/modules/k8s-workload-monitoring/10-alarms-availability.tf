@@ -7,8 +7,26 @@
 locals {
   # If other workload type need to be included, for example StatefulSet, 
   # modify as follows: (var.kind == "Deployment") -> (var.kind == "Deployment" || var.kind == "StatefulSet")
-  is_pod_availability_alarm_required = var.create_pod_availability_alarm && (var.kind == "Deployment")
-  is_pod_readiness_alarm_required    = var.create_pod_readiness_alarm && (var.kind == "Deployment")
+  is_pod_availability_alarm_required = var.create_pod_availability_alarm && (var.kind == "Deployment" || var.kind == "StatefulSet")
+  is_pod_readiness_alarm_required    = var.create_pod_readiness_alarm && (var.kind == "Deployment" || var.kind == "StatefulSet")
+
+  # kube-state-metrics uses different metric names for StatefulSet vs Deployment
+  total_replicas_metric_name = {
+    "Deployment"  = "kube_deployment_status_replicas"
+    "StatefulSet" = "kube_statefulset_status_replicas"
+  }
+  available_replicas_metric_name = {
+    "Deployment"  = "kube_deployment_status_replicas_available"
+    "StatefulSet" = "kube_statefulset_status_replicas_available"
+  }
+  desired_replicas_metric_name = {
+    "Deployment"  = "kube_deployment_spec_replicas"
+    "StatefulSet" = "kube_statefulset_replicas"
+  }
+  ready_replicas_metric_name = {
+    "Deployment"  = "kube_deployment_status_replicas_ready"
+    "StatefulSet" = "kube_statefulset_status_replicas_ready"
+  }
 }
 
 ###############################################################################
@@ -47,7 +65,7 @@ resource "aws_cloudwatch_metric_alarm" "unavailable_pods" {
       stat   = "Maximum"
       period = 60 # 1 minute
 
-      metric_name = "kube_deployment_status_replicas"
+      metric_name = local.total_replicas_metric_name[var.kind]
       namespace   = "ContainerInsights"
 
       dimensions = {
@@ -67,7 +85,7 @@ resource "aws_cloudwatch_metric_alarm" "unavailable_pods" {
       stat   = "Maximum"
       period = 60 # 1 minute
 
-      metric_name = "kube_deployment_status_replicas_available"
+      metric_name = local.available_replicas_metric_name[var.kind]
       namespace   = "ContainerInsights"
 
       dimensions = {
@@ -113,7 +131,7 @@ resource "aws_cloudwatch_metric_alarm" "readiness_pods" {
       stat   = "Maximum"
       period = 60 # 1 minute
 
-      metric_name = "kube_deployment_spec_replicas"
+      metric_name = local.desired_replicas_metric_name[var.kind]
       namespace   = "ContainerInsights"
 
       dimensions = {
@@ -133,7 +151,7 @@ resource "aws_cloudwatch_metric_alarm" "readiness_pods" {
       stat   = "Maximum"
       period = 60 # 1 minute
 
-      metric_name = "kube_deployment_status_replicas_ready"
+      metric_name = local.ready_replicas_metric_name[var.kind]
       namespace   = "ContainerInsights"
 
       dimensions = {
