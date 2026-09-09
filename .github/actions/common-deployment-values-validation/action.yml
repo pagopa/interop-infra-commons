@@ -194,18 +194,29 @@ runs:
 
             if [[ "${ENABLE_KUBE_LINTER}" == "true" ]]; then
               echo "Kube Linting microservice: $MICROSERVICE_NAME"
-              KUBE_LINTER_LOG_PATH="$(pwd)/kube-lint-${MICROSERVICE_NAME}.log"
-              kube-linter lint "$TEMPLATE_OUTPUT_PATH" >"$KUBE_LINTER_LOG_PATH" 2>&1
-              LINTER_EXIT_CODE=$?
+              KUBE_LINTER_BIN="$(command -v kube-linter || echo "$PWD/.tools/kube-linter")"
 
-              if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
-                echo "Linting failed for microservice: $MICROSERVICE_NAME"
+              if [[ ! -x "$KUBE_LINTER_BIN" ]]; then
+                echo "kube-linter binary not found at $KUBE_LINTER_BIN"
                 FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
                 printf '%s\n' "### Lint: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
-                cat "$KUBE_LINTER_LOG_PATH" >> "$REPORT_PATH"
+                printf '%s\n' "kube-linter binary not found at $KUBE_LINTER_BIN" >> "$REPORT_PATH"
                 printf '\n---\n' >> "$REPORT_PATH"
-                if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
-                  VALIDATION_ERROR_FLAG=1
+                VALIDATION_ERROR_FLAG=1
+              else
+                KUBE_LINTER_LOG_PATH="$(pwd)/kube-lint-${MICROSERVICE_NAME}.log"
+                "$KUBE_LINTER_BIN" lint "$TEMPLATE_OUTPUT_PATH" >"$KUBE_LINTER_LOG_PATH" 2>&1
+                LINTER_EXIT_CODE=$?
+
+                if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
+                  echo "Linting failed for microservice: $MICROSERVICE_NAME"
+                  FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
+                  printf '%s\n' "### Lint: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
+                  cat "$KUBE_LINTER_LOG_PATH" >> "$REPORT_PATH"
+                  printf '\n---\n' >> "$REPORT_PATH"
+                  if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
+                    VALIDATION_ERROR_FLAG=1
+                  fi
                 fi
               fi
             fi
@@ -332,18 +343,29 @@ runs:
 
             if [[ "${ENABLE_KUBE_LINTER}" == "true" ]]; then
               echo "Kube Linting cronjob: $CRONJOB_NAME"
-              KUBE_LINTER_LOG_PATH="$(pwd)/kube-lint-${CRONJOB_NAME}.log"
-              kube-linter lint "$TEMPLATE_OUTPUT_PATH" >"$KUBE_LINTER_LOG_PATH" 2>&1
-              LINTER_EXIT_CODE=$?
+              KUBE_LINTER_BIN="$(command -v kube-linter || echo "$PWD/.tools/kube-linter")"
 
-              if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
-                echo "Linting failed for cronjob: $CRONJOB_NAME"
+              if [[ ! -x "$KUBE_LINTER_BIN" ]]; then
+                echo "kube-linter binary not found at $KUBE_LINTER_BIN"
                 FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
                 printf '%s\n' "### Lint: ${CRONJOB_NAME}" >> "$REPORT_PATH"
-                cat "$KUBE_LINTER_LOG_PATH" >> "$REPORT_PATH"
+                printf '%s\n' "kube-linter binary not found at $KUBE_LINTER_BIN" >> "$REPORT_PATH"
                 printf '\n---\n' >> "$REPORT_PATH"
-                if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
-                  VALIDATION_ERROR_FLAG=1
+                VALIDATION_ERROR_FLAG=1
+              else
+                KUBE_LINTER_LOG_PATH="$(pwd)/kube-lint-${CRONJOB_NAME}.log"
+                "$KUBE_LINTER_BIN" lint "$TEMPLATE_OUTPUT_PATH" >"$KUBE_LINTER_LOG_PATH" 2>&1
+                LINTER_EXIT_CODE=$?
+
+                if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
+                  echo "Linting failed for cronjob: $CRONJOB_NAME"
+                  FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
+                  printf '%s\n' "### Lint: ${CRONJOB_NAME}" >> "$REPORT_PATH"
+                  cat "$KUBE_LINTER_LOG_PATH" >> "$REPORT_PATH"
+                  printf '\n---\n' >> "$REPORT_PATH"
+                  if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
+                    VALIDATION_ERROR_FLAG=1
+                  fi
                 fi
               fi
             fi
