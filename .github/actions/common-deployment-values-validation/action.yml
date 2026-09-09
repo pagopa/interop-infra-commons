@@ -39,6 +39,19 @@ inputs:
 runs:
   using: composite
   steps:
+    - name: Print action inputs
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "Action inputs:"
+        echo "environment=${{ inputs.environment }}"
+        echo "infra_commons_tag=${{ inputs.infra_commons_tag }}"
+        echo "enable_kube_linter=${{ inputs.enable_kube_linter }}"
+        echo "strict_kube_linter_checks=${{ inputs.strict_kube_linter_checks }}"
+        echo "enable_argocd_validation=${{ inputs.enable_argocd_validation }}"
+        echo "enable_argocd_schema_validation=${{ inputs.enable_argocd_schema_validation }}"
+        echo "repo_structure_validation_warning_only=${{ inputs.repo_structure_validation_warning_only }}"
+
     - name: Checkout current repository
       uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
 
