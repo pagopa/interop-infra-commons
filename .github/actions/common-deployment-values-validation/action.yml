@@ -246,14 +246,10 @@ runs:
         echo "" >> "$GITHUB_STEP_SUMMARY"
 
         if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
-          echo "```text" >> "$GITHUB_STEP_SUMMARY"
           cat "$REPORT_PATH" >> "$GITHUB_STEP_SUMMARY"
-          echo "```" >> "$GITHUB_STEP_SUMMARY"
           echo ""
 
-          echo "```text"
           cat "$REPORT_PATH"
-          echo "```"
           echo ""
         else
           echo "- No workload-level failures recorded." >> "$GITHUB_STEP_SUMMARY"
@@ -388,14 +384,10 @@ runs:
         echo "" >> "$GITHUB_STEP_SUMMARY"
 
         if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
-          echo "```text" >> "$GITHUB_STEP_SUMMARY"
           cat "$REPORT_PATH" >> "$GITHUB_STEP_SUMMARY"
-          echo "```" >> "$GITHUB_STEP_SUMMARY"
           echo ""
 
-          echo "```text"
           cat "$REPORT_PATH"
-          echo "```"
           echo ""
         else
           echo "- No workload-level failures recorded." >> "$GITHUB_STEP_SUMMARY"
