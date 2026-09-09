@@ -130,6 +130,7 @@ runs:
         echo "microservices discovered: $MICROSERVICES"
 
     - name: Microservices template and lint
+      id: microservices_template_and_lint
       shell: bash
       env:
         ENVIRONMENT: ${{ inputs.environment }}
@@ -143,6 +144,8 @@ runs:
         export PROJECT_DIR=$(pwd)
         FAILED_MICROSERVICES=""
         VALIDATION_ERROR_FLAG=0
+        REPORT_PATH="$(pwd)/microservices-validation-report.txt"
+        : > "$REPORT_PATH"
 
         if [[ -n "$MICROSERVICES" ]]; then
           set +e
@@ -151,20 +154,25 @@ runs:
 
             echo "Helm Linting microservice: $MICROSERVICE_NAME"
             LINT_OUTPUT_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.yaml"
+            LINT_LOG_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.log"
             "$HELM_SCRIPTS_FOLDER"/helmLint-svc-single.sh \
               --debug -e "$ENVIRONMENT" \
               -m "$MICROSERVICE_NAME" \
               -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
-              --output "$LINT_OUTPUT_PATH"
+              --output "$LINT_OUTPUT_PATH" >"$LINT_LOG_PATH" 2>&1
 
             if [[ $? -ne 0 ]]; then
               echo "Linting failed for microservice: $MICROSERVICE_NAME"
               FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
               VALIDATION_ERROR_FLAG=1
+              printf '%s\n' "### Lint: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
+              cat "$LINT_LOG_PATH" >> "$REPORT_PATH"
+              printf '\n---\n' >> "$REPORT_PATH"
               continue
             fi
 
             TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.yaml"
+            TEMPLATE_LOG_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.log"
             echo "Templating microservice: $MICROSERVICE_NAME"
             "$HELM_SCRIPTS_FOLDER"/helmTemplate-svc-single.sh \
               --debug \
@@ -172,23 +180,30 @@ runs:
               --environment "$ENVIRONMENT" \
               --microservice "$MICROSERVICE_NAME" \
               -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
-              --output "$TEMPLATE_OUTPUT_PATH"
+              --output "$TEMPLATE_OUTPUT_PATH" >"$TEMPLATE_LOG_PATH" 2>&1
 
             if [[ $? -ne 0 ]]; then
               echo "Template generation failed for microservice: $MICROSERVICE_NAME"
               FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(template) "
               VALIDATION_ERROR_FLAG=1
+              printf '%s\n' "### Template: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
+              cat "$TEMPLATE_LOG_PATH" >> "$REPORT_PATH"
+              printf '\n---\n' >> "$REPORT_PATH"
               continue
             fi
 
             if [[ "${ENABLE_KUBE_LINTER}" == "true" ]]; then
               echo "Kube Linting microservice: $MICROSERVICE_NAME"
-              kube-linter lint "$TEMPLATE_OUTPUT_PATH"
+              KUBE_LINTER_LOG_PATH="$(pwd)/kube-lint-${MICROSERVICE_NAME}.log"
+              kube-linter lint "$TEMPLATE_OUTPUT_PATH" >"$KUBE_LINTER_LOG_PATH" 2>&1
               LINTER_EXIT_CODE=$?
 
               if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
                 echo "Linting failed for microservice: $MICROSERVICE_NAME"
                 FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
+                printf '%s\n' "### Lint: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
+                cat "$KUBE_LINTER_LOG_PATH" >> "$REPORT_PATH"
+                printf '\n---\n' >> "$REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   VALIDATION_ERROR_FLAG=1
                 fi
@@ -208,6 +223,8 @@ runs:
           echo "No microservices found for environment ${ENVIRONMENT}"
         fi
 
+        echo "MICROSERVICES_VALIDATION_REPORT_PATH=$REPORT_PATH" >> "$GITHUB_ENV"
+
         if [[ -n "$FAILED_MICROSERVICES" ]]; then
           echo "Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
           if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
@@ -215,6 +232,32 @@ runs:
           fi
         else
           echo "All microservices passed validation successfully"
+        fi
+
+    - name: Microservices validation summary
+      if: ${{ always() }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ env.MICROSERVICES_VALIDATION_REPORT_PATH }}
+      run: |
+        set -euo pipefail
+
+        echo "## Microservices validation summary" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+
+        if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
+          echo "```text" >> "$GITHUB_STEP_SUMMARY"
+          cat "$REPORT_PATH" >> "$GITHUB_STEP_SUMMARY"
+          echo "```" >> "$GITHUB_STEP_SUMMARY"
+          echo ""
+
+          echo "```text"
+          cat "$REPORT_PATH"
+          echo "```"
+          echo ""
+        else
+          echo "- No workload-level failures recorded." >> "$GITHUB_STEP_SUMMARY"
+          echo "- No workload-level failures recorded."
         fi
 
     - name: Cronjobs discovery
@@ -229,6 +272,7 @@ runs:
         echo "Cronjobs discovered: $CRONJOBS"
 
     - name: Cronjobs template and lint
+      id: cronjobs_template_and_lint
       shell: bash
       env:
         ENVIRONMENT: ${{ inputs.environment }}
@@ -242,6 +286,8 @@ runs:
         export PROJECT_DIR=$(pwd)
         FAILED_CRONJOBS=""
         VALIDATION_ERROR_FLAG=0
+        REPORT_PATH="$(pwd)/cronjobs-validation-report.txt"
+        : > "$REPORT_PATH"
 
         if [[ -n "$CRONJOBS" ]]; then
           set +e
@@ -250,20 +296,25 @@ runs:
 
             echo "Helm Linting cronjob: $CRONJOB_NAME"
             LINT_OUTPUT_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.yaml"
+            LINT_LOG_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.log"
             "$HELM_SCRIPTS_FOLDER"/helmLint-cron-single.sh \
               --debug -e "$ENVIRONMENT" \
               -j "$CRONJOB_NAME" \
               -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
-              --output "$LINT_OUTPUT_PATH"
+              --output "$LINT_OUTPUT_PATH" >"$LINT_LOG_PATH" 2>&1
 
             if [[ $? -ne 0 ]]; then
               echo "Linting failed for cronjob: $CRONJOB_NAME"
               FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
               VALIDATION_ERROR_FLAG=1
+              printf '%s\n' "### Lint: ${CRONJOB_NAME}" >> "$REPORT_PATH"
+              cat "$LINT_LOG_PATH" >> "$REPORT_PATH"
+              printf '\n---\n' >> "$REPORT_PATH"
               continue
             fi
 
             TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${CRONJOB_NAME}.yaml"
+            TEMPLATE_LOG_PATH="$(pwd)/helm-template-${CRONJOB_NAME}.log"
             echo "Templating cronjob: $CRONJOB_NAME"
             "$HELM_SCRIPTS_FOLDER"/helmTemplate-cron-single.sh \
               --debug \
@@ -271,23 +322,30 @@ runs:
               --environment "$ENVIRONMENT" \
               --job "$CRONJOB_NAME" \
               -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
-              --output "$TEMPLATE_OUTPUT_PATH"
+              --output "$TEMPLATE_OUTPUT_PATH" >"$TEMPLATE_LOG_PATH" 2>&1
 
             if [[ $? -ne 0 ]]; then
               echo "Template generation failed for cronjob: $CRONJOB_NAME"
               FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(template) "
               VALIDATION_ERROR_FLAG=1
+              printf '%s\n' "### Template: ${CRONJOB_NAME}" >> "$REPORT_PATH"
+              cat "$TEMPLATE_LOG_PATH" >> "$REPORT_PATH"
+              printf '\n---\n' >> "$REPORT_PATH"
               continue
             fi
 
             if [[ "${ENABLE_KUBE_LINTER}" == "true" ]]; then
               echo "Kube Linting cronjob: $CRONJOB_NAME"
-              kube-linter lint "$TEMPLATE_OUTPUT_PATH"
+              KUBE_LINTER_LOG_PATH="$(pwd)/kube-lint-${CRONJOB_NAME}.log"
+              kube-linter lint "$TEMPLATE_OUTPUT_PATH" >"$KUBE_LINTER_LOG_PATH" 2>&1
               LINTER_EXIT_CODE=$?
 
               if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
                 echo "Linting failed for cronjob: $CRONJOB_NAME"
                 FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
+                printf '%s\n' "### Lint: ${CRONJOB_NAME}" >> "$REPORT_PATH"
+                cat "$KUBE_LINTER_LOG_PATH" >> "$REPORT_PATH"
+                printf '\n---\n' >> "$REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   VALIDATION_ERROR_FLAG=1
                 fi
@@ -307,6 +365,8 @@ runs:
           echo "No cronjobs found for environment ${ENVIRONMENT}"
         fi
 
+        echo "CRONJOBS_VALIDATION_REPORT_PATH=$REPORT_PATH" >> "$GITHUB_ENV"
+
         if [[ -n "$FAILED_CRONJOBS" ]]; then
           echo "Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
           if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
@@ -314,4 +374,30 @@ runs:
           fi
         else
           echo "All cronjobs passed validation successfully"
+        fi
+
+    - name: Cronjobs validation summary
+      if: ${{ always() }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ env.CRONJOBS_VALIDATION_REPORT_PATH }}
+      run: |
+        set -euo pipefail
+
+        echo "## Cronjobs validation summary" >> "$GITHUB_STEP_SUMMARY"
+        echo "" >> "$GITHUB_STEP_SUMMARY"
+
+        if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
+          echo "```text" >> "$GITHUB_STEP_SUMMARY"
+          cat "$REPORT_PATH" >> "$GITHUB_STEP_SUMMARY"
+          echo "```" >> "$GITHUB_STEP_SUMMARY"
+          echo ""
+
+          echo "```text"
+          cat "$REPORT_PATH"
+          echo "```"
+          echo ""
+        else
+          echo "- No workload-level failures recorded." >> "$GITHUB_STEP_SUMMARY"
+          echo "- No workload-level failures recorded."
         fi
