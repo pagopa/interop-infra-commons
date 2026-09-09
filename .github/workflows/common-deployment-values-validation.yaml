@@ -166,11 +166,12 @@ jobs:
               echo "=== Processing microservice: $MICROSERVICE_NAME ==="
 
               echo "Helm Linting microservice: $MICROSERVICE_NAME"
+              LINT_OUTPUT_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.yaml"
               "$HELM_SCRIPTS_FOLDER"/helmLint-svc-single.sh \
                 --debug -e "$ENVIRONMENT" \
                 -m "$MICROSERVICE_NAME" \
                 -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml \
-                --output $LINT_OUTPUT_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.yaml"
+                --output $LINT_OUTPUT_PATH
                 
               if [[ $? -ne 0 ]]; then
                 echo "Linting failed for microservice: $MICROSERVICE_NAME"
@@ -291,11 +292,12 @@ jobs:
               echo "=== Processing cronjob: $CRONJOB_NAME ==="
 
               echo "Helm Linting cronjob: $CRONJOB_NAME"
+              LINT_OUTPUT_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.yaml"
               "$HELM_SCRIPTS_FOLDER"/helmLint-cronjob-single.sh \
                 --debug -e "$ENVIRONMENT" \
                 -j "$CRONJOB_NAME" \
                 -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml \
-                --output $LINT_OUTPUT_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.yaml"
+                --output $LINT_OUTPUT_PATH
                 
               if [[ $? -ne 0 ]]; then
                 echo "Linting failed for cronjob: $CRONJOB_NAME"
