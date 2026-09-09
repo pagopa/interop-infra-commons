@@ -285,7 +285,7 @@ jobs:
           set -euo pipefail
 
           export PROJECT_DIR=$(pwd)
-          FAILED_MICROSERVICES=""
+          FAILED_CRONJOBS=""
           VALIDATION_ERROR_FLAG=0
 
           if [[ -n "$CRONJOBS" ]]; then
