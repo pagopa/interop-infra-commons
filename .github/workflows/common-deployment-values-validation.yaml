@@ -295,7 +295,7 @@ jobs:
 
               echo "Helm Linting cronjob: $CRONJOB_NAME"
               LINT_OUTPUT_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.yaml"
-              "$HELM_SCRIPTS_FOLDER"/helmLint-cronjob-single.sh \
+              "$HELM_SCRIPTS_FOLDER"/helmLint-cron-single.sh \
                 --debug -e "$ENVIRONMENT" \
                 -j "$CRONJOB_NAME" \
                 -i $PROJECT_DIR/commons/"$ENVIRONMENT"/images.yaml \
