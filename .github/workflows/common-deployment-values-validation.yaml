@@ -351,17 +351,17 @@ jobs:
 
             set -e
           else
-            echo "No microservices found for environment ${{ inputs.environment }}"
+            echo "No cronjobs found for environment ${{ inputs.environment }}"
           fi
           
 
-          if [[ -n "$FAILED_MICROSERVICES" ]]; then
-            echo "Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
+          if [[ -n "$FAILED_CRONJOBS" ]]; then
+            echo "Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
             if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
               exit 1
             fi
           else
-            echo "All microservices passed validation successfully"
+            echo "All cronjobs passed validation successfully"
           fi
       
 
