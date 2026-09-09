@@ -154,6 +154,8 @@ jobs:
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           MICROSERVICES: ${{ steps.microservices_discovery.outputs.microservices }}
+          ENABLE_KUBE_LINTER: ${{ inputs.enable_kube_linter }}
+          STRICT_KUBE_LINTER_CHECKS: ${{ inputs.strict_kube_linter_checks }}
         run: |
           set -euo pipefail
 
@@ -199,7 +201,7 @@ jobs:
                 continue
               fi
 
-              if [[ "${{ inputs.enable_kube_linter }}" == "true" ]]; then
+              if [[ "$ENABLE_KUBE_LINTER" == "true" ]]; then
                 echo "Kube Linting microservice: $MICROSERVICE_NAME"
                 kube-linter lint $TEMPLATE_OUTPUT_PATH
                 LINTER_EXIT_CODE=$?
@@ -207,7 +209,7 @@ jobs:
                 if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
                   echo "Linting failed for microservice: $MICROSERVICE_NAME"
                   FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
-                  if [[ "${{ inputs.strict_kube_linter_checks }}" == "true" ]]; then
+                  if [[ "$STRICT_KUBE_LINTER_CHECKS" == "true" ]]; then
                     VALIDATION_ERROR_FLAG=1
                   fi
                 fi
@@ -223,7 +225,7 @@ jobs:
 
             set -e
           else
-            echo "No microservices found for environment ${{ inputs.environment }}"
+            echo "No microservices found for environment $ENVIRONMENT"
           fi
 
           if [[ -n "$FAILED_MICROSERVICES" ]]; then
@@ -281,6 +283,8 @@ jobs:
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           CRONJOBS: ${{ steps.cronjobs_discovery.outputs.cronjobs }}
+          ENABLE_KUBE_LINTER: ${{ inputs.enable_kube_linter }}
+          STRICT_KUBE_LINTER_CHECKS: ${{ inputs.strict_kube_linter_checks }}
         run: |
           set -euo pipefail
 
@@ -327,7 +331,7 @@ jobs:
                 continue
               fi
 
-              if [[ "${{ inputs.enable_kube_linter }}" == "true" ]]; then
+              if [[ "$ENABLE_KUBE_LINTER" == "true" ]]; then
                 echo "Kube Linting cronjob: $CRONJOB_NAME"
                 kube-linter lint $TEMPLATE_OUTPUT_PATH
                 LINTER_EXIT_CODE=$?
@@ -335,7 +339,7 @@ jobs:
                 if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
                   echo "Linting failed for cronjob: $CRONJOB_NAME"
                   FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
-                  if [[ "${{ inputs.strict_kube_linter_checks }}" == "true" ]]; then
+                  if [[ "$STRICT_KUBE_LINTER_CHECKS" == "true" ]]; then
                     VALIDATION_ERROR_FLAG=1
                   fi
                 fi
@@ -351,7 +355,7 @@ jobs:
 
             set -e
           else
-            echo "No cronjobs found for environment ${{ inputs.environment }}"
+            echo "No cronjobs found for environment $ENVIRONMENT"
           fi
           
 
