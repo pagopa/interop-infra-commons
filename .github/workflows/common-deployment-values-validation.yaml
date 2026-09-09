@@ -46,8 +46,10 @@ env:
 
 jobs:
   repo_structure_validation:
-    name: Repo Structure Validation
+    name: "${{ inputs.environment}} - Repo Structure Validation"
     runs-on: ubuntu-22.04
+    environment:
+      name: ${{ inputs.environment }}
     steps:
       - name: Checkout
         uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
@@ -108,8 +110,10 @@ jobs:
           bash "$VALIDATION_SCRIPTS_FOLDER/validate-repo-structure.sh" "${ARGS[@]}"
            
   microservices_validation:
-    name: Microservices - Template & Lint
+    name: "${{ inputs.environment }} - Microservices - Template & Lint"
     runs-on: ubuntu-22.04
+    environment:
+      name: ${{ inputs.environment }}
     steps:
       - name: Checkout
         id: checkout
@@ -236,8 +240,10 @@ jobs:
           fi
           
   cronjobs_validation:
-    name: Cronjobs - Template & Lint
+    name: "${{ inputs.environment }} - Cronjobs - Template & Lint"
     runs-on: ubuntu-22.04
+    environment:
+      name: ${{ inputs.environment }}
     steps:
       - name: Checkout
         id: checkout
