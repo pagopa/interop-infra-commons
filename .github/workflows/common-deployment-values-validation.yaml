@@ -145,9 +145,10 @@ jobs:
           TARGET_ENVIRONMENT: ${{ inputs.environment }}
         run: |
           echo "Discovering workloads for environment $TARGET_ENVIRONMENT"
-          echo "microservices discovered: $(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')"
-          echo "microservices=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
-          
+          MICROSERVICES=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | tr '\n' ' ')
+          echo "microservices=$MICROSERVICES" >> $GITHUB_OUTPUT
+          echo "microservices discovered: $MICROSERVICES"
+
       - name: Microservices Template & Lint
         id: microservices_template_lint
         env:
@@ -271,9 +272,10 @@ jobs:
           TARGET_ENVIRONMENT: ${{ inputs.environment }}
         run: |
           echo "Discovering cronjobs for environment $TARGET_ENVIRONMENT"
-          echo "cronjobs discovered: $(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')"
-          echo "cronjobs=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
-  
+          CRONJOBS=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | tr '\n' ' ')
+          echo "cronjobs=$CRONJOBS" >> $GITHUB_OUTPUT
+          echo "Cronjobs discovered: $CRONJOBS"
+
       - name: Cronjobs Template & Lint
         id: cronjobs_template_lint
         env:
