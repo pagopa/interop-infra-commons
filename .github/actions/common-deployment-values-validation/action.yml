@@ -5,52 +5,73 @@ inputs:
   environment:
     description: 'Environment to run tests against'
     required: true
-    type: string
   infra_commons_tag:
     description: 'Tag or ref of the interop-infra-commons repository to use'
     required: true
-    type: string
   enable_kube_linter:
-    description: 'Enable Kube-linter validation'
+    description: 'Enable Kube-linter validation (allowed: true or false)'
     required: false
-    type: boolean
-    default: false
+    default: 'false'
   strict_kube_linter_checks:
-    description: 'Enable strict kube-linter checks'
+    description: 'Enable strict kube-linter checks (allowed: true or false)'
     required: false
-    type: boolean
-    default: false
+    default: 'false'
   enable_argocd_validation:
-    description: 'Enable ArgoCD validation'
+    description: 'Enable ArgoCD validation (allowed: true or false)'
     required: false
-    type: boolean
-    default: false
+    default: 'false'
   enable_argocd_schema_validation:
-    description: 'Enable ArgoCD schema validation'
+    description: 'Enable ArgoCD schema validation (allowed: true or false)'
     required: false
-    type: boolean
-    default: false
+    default: 'false'
   repo_structure_validation_warning_only:
-    description: 'Enable warning only mode for repo structure validation'
+    description: 'Enable warning only mode for repo structure validation (allowed: true or false)'
     required: false
-    type: boolean
-    default: false
+    default: 'false'
 
 runs:
   using: composite
   steps:
-    - name: Print action inputs
+    - name: Validate and print action inputs
+      id: validate_inputs
       shell: bash
+      env:
+        environment: ${{ inputs.environment }}
+        infra_commons_tag: ${{ inputs.infra_commons_tag }}
+        enable_kube_linter: ${{ inputs.enable_kube_linter }}
+        strict_kube_linter_checks: ${{ inputs.strict_kube_linter_checks }}
+        enable_argocd_validation: ${{ inputs.enable_argocd_validation }}
+        enable_argocd_schema_validation: ${{ inputs.enable_argocd_schema_validation }}
+        repo_structure_validation_warning_only: ${{ inputs.repo_structure_validation_warning_only }}
       run: |
         set -euo pipefail
+        invalid_inputs=0
+        for input_name in \
+          enable_kube_linter \
+          strict_kube_linter_checks \
+          enable_argocd_validation \
+          enable_argocd_schema_validation \
+          repo_structure_validation_warning_only; do
+          case "${!input_name}" in
+            true|false) ;;
+            *)
+              echo "::error::Input '$input_name' must be exactly 'true' or 'false'."
+              invalid_inputs=1
+              ;;
+          esac
+        done
+        if [[ "$invalid_inputs" -ne 0 ]]; then
+          exit 1
+        fi
+
         echo "Action inputs:"
-        echo "environment=${{ inputs.environment }}"
-        echo "infra_commons_tag=${{ inputs.infra_commons_tag }}"
-        echo "enable_kube_linter=${{ inputs.enable_kube_linter }}"
-        echo "strict_kube_linter_checks=${{ inputs.strict_kube_linter_checks }}"
-        echo "enable_argocd_validation=${{ inputs.enable_argocd_validation }}"
-        echo "enable_argocd_schema_validation=${{ inputs.enable_argocd_schema_validation }}"
-        echo "repo_structure_validation_warning_only=${{ inputs.repo_structure_validation_warning_only }}"
+        echo "environment=${environment}"
+        echo "infra_commons_tag=${infra_commons_tag}"
+        echo "enable_kube_linter=${enable_kube_linter}"
+        echo "strict_kube_linter_checks=${strict_kube_linter_checks}"
+        echo "enable_argocd_validation=${enable_argocd_validation}"
+        echo "enable_argocd_schema_validation=${enable_argocd_schema_validation}"
+        echo "repo_structure_validation_warning_only=${repo_structure_validation_warning_only}"
 
     - name: Checkout current repository
       uses: actions/checkout@a5ac7e51b41094c92402da3b24376905380afc29
@@ -67,7 +88,7 @@ runs:
         ref: ${{ inputs.infra_commons_tag }}
 
     - name: Install kubeconform
-      if: ${{ inputs.enable_argocd_schema_validation == true }}
+      if: ${{ inputs.enable_argocd_schema_validation == 'true' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -82,7 +103,7 @@ runs:
         echo "$PWD/.tools" >> "$GITHUB_PATH"
 
     - name: Echo kubeconform version
-      if: ${{ inputs.enable_argocd_schema_validation == true }}
+      if: ${{ inputs.enable_argocd_schema_validation == 'true' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -117,7 +138,7 @@ runs:
         bash "${VALIDATION_SCRIPTS_FOLDER}/validate-repo-structure.sh" "${ARGS[@]}"
 
     - name: Install kube-linter
-      if: ${{ inputs.enable_kube_linter == true }}
+      if: ${{ inputs.enable_kube_linter == 'true' }}
       shell: bash
       run: |
         set -euo pipefail
@@ -131,7 +152,7 @@ runs:
         echo "$PWD/.tools" >> "$GITHUB_PATH"
 
     - name: Microservices discovery
-      if: ${{ always() }}
+      if: ${{ always() && steps.validate_inputs.outcome == 'success' }}
       shell: bash
       id: microservices_discovery
       env:
@@ -248,7 +269,7 @@ runs:
         fi
 
     - name: Microservices validation summary
-      if: ${{ always() }}
+      if: ${{ always() && steps.validate_inputs.outcome == 'success' }}
       shell: bash
       env:
         REPORT_PATH: ${{ env.MICROSERVICES_VALIDATION_REPORT_PATH }}
@@ -386,7 +407,7 @@ runs:
         fi
 
     - name: Cronjobs validation summary
-      if: ${{ always() }}
+      if: ${{ always() && steps.validate_inputs.outcome == 'success' }}
       shell: bash
       env:
         REPORT_PATH: ${{ env.CRONJOBS_VALIDATION_REPORT_PATH }}
