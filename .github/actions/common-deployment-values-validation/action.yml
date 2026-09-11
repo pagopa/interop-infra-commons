@@ -276,6 +276,7 @@ runs:
         fi
 
         echo "MICROSERVICES_VALIDATION_REPORT_PATH=$REPORT_PATH" >> "$GITHUB_ENV"
+        echo "MICROSERVICES_BLOCKING_ERRORS=$VALIDATION_ERROR_FLAG" >> "$GITHUB_ENV"
 
         if [[ -n "$FAILED_MICROSERVICES" ]]; then
           echo "Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
@@ -291,6 +292,7 @@ runs:
       shell: bash
       env:
         REPORT_PATH: ${{ env.MICROSERVICES_VALIDATION_REPORT_PATH }}
+        BLOCKING_ERRORS: ${{ env.MICROSERVICES_BLOCKING_ERRORS }}
       run: |
         set -euo pipefail
 
@@ -306,6 +308,11 @@ runs:
         else
           echo "- No workload-level failures recorded." >> "$GITHUB_STEP_SUMMARY"
           echo "- No workload-level failures recorded."
+        fi
+
+        if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
+          echo "::error::Blocking validation errors detected for microservices."
+          exit 1
         fi
 
     - name: Cronjobs discovery
@@ -432,6 +439,7 @@ runs:
         fi
 
         echo "CRONJOBS_VALIDATION_REPORT_PATH=$REPORT_PATH" >> "$GITHUB_ENV"
+        echo "CRONJOBS_BLOCKING_ERRORS=$VALIDATION_ERROR_FLAG" >> "$GITHUB_ENV"
 
         if [[ -n "$FAILED_CRONJOBS" ]]; then
           echo "Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
@@ -447,6 +455,7 @@ runs:
       shell: bash
       env:
         REPORT_PATH: ${{ env.CRONJOBS_VALIDATION_REPORT_PATH }}
+        BLOCKING_ERRORS: ${{ env.CRONJOBS_BLOCKING_ERRORS }}
       run: |
         set -euo pipefail
 
@@ -462,4 +471,9 @@ runs:
         else
           echo "- No workload-level failures recorded." >> "$GITHUB_STEP_SUMMARY"
           echo "- No workload-level failures recorded."
+        fi
+
+        if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
+          echo "::error::Blocking validation errors detected for cronjobs."
+          exit 1
         fi
