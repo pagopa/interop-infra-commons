@@ -22,6 +22,7 @@ environment=""
 microservice=""
 configFile=""
 job=""
+argocd_plugin=false
 
 step=1
 for (( i=0; i<$args; i+=$step ))
@@ -69,6 +70,11 @@ do
           
           step=2
           shift 2
+          ;;
+        --argocd-plugin )
+          argocd_plugin=true
+          step=1
+          shift 1
           ;;
         -h | --help )
           help
