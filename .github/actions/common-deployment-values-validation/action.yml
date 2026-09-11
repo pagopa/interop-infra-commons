@@ -176,15 +176,34 @@ runs:
         set -euo pipefail
 
         export PROJECT_DIR=$(pwd)
+        REPO_NAME="$(basename "$PROJECT_DIR")"
         FAILED_MICROSERVICES=""
         VALIDATION_ERROR_FLAG=0
         REPORT_PATH="$(pwd)/microservices-validation-report.txt"
         : > "$REPORT_PATH"
 
+        sanitize_log_paths() {
+          local log_path="$1"
+          local from_path="$2"
+          local to_path="$3"
+
+          local from_escaped
+          local to_escaped
+
+          from_escaped="$(printf '%s' "$from_path" | sed -e 's/[\\/&]/\\\\&/g')"
+          to_escaped="$(printf '%s' "$to_path" | sed -e 's/[\\/&]/\\\\&/g')"
+
+          # Rewrite only absolute runner/workspace file paths in log content.
+          sed \
+            -e "s/${from_escaped}/${to_escaped}/g" \
+            "$log_path"
+        }
+
         if [[ -n "$MICROSERVICES" ]]; then
           set +e
           for MICROSERVICE_NAME in $MICROSERVICES; do
             echo "=== Processing microservice: $MICROSERVICE_NAME ==="
+            WORKLOAD_PATH="${REPO_NAME}/microservices/${MICROSERVICE_NAME}"
 
             echo "Helm Linting microservice: $MICROSERVICE_NAME"
             LINT_OUTPUT_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.yaml"
@@ -200,7 +219,7 @@ runs:
               FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
               VALIDATION_ERROR_FLAG=1
               printf '%s\n' "### Lint: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
-              cat "$LINT_LOG_PATH" >> "$REPORT_PATH"
+              sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$REPORT_PATH"
               printf '\n---\n' >> "$REPORT_PATH"
               continue
             fi
@@ -221,7 +240,7 @@ runs:
               FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(template) "
               VALIDATION_ERROR_FLAG=1
               printf '%s\n' "### Template: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
-              cat "$TEMPLATE_LOG_PATH" >> "$REPORT_PATH"
+              sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$REPORT_PATH"
               printf '\n---\n' >> "$REPORT_PATH"
               continue
             fi
@@ -236,7 +255,7 @@ runs:
                 echo "Linting failed for microservice: $MICROSERVICE_NAME"
                 FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
                 printf '%s\n' "### Lint: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
-                cat "$KUBE_LINTER_LOG_PATH" >> "$REPORT_PATH"
+                sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$REPORT_PATH"
                 printf '\n---\n' >> "$REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   VALIDATION_ERROR_FLAG=1
@@ -314,15 +333,34 @@ runs:
         set -euo pipefail
 
         export PROJECT_DIR=$(pwd)
+        REPO_NAME="$(basename "$PROJECT_DIR")"
         FAILED_CRONJOBS=""
         VALIDATION_ERROR_FLAG=0
         REPORT_PATH="$(pwd)/cronjobs-validation-report.txt"
         : > "$REPORT_PATH"
 
+        sanitize_log_paths() {
+          local log_path="$1"
+          local from_path="$2"
+          local to_path="$3"
+
+          local from_escaped
+          local to_escaped
+
+          from_escaped="$(printf '%s' "$from_path" | sed -e 's/[\\/&]/\\\\&/g')"
+          to_escaped="$(printf '%s' "$to_path" | sed -e 's/[\\/&]/\\\\&/g')"
+
+          # Rewrite only absolute runner/workspace file paths in log content.
+          sed \
+            -e "s/${from_escaped}/${to_escaped}/g" \
+            "$log_path"
+        }
+
         if [[ -n "$CRONJOBS" ]]; then
           set +e
           for CRONJOB_NAME in $CRONJOBS; do
             echo "=== Processing cronjob: $CRONJOB_NAME ==="
+            WORKLOAD_PATH="${REPO_NAME}/jobs/${CRONJOB_NAME}"
 
             echo "Helm Linting cronjob: $CRONJOB_NAME"
             LINT_OUTPUT_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.yaml"
@@ -338,7 +376,7 @@ runs:
               FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
               VALIDATION_ERROR_FLAG=1
               printf '%s\n' "### Lint: ${CRONJOB_NAME}" >> "$REPORT_PATH"
-              cat "$LINT_LOG_PATH" >> "$REPORT_PATH"
+              sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$REPORT_PATH"
               printf '\n---\n' >> "$REPORT_PATH"
               continue
             fi
@@ -359,7 +397,7 @@ runs:
               FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(template) "
               VALIDATION_ERROR_FLAG=1
               printf '%s\n' "### Template: ${CRONJOB_NAME}" >> "$REPORT_PATH"
-              cat "$TEMPLATE_LOG_PATH" >> "$REPORT_PATH"
+              sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$REPORT_PATH"
               printf '\n---\n' >> "$REPORT_PATH"
               continue
             fi
@@ -374,7 +412,7 @@ runs:
                 echo "Linting failed for cronjob: $CRONJOB_NAME"
                 FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
                 printf '%s\n' "### Lint: ${CRONJOB_NAME}" >> "$REPORT_PATH"
-                cat "$KUBE_LINTER_LOG_PATH" >> "$REPORT_PATH"
+                sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$REPORT_PATH"
                 printf '\n---\n' >> "$REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   VALIDATION_ERROR_FLAG=1
