@@ -251,8 +251,8 @@ runs:
                 FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
                 printf '%s\n' "### Lint: ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "false" ]]; then
-                  printf '%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR MICROSERVICE ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
-                  printf '%s\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$REPORT_PATH"
+                  printf '\n%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR MICROSERVICE ${MICROSERVICE_NAME}" >> "$REPORT_PATH"
+                  printf '%s\n\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$REPORT_PATH"
                 fi
                 sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$REPORT_PATH"
                 printf '\n---\n' >> "$REPORT_PATH"
@@ -407,8 +407,8 @@ runs:
                 FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
                 printf '%s\n' "### Lint: ${CRONJOB_NAME}" >> "$REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "false" ]]; then
-                  printf '%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR CRONJOB ${CRONJOB_NAME}" >> "$REPORT_PATH"
-                  printf '%s\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$REPORT_PATH"
+                  printf '\n%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR CRONJOB ${CRONJOB_NAME}" >> "$REPORT_PATH"
+                  printf '%s\n\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$REPORT_PATH"
                 fi
                 sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$REPORT_PATH"
                 printf '\n---\n' >> "$REPORT_PATH"
