@@ -186,17 +186,12 @@ runs:
           local log_path="$1"
           local from_path="$2"
           local to_path="$3"
+          local safe_to_path
 
-          local from_escaped
-          local to_escaped
-
-          from_escaped="$(printf '%s' "$from_path" | sed -e 's/[\\/&]/\\\\&/g')"
-          to_escaped="$(printf '%s' "$to_path" | sed -e 's/[\\/&]/\\\\&/g')"
+          safe_to_path="${to_path//&/\\&}"
 
           # Rewrite only absolute runner/workspace file paths in log content.
-          sed \
-            -e "s/${from_escaped}/${to_escaped}/g" \
-            "$log_path"
+          sed "s|${from_path}|${safe_to_path}|g" "$log_path"
         }
 
         if [[ -n "$MICROSERVICES" ]]; then
@@ -343,17 +338,12 @@ runs:
           local log_path="$1"
           local from_path="$2"
           local to_path="$3"
+          local safe_to_path
 
-          local from_escaped
-          local to_escaped
-
-          from_escaped="$(printf '%s' "$from_path" | sed -e 's/[\\/&]/\\\\&/g')"
-          to_escaped="$(printf '%s' "$to_path" | sed -e 's/[\\/&]/\\\\&/g')"
+          safe_to_path="${to_path//&/\\&}"
 
           # Rewrite only absolute runner/workspace file paths in log content.
-          sed \
-            -e "s/${from_escaped}/${to_escaped}/g" \
-            "$log_path"
+          sed "s|${from_path}|${safe_to_path}|g" "$log_path"
         }
 
         if [[ -n "$CRONJOBS" ]]; then
