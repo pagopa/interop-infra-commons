@@ -319,6 +319,7 @@ runs:
     - name: Cronjobs discovery
       shell: bash
       id: cronjobs_discovery
+      if: ${{ always() && steps.validate_inputs.outcome == 'success' }}
       env:
         TARGET_ENVIRONMENT: ${{ inputs.environment }}
       run: |
