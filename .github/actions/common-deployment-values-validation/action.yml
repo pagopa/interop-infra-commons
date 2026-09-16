@@ -1,4 +1,4 @@
-name: 'Common deployment values validation'
+name: 'Deployment repo validation'
 description: 'Validates repository structure, microservices, and cronjobs for a target environment.'
 
 inputs:
