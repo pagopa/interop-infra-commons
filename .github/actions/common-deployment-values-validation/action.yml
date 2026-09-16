@@ -166,6 +166,7 @@ runs:
     - name: Microservices template and lint
       id: microservices_template_and_lint
       shell: bash
+      if: ${{ always() && steps.microservices_discovery.outcome == 'success' }}
       env:
         ENVIRONMENT: ${{ inputs.environment }}
         MICROSERVICES: ${{ steps.microservices_discovery.outputs.microservices }}
@@ -288,7 +289,7 @@ runs:
         fi
 
     - name: Microservices validation summary
-      if: ${{ always() && steps.validate_inputs.outcome == 'success' }}
+      if: ${{ always() && steps.microservices_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
       shell: bash
       env:
         REPORT_PATH: ${{ env.MICROSERVICES_VALIDATION_REPORT_PATH }}
@@ -329,6 +330,7 @@ runs:
     - name: Cronjobs template and lint
       id: cronjobs_template_and_lint
       shell: bash
+      if: ${{ always() && steps.cronjobs_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
       env:
         ENVIRONMENT: ${{ inputs.environment }}
         CRONJOBS: ${{ steps.cronjobs_discovery.outputs.cronjobs }}
@@ -451,7 +453,7 @@ runs:
         fi
 
     - name: Cronjobs validation summary
-      if: ${{ always() && steps.validate_inputs.outcome == 'success' }}
+      if: ${{ always() && steps.cronjobs_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
       shell: bash
       env:
         REPORT_PATH: ${{ env.CRONJOBS_VALIDATION_REPORT_PATH }}
