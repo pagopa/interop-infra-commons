@@ -318,7 +318,6 @@ runs:
           echo ""
         else
           echo "- No workload-level failures recorded."
-          echo "- No workload-level failures recorded."
         fi
 
         if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
@@ -534,10 +533,10 @@ runs:
         set -euo pipefail
 
         echo "## Cronjobs Helm lint summary"
+        echo ""
 
         if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
           echo ""
-
           cat "$REPORT_PATH"
           echo ""
         else
@@ -559,6 +558,7 @@ runs:
         set -euo pipefail
 
         echo "## Cronjobs kube-linter summary"
+        echo ""
         
         if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
           echo ""
@@ -583,6 +583,7 @@ runs:
         set -euo pipefail
 
         echo "## Cronjobs Helm template summary"
+        echo ""
 
         if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
           echo ""
