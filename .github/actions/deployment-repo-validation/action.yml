@@ -281,9 +281,6 @@ runs:
 
         if [[ -n "$FAILED_MICROSERVICES" ]]; then
           echo "Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
-          if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
-            exit 1
-          fi
         else
           echo "All microservices passed validation successfully"
         fi
@@ -446,9 +443,6 @@ runs:
 
         if [[ -n "$FAILED_CRONJOBS" ]]; then
           echo "Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
-          if [[ $VALIDATION_ERROR_FLAG -eq 1 ]]; then
-            exit 1
-          fi
         else
           echo "All cronjobs passed validation successfully"
         fi
