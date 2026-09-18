@@ -319,41 +319,37 @@ fi
 summary_msg="Repo structure validation completed. errors=$error_count warnings=$warning_count target_env=$TARGET_ENV"
 echo "$summary_msg"
 
-  if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
-  {
-    echo "### Repo Structure Validation"
-    echo
-    echo "- target_env: $TARGET_ENV"
-    echo "- errors: $error_count"
-    echo "- warnings: $warning_count"
-    echo "- warning_only: $WARNING_ONLY"
-    echo "- enable_argocd_validation: $ENABLE_ARGOCD_VALIDATION"
-    echo "- enable_argocd_schema_validation: $ENABLE_ARGOCD_SCHEMA_VALIDATION"
-    echo "- argocd_crd_schema_location: ${ARGOCD_CRD_SCHEMA_LOCATION:-<default>}"
-    echo ""
+echo "### Repo Structure Validation"
+echo
+echo "- target_env: $TARGET_ENV"
+echo "- errors: $error_count"
+echo "- warnings: $warning_count"
+echo "- warning_only: $WARNING_ONLY"
+echo "- enable_argocd_validation: $ENABLE_ARGOCD_VALIDATION"
+echo "- enable_argocd_schema_validation: $ENABLE_ARGOCD_SCHEMA_VALIDATION"
+echo "- argocd_crd_schema_location: ${ARGOCD_CRD_SCHEMA_LOCATION:-<default>}"
+echo ""
 
-    # Print the list of issues if any
-    if [[ ${#issues[@]} -gt 0 ]]; then
-      echo "#### Issues:"
-      for issue in "${issues[@]}"; do
-        echo "- $issue"
-      done
-    fi
-    # Print the list of warnings if any
-    if [[ ${#warnings[@]} -gt 0 ]]; then
-      echo "#### Warnings:"
-      for warning in "${warnings[@]}"; do
-        echo "- $warning"
-      done
-    fi
-    # Print the list of info if any
-    if [[ ${#infos[@]} -gt 0 ]]; then
-      echo "#### Info:"
-      for info in "${infos[@]}"; do
-        echo "- $info"
-      done
-    fi
-  } >> "$GITHUB_STEP_SUMMARY"
+# Print the list of issues if any
+if [[ ${#issues[@]} -gt 0 ]]; then
+  echo "#### Issues:"
+  for issue in "${issues[@]}"; do
+    echo "- $issue"
+  done
+fi
+# Print the list of warnings if any
+if [[ ${#warnings[@]} -gt 0 ]]; then
+  echo "#### Warnings:"
+  for warning in "${warnings[@]}"; do
+    echo "- $warning"
+  done
+fi
+# Print the list of info if any
+if [[ ${#infos[@]} -gt 0 ]]; then
+  echo "#### Info:"
+  for info in "${infos[@]}"; do
+    echo "- $info"
+  done
 fi
 
 if [[ "$WARNING_ONLY" == "false" && $error_count -gt 0 ]]; then
