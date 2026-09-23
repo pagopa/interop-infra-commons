@@ -224,7 +224,8 @@ runs:
               HELM_LINT_ERROR_FLAG=1
               printf '::group::Helm lint: %s\n' "$MICROSERVICE_NAME" >> "$HELM_LINT_REPORT_PATH"
               sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
-              printf '\n---::endgroup::\n' >> "$HELM_LINT_REPORT_PATH"
+              printf '::endgroup::' >> "$HELM_LINT_REPORT_PATH"
+              echo "::endgroup::"
               continue
             fi
 
@@ -246,7 +247,8 @@ runs:
               HELM_TEMPLATE_ERROR_FLAG=1
               printf '::group::Helm template: %s\n' "$MICROSERVICE_NAME" >> "$HELM_TEMPLATE_REPORT_PATH"
               sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
-              printf '\n---::endgroup::\n' >> "$HELM_TEMPLATE_REPORT_PATH"
+              printf '::endgroup::' >> "$HELM_TEMPLATE_REPORT_PATH"
+              echo "::endgroup::"
               continue
             fi
 
@@ -266,7 +268,7 @@ runs:
                   printf '%s\n\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
                 fi
                 sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
-                printf '\n---::endgroup::\n' >> "$KUBE_LINT_REPORT_PATH"
+                printf '::endgroup::' >> "$KUBE_LINT_REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   KUBE_LINT_ERROR_FLAG=1
                 fi
@@ -278,7 +280,8 @@ runs:
             fi
 
             echo "=== Completed processing microservice: $MICROSERVICE_NAME ==="
-            echo "::endgroup::\n"
+            echo "::endgroup::"
+            echo ""
           done
 
           set -e
@@ -360,8 +363,7 @@ runs:
         set -euo pipefail
 
         echo "## Microservices Helm template summary"
-        echo ""
-
+        
         if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
           echo ""
           cat "$REPORT_PATH"
@@ -428,7 +430,7 @@ runs:
         if [[ -n "$CRONJOBS" ]]; then
           set +e
           for CRONJOB_NAME in $CRONJOBS; do
-            echo "::group:: Processing cronjob: $CRONJOB_NAME"
+            echo "::group::Processing cronjob: $CRONJOB_NAME"
             WORKLOAD_PATH="${REPO_NAME}/jobs/${CRONJOB_NAME}"
             WORKLOAD_VALIDATION_ERROR_FLAG=0
 
@@ -448,7 +450,8 @@ runs:
               HELM_LINT_ERROR_FLAG=1
               printf '::group::Helm lint: %s\n' "$CRONJOB_NAME" >> "$HELM_LINT_REPORT_PATH"
               sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
-              printf '\n---::endgroup::\n' >> "$HELM_LINT_REPORT_PATH"
+              printf '::endgroup::' >> "$HELM_LINT_REPORT_PATH"
+              echo "::endgroup::"
               continue
             fi
 
@@ -470,7 +473,8 @@ runs:
               HELM_TEMPLATE_ERROR_FLAG=1
               printf '::group::Helm template: %s\n' "$CRONJOB_NAME" >> "$HELM_TEMPLATE_REPORT_PATH"
               sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
-              printf '\n---::endgroup::\n' >> "$HELM_TEMPLATE_REPORT_PATH"
+              printf '::endgroup::' >> "$HELM_TEMPLATE_REPORT_PATH"
+              echo "::endgroup::"
               continue
             fi
 
@@ -490,7 +494,7 @@ runs:
                   printf '%s\n\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
                 fi
                 sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
-                printf '\n---::endgroup::\n' >> "$KUBE_LINT_REPORT_PATH"
+                printf '::endgroup::' >> "$KUBE_LINT_REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   KUBE_LINT_ERROR_FLAG=1
                 fi
@@ -502,7 +506,8 @@ runs:
             fi
 
             echo "=== Completed processing cronjob: $CRONJOB_NAME ==="
-            echo "::endgroup::\n"
+            echo "::endgroup::"
+            echo ""
           done
 
           set -e
@@ -583,8 +588,7 @@ runs:
         set -euo pipefail
 
         echo "## Cronjobs Helm template summary"
-        echo ""
-
+        
         if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
           echo ""
           cat "$REPORT_PATH"
