@@ -224,8 +224,8 @@ runs:
               HELM_LINT_ERROR_FLAG=1
               printf '::group::Helm lint: %s' "$MICROSERVICE_NAME" >> "$HELM_LINT_REPORT_PATH"
               sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
-              printf '::endgroup::' >> "$HELM_LINT_REPORT_PATH"
-              echo "::endgroup::"
+              printf '::endgroup::\n' >> "$HELM_LINT_REPORT_PATH"
+              echo "::endgroup::\n"
               continue
             fi
 
@@ -247,8 +247,8 @@ runs:
               HELM_TEMPLATE_ERROR_FLAG=1
               printf '::group::Helm template: %s' "$MICROSERVICE_NAME" >> "$HELM_TEMPLATE_REPORT_PATH"
               sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
-              printf '::endgroup::' >> "$HELM_TEMPLATE_REPORT_PATH"
-              echo "::endgroup::"
+              printf '::endgroup::\n' >> "$HELM_TEMPLATE_REPORT_PATH"
+              echo "::endgroup::\n"
               continue
             fi
 
@@ -281,8 +281,7 @@ runs:
             fi
 
             echo "=== Completed processing microservice: $MICROSERVICE_NAME ==="
-            echo "::endgroup::"
-            echo ""
+            echo "::endgroup::\n"
           done
 
           set -e
@@ -450,8 +449,8 @@ runs:
               HELM_LINT_ERROR_FLAG=1
               printf '::group::Helm lint: %s' "$CRONJOB_NAME" >> "$HELM_LINT_REPORT_PATH"
               sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
-              printf '::endgroup::' >> "$HELM_LINT_REPORT_PATH"
-              echo "::endgroup::"
+              printf '::endgroup::\n' >> "$HELM_LINT_REPORT_PATH"
+              echo "::endgroup::\n"
               continue
             fi
 
@@ -473,8 +472,8 @@ runs:
               HELM_TEMPLATE_ERROR_FLAG=1
               printf '::group::Helm template: %s' "$CRONJOB_NAME" >> "$HELM_TEMPLATE_REPORT_PATH"
               sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
-              printf '::endgroup::' >> "$HELM_TEMPLATE_REPORT_PATH"
-              echo "::endgroup::"
+              printf '::endgroup::\n' >> "$HELM_TEMPLATE_REPORT_PATH"
+              echo "::endgroup::\n"
               continue
             fi
 
@@ -507,8 +506,7 @@ runs:
             fi
 
             echo "=== Completed processing cronjob: $CRONJOB_NAME ==="
-            echo "::endgroup::"
-            echo ""
+            echo "::endgroup::\n"
           done
 
           set -e
