@@ -269,6 +269,8 @@ runs:
                 fi
                 sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
                 printf '::endgroup::' >> "$KUBE_LINT_REPORT_PATH"
+                echo "::endgroup::"
+                
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   KUBE_LINT_ERROR_FLAG=1
                 fi
@@ -495,6 +497,8 @@ runs:
                 fi
                 sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
                 printf '::endgroup::' >> "$KUBE_LINT_REPORT_PATH"
+                echo "::endgroup::"
+                
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   KUBE_LINT_ERROR_FLAG=1
                 fi
