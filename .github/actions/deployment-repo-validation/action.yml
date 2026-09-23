@@ -264,11 +264,11 @@ runs:
                 WORKLOAD_VALIDATION_ERROR_FLAG=1
                 printf '::group::Kube-linter: %s' "$MICROSERVICE_NAME" >> "$KUBE_LINT_REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "false" ]]; then
-                  printf '%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR MICROSERVICE ${MICROSERVICE_NAME}" >> "$KUBE_LINT_REPORT_PATH"
-                  printf '%s\n\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
+                  printf '\n%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR MICROSERVICE ${MICROSERVICE_NAME}" >> "$KUBE_LINT_REPORT_PATH"
+                  printf '%s\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
                 fi
                 sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
-                printf '::endgroup::' >> "$KUBE_LINT_REPORT_PATH"
+                printf '::endgroup::\n' >> "$KUBE_LINT_REPORT_PATH"
                 
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   KUBE_LINT_ERROR_FLAG=1
@@ -491,10 +491,10 @@ runs:
                 printf '::group::Kube-linter: %s' "$CRONJOB_NAME" >> "$KUBE_LINT_REPORT_PATH"
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "false" ]]; then
                   printf '\n%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR CRONJOB ${CRONJOB_NAME}" >> "$KUBE_LINT_REPORT_PATH"
-                  printf '%s\n\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
+                  printf '%s\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
                 fi
                 sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
-                printf '::endgroup::' >> "$KUBE_LINT_REPORT_PATH"
+                printf '::endgroup::\n' >> "$KUBE_LINT_REPORT_PATH"
                 
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
                   KUBE_LINT_ERROR_FLAG=1
