@@ -204,7 +204,7 @@ runs:
         if [[ -n "$MICROSERVICES" ]]; then
           set +e
           for MICROSERVICE_NAME in $MICROSERVICES; do
-            echo "=== Processing microservice: $MICROSERVICE_NAME ==="
+            echo "::group::Processing microservice: $MICROSERVICE_NAME"
             WORKLOAD_PATH="${REPO_NAME}/microservices/${MICROSERVICE_NAME}"
             WORKLOAD_VALIDATION_ERROR_FLAG=0
 
@@ -278,7 +278,7 @@ runs:
             fi
 
             echo "=== Completed processing microservice: $MICROSERVICE_NAME ==="
-            echo ""
+            echo "::endgroup::\n"
           done
 
           set -e
@@ -428,7 +428,7 @@ runs:
         if [[ -n "$CRONJOBS" ]]; then
           set +e
           for CRONJOB_NAME in $CRONJOBS; do
-            echo "=== Processing cronjob: $CRONJOB_NAME ==="
+            echo "::group:: Processing cronjob: $CRONJOB_NAME"
             WORKLOAD_PATH="${REPO_NAME}/jobs/${CRONJOB_NAME}"
             WORKLOAD_VALIDATION_ERROR_FLAG=0
 
@@ -502,7 +502,7 @@ runs:
             fi
 
             echo "=== Completed processing cronjob: $CRONJOB_NAME ==="
-            echo ""
+            echo "::endgroup::\n"
           done
 
           set -e
