@@ -81,3 +81,9 @@ variable "grant_redshift_groups" {
   type        = list(string)
   default     = []
 }
+
+variable "secret_string_wo_version" {
+  description = "Optional secret string without version. If provided, it will be used instead of the generated one"
+  type        = number
+  default     = null
+}

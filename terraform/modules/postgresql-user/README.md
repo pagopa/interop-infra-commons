@@ -46,6 +46,7 @@ No modules.
 | <a name="input_redshift_schema_name_procedures"></a> [redshift\_schema\_name\_procedures](#input\_redshift\_schema\_name\_procedures) | Redshift schema name in which to create stored procedures | `string` | `"terraform_postgresql_user_module"` | no |
 | <a name="input_secret_prefix"></a> [secret\_prefix](#input\_secret\_prefix) | Prefix for the secret that will be created | `string` | n/a | yes |
 | <a name="input_secret_recovery_window_in_days"></a> [secret\_recovery\_window\_in\_days](#input\_secret\_recovery\_window\_in\_days) | Number of days that AWS Secrets Manager waits before it can delete the secret | `number` | `0` | no |
+| <a name="input_secret_string_wo_version"></a> [secret\_string\_wo\_version](#input\_secret\_string\_wo\_version) | Optional secret string without version. If provided, it will be used instead of the generated one | `number` | `null` | no |
 | <a name="input_secret_tags"></a> [secret\_tags](#input\_secret\_tags) | Tags to apply to the secret that will be created | `map(string)` | `{}` | no |
 | <a name="input_username"></a> [username](#input\_username) | Username to be created | `string` | n/a | yes |
 
@@ -56,4 +57,98 @@ No modules.
 | <a name="output_secret_arn"></a> [secret\_arn](#output\_secret\_arn) | User credentials secret ARN |
 | <a name="output_secret_id"></a> [secret\_id](#output\_secret\_id) | User credentials secret ID |
 | <a name="output_secret_name"></a> [secret\_name](#output\_secret\_name) | User credentials secret name |
+
+### Execution Requirements
+
+The following tools need to be installed on the local machine were the Terraform Apply will be executed:
+* PagoPA VPN
+* [AWS CLI](https://aws.amazon.com/it/cli/)
+* [jq](https://jqlang.github.io/jq/)
+* [psql](https://www.postgresql.org/docs/current/app-psql.html)
+
+### DB Admin credentials
+
+In order to get user credentials, the module input variable "db\_admin\_credentials\_secret\_arn" must be specified;
+it represents the ARN of the AWS Secrets Manager resource where admin credentials are stored in a JSON format, following this naming convention:
+
+```
+{
+  "username": "admin_user",
+  "password": "admin_password"
+}
+```
+
+### User credentials secret
+
+The module creates a dedicated AWS Secrets Manager secret for the target DB user.
+
+The stored payload has this structure:
+
+```
+{
+  "database": "db_name",
+  "username": "db_user",
+  "password": "generated_password"
+}
+```
+
+Password generation and secret payload are managed through:
+
+* generated\_password\_length
+* generated\_password\_use\_special\_characters
+* secret\_prefix
+* secret\_tags
+* secret\_recovery\_window\_in\_days
+
+The secret value is written using write-only fields on aws\_secretsmanager\_secret\_version.
+To force secret payload updates safely, use the secret\_string\_wo\_version input as a monotonic version token (for example: 1, 2, 3, ...).
+
+When you need to rotate credentials, increment secret\_string\_wo\_version and apply again.
+
+### Usage example
+
+```
+module "sql_roles" {
+  source       = "./modules/sql-roles"
+  db_admin_credentials_secret_arn = "arn:aws:secretsmanager:eu-central-1:000000000000:secret:dbadmincredentials-PDUERn"
+  db_host                         = "localhost"
+  db_name                         = "db1"
+  username                        = "testUser"
+  enable_sql_statements           = true
+  additional_sql_statements       = <<EOT
+        DO \$\$
+        BEGIN
+        GRANT CREATE ON SCHEMA public TO $USERNAME;
+        END
+        \$\$;
+    EOT
+}
+```
+
+<b>String Escaping</b>
+
+If the script contains special characters (e.g., $, ", or \), you may need to escape them or use a heredoc (<<EOT) to make it easier to handle.
+
+<b>Environment Variables</b>
+
+The input SQL script in additional\_sql\_statements has access to the following environment variables:
+```
+# User password
+PASSWORD
+
+# User username
+USERNAME
+
+# Database name
+DATABASE
+
+# Database port
+DATABASE_PORT
+
+# Database host
+HOST
+
+# DB Admin credentials AWS secret ARN
+ADMIN_CREDENTIALS_SECRET_ARN
+```
 <!-- END_TF_DOCS -->

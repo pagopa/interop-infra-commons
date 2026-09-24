@@ -19,6 +19,33 @@ it represents the ARN of the AWS Secrets Manager resource where admin credential
 }
 ```
 
+### User credentials secret
+
+The module creates a dedicated AWS Secrets Manager secret for the target DB user.
+
+The stored payload has this structure:
+
+```
+{
+  "database": "db_name",
+  "username": "db_user",
+  "password": "generated_password"
+}
+```
+
+Password generation and secret payload are managed through:
+
+* generated_password_length
+* generated_password_use_special_characters
+* secret_prefix
+* secret_tags
+* secret_recovery_window_in_days
+
+The secret value is written using write-only fields on aws_secretsmanager_secret_version.
+To force secret payload updates safely, use the secret_string_wo_version input as a monotonic version token (for example: 1, 2, 3, ...).
+
+When you need to rotate credentials, increment secret_string_wo_version and apply again.
+
 ### Usage example
 
 ```
@@ -46,7 +73,7 @@ If the script contains special characters (e.g., $, ", or \), you may need to es
 
 <b>Environment Variables</b>
 
-The input sql script in additional_sql_statemets has access to the following environment variables:
+The input SQL script in additional_sql_statements has access to the following environment variables:
 ```
 # User password
 PASSWORD
