@@ -200,10 +200,20 @@ elif [[ -n "$output_redirect" ]]; then
   OUTPUT_TO="> \"$output_redirect\""
 fi
 
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput --force
+fi
+
 #TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
 TEMPLATE_CMD=$TEMPLATE_CMD" "$microservice" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $ADDITIONAL_VALUES $OUTPUT_TO"
 
 eval $TEMPLATE_CMD
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $verbose == true ]]; then
   echo "Successfully created Helm Template for microservice $microservice at $OUTPUT_FILE"
 fi
@@ -215,3 +225,4 @@ fi
 if [[ "$argocd_plugin" == "true" ]]; then
   restoreOutput
 fi
+

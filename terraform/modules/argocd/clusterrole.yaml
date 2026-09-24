@@ -1,0 +1,46 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: repo-server-read-config
+  namespace: dev-experimental-argocd-interop-sync
+rules:
+- apiGroups: [""]
+  resources: ["configmaps","secrets","services"]
+  verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: repo-server-read-config
+  namespace: dev-experimental-argocd-interop-sync
+subjects:
+- kind: ServiceAccount
+  name: argocd-repo-server
+  namespace: dev-experimental-argocd-interop-sync
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: repo-server-read-config
+---
+# cluster-wide, READ-ONLY test binding (narrow it after you confirm)
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: repo-server-read-config
+rules:
+- apiGroups: [""]
+  resources: ["configmaps","secrets","services","namespaces"]
+  verbs: ["get","list","watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: repo-server-read-config
+subjects:
+- kind: ServiceAccount
+  name: argocd-repo-server
+  namespace: dev-experimental-argocd
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: repo-server-read-config
