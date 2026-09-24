@@ -1,0 +1,26 @@
+{
+  "name": "interop-external-secrets-lister",
+  "version": "1.0.0",
+  "description": "CLI utility to analyze External Secrets in values.yaml and compare versions on AWS Secrets Manager",
+  "main": "list-external-secrets.js",
+  "scripts": {
+    "start": "node list-external-secrets.js"
+  },
+  "keywords": [
+    "aws",
+    "secrets-manager",
+    "kubernetes",
+    "external-secrets",
+    "yaml",
+    "automation"
+  ],
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.758.0",
+    "yaml": "^2.8.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
