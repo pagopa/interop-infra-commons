@@ -223,7 +223,7 @@ runs:
               WORKLOAD_VALIDATION_ERROR_FLAG=1
               HELM_LINT_ERROR_FLAG=1
               printf '::group::Helm lint: %s' "$MICROSERVICE_NAME" >> "$HELM_LINT_REPORT_PATH"
-              sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
+              sanitize_log_paths "\n$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
               printf '::endgroup::\n' >> "$HELM_LINT_REPORT_PATH"
               echo "::endgroup::\n"
               continue
@@ -246,7 +246,7 @@ runs:
               WORKLOAD_VALIDATION_ERROR_FLAG=1
               HELM_TEMPLATE_ERROR_FLAG=1
               printf '::group::Helm template: %s' "$MICROSERVICE_NAME" >> "$HELM_TEMPLATE_REPORT_PATH"
-              sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
+              sanitize_log_paths "\n$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
               printf '::endgroup::\n' >> "$HELM_TEMPLATE_REPORT_PATH"
               echo "::endgroup::\n"
               continue
@@ -267,7 +267,7 @@ runs:
                   printf '\n%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR MICROSERVICE ${MICROSERVICE_NAME}" >> "$KUBE_LINT_REPORT_PATH"
                   printf '%s\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
                 fi
-                sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
+                sanitize_log_paths "\n$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
                 printf '::endgroup::\n' >> "$KUBE_LINT_REPORT_PATH"
                 
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
@@ -448,7 +448,7 @@ runs:
               WORKLOAD_VALIDATION_ERROR_FLAG=1
               HELM_LINT_ERROR_FLAG=1
               printf '::group::Helm lint: %s' "$CRONJOB_NAME" >> "$HELM_LINT_REPORT_PATH"
-              sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
+              sanitize_log_paths "\n$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
               printf '::endgroup::\n' >> "$HELM_LINT_REPORT_PATH"
               echo "::endgroup::\n"
               continue
@@ -471,7 +471,7 @@ runs:
               WORKLOAD_VALIDATION_ERROR_FLAG=1
               HELM_TEMPLATE_ERROR_FLAG=1
               printf '::group::Helm template: %s' "$CRONJOB_NAME" >> "$HELM_TEMPLATE_REPORT_PATH"
-              sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
+              sanitize_log_paths "\n$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
               printf '::endgroup::\n' >> "$HELM_TEMPLATE_REPORT_PATH"
               echo "::endgroup::\n"
               continue
@@ -492,7 +492,7 @@ runs:
                   printf '\n%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR CRONJOB ${CRONJOB_NAME}" >> "$KUBE_LINT_REPORT_PATH"
                   printf '%s\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
                 fi
-                sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
+                sanitize_log_paths "\n$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
                 printf '::endgroup::\n' >> "$KUBE_LINT_REPORT_PATH"
                 
                 if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
