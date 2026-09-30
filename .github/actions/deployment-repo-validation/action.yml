@@ -182,6 +182,7 @@ runs:
         HELM_LINT_ERROR_FLAG=0
         HELM_TEMPLATE_ERROR_FLAG=0
         KUBE_LINT_ERROR_FLAG=0
+        SKIP_DEP_OPT=""
         HELM_LINT_REPORT_PATH="$(pwd)/microservices-helm-lint-report.txt"
         HELM_TEMPLATE_REPORT_PATH="$(pwd)/microservices-helm-template-report.txt"
         KUBE_LINT_REPORT_PATH="$(pwd)/microservices-kube-lint-report.txt"
@@ -212,10 +213,13 @@ runs:
             LINT_OUTPUT_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.yaml"
             LINT_LOG_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.log"
             "$HELM_SCRIPTS_FOLDER"/helmLint-svc-single.sh \
-              --debug -e "$ENVIRONMENT" \
+              --debug $SKIP_DEP_OPT -e "$ENVIRONMENT" \
               -m "$MICROSERVICE_NAME" \
               -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
               --output "$LINT_OUTPUT_PATH" >"$LINT_LOG_PATH" 2>&1
+
+            # After the first Helm lint, set SKIP_DEP_OPT to skip dependencies for subsequent Helm commands.
+            SKIP_DEP_OPT="-sd"
 
             if [[ $? -ne 0 ]]; then
               echo "Linting failed for microservice: $MICROSERVICE_NAME"
@@ -235,7 +239,7 @@ runs:
             TEMPLATE_LOG_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.log"
             echo "Templating microservice: $MICROSERVICE_NAME"
             "$HELM_SCRIPTS_FOLDER"/helmTemplate-svc-single.sh \
-              --debug \
+              --debug $SKIP_DEP_OPT \
               --disable-templating-lookup \
               --environment "$ENVIRONMENT" \
               --microservice "$MICROSERVICE_NAME" \
@@ -412,6 +416,7 @@ runs:
         HELM_LINT_ERROR_FLAG=0
         HELM_TEMPLATE_ERROR_FLAG=0
         KUBE_LINT_ERROR_FLAG=0
+        SKIP_DEP_OPT=""
         HELM_LINT_REPORT_PATH="$(pwd)/cronjobs-helm-lint-report.txt"
         HELM_TEMPLATE_REPORT_PATH="$(pwd)/cronjobs-helm-template-report.txt"
         KUBE_LINT_REPORT_PATH="$(pwd)/cronjobs-kube-lint-report.txt"
@@ -442,10 +447,13 @@ runs:
             LINT_OUTPUT_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.yaml"
             LINT_LOG_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.log"
             "$HELM_SCRIPTS_FOLDER"/helmLint-cron-single.sh \
-              --debug -e "$ENVIRONMENT" \
+              --debug $SKIP_DEP_OPT -e "$ENVIRONMENT" \
               -j "$CRONJOB_NAME" \
               -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
               --output "$LINT_OUTPUT_PATH" >"$LINT_LOG_PATH" 2>&1
+
+            # After the first Helm lint, set SKIP_DEP_OPT to skip dependencies for subsequent Helm commands.
+            SKIP_DEP_OPT="-sd"
 
             if [[ $? -ne 0 ]]; then
               echo "Linting failed for cronjob: $CRONJOB_NAME"
@@ -464,7 +472,7 @@ runs:
             TEMPLATE_LOG_PATH="$(pwd)/helm-template-${CRONJOB_NAME}.log"
             echo "Templating cronjob: $CRONJOB_NAME"
             "$HELM_SCRIPTS_FOLDER"/helmTemplate-cron-single.sh \
-              --debug \
+              --debug $SKIP_DEP_OPT \
               --disable-templating-lookup \
               --environment "$ENVIRONMENT" \
               --job "$CRONJOB_NAME" \
