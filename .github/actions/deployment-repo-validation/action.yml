@@ -218,9 +218,6 @@ runs:
               -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
               --output "$LINT_OUTPUT_PATH" >"$LINT_LOG_PATH" 2>&1
 
-            # After the first Helm lint, set SKIP_DEP_OPT to skip dependencies for subsequent Helm commands.
-            SKIP_DEP_OPT="-sd"
-
             if [[ $? -ne 0 ]]; then
               echo "Linting failed for microservice: $MICROSERVICE_NAME"
               FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
@@ -234,6 +231,9 @@ runs:
               echo "::endgroup::\n"
               continue
             fi
+
+            # After the first Helm lint, set SKIP_DEP_OPT to skip dependencies for subsequent Helm commands.
+            SKIP_DEP_OPT="-sd"
 
             TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.yaml"
             TEMPLATE_LOG_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.log"
@@ -452,9 +452,6 @@ runs:
               -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
               --output "$LINT_OUTPUT_PATH" >"$LINT_LOG_PATH" 2>&1
 
-            # After the first Helm lint, set SKIP_DEP_OPT to skip dependencies for subsequent Helm commands.
-            SKIP_DEP_OPT="-sd"
-
             if [[ $? -ne 0 ]]; then
               echo "Linting failed for cronjob: $CRONJOB_NAME"
               FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
@@ -467,6 +464,9 @@ runs:
               echo "::endgroup::\n"
               continue
             fi
+
+            # After the first Helm lint, set SKIP_DEP_OPT to skip dependencies for subsequent Helm commands.
+            SKIP_DEP_OPT="-sd"
 
             TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${CRONJOB_NAME}.yaml"
             TEMPLATE_LOG_PATH="$(pwd)/helm-template-${CRONJOB_NAME}.log"
