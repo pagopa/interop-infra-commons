@@ -22,6 +22,11 @@ on:
         required: false
         type: boolean
         default: false
+      enable_force_upgrade:
+        description: 'Force Helm upgrade for all deployed workloads'
+        required: false
+        type: boolean
+        default: false
     secrets:
       AWS_REGION:
         required: true
@@ -139,6 +144,7 @@ jobs:
       target: ${{ matrix.target }}
       infra_commons_tag: ${{ inputs.infra_commons_tag }}
       use_kubectl_diff: ${{ inputs.use_kubectl_diff }}
+      enable_force_upgrade: ${{ inputs.enable_force_upgrade }}
       deploy_mode: ${{ needs.workflow_setup.outputs.microservice_deploy_mode }}
 
   deploy_cj:
@@ -158,4 +164,5 @@ jobs:
       target: ${{ matrix.target }}
       infra_commons_tag: ${{ inputs.infra_commons_tag }}
       use_kubectl_diff: ${{ inputs.use_kubectl_diff }}
+      enable_force_upgrade: ${{ inputs.enable_force_upgrade }}
       deploy_mode: ${{ needs.workflow_setup.outputs.cronjob_deploy_mode }}

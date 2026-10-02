@@ -220,7 +220,7 @@ jobs:
           echo "ENABLE_FORCE_UPGRADE: $ENABLE_FORCE_UPGRADE"
 
           if [[ "$KIND" == "microservice" ]]; then
-            if [[ "$HELM_FORCE_UPGRADE_MS_CSV" == "*" || ",$HELM_FORCE_UPGRADE_MS_CSV," == *",$TARGET,"* ]]; then
+            if [[ "$ENABLE_FORCE_UPGRADE" == "true" || "$HELM_FORCE_UPGRADE_MS_CSV" == "*" || ",$HELM_FORCE_UPGRADE_MS_CSV," == *",$TARGET,"* ]]; then
               FORCE_UPGRADE_MS=true
             else
               FORCE_UPGRADE_MS=false
@@ -246,7 +246,7 @@ jobs:
             fi
 
           else
-            if [[ "$HELM_FORCE_UPGRADE_CJ_CSV" == '*' ]] || [[ ",$HELM_FORCE_UPGRADE_CJ_CSV," == *",$TARGET,"* ]]; then
+            if [[ "$ENABLE_FORCE_UPGRADE" == "true" || "$HELM_FORCE_UPGRADE_CJ_CSV" == '*' || ",$HELM_FORCE_UPGRADE_CJ_CSV," == *",$TARGET,"* ]]; then
               FORCE_UPGRADE_CJ=true
             else
               FORCE_UPGRADE_CJ=false
@@ -281,7 +281,7 @@ jobs:
             case "$DEPLOY_MODE" in
               HELM_UPGRADE)
                 HELM_UPGRADE_OPTIONS="--debug --skip-dep $TIMEOUT_OPT $NOWAIT_OPT --output console"
-                if [[ "$ENABLE_FORCE_UPGRADE" == "true" ]]; then
+                if [[ "$FORCE_UPGRADE_MS" == "true" ]]; then
                   echo "INFO - Force upgrade requested for $MICROSERVICE_FULLNAME"
                   HELM_UPGRADE_OPTIONS=$HELM_UPGRADE_OPTIONS" --force"
                 fi
@@ -292,13 +292,12 @@ jobs:
                   --environment "$K8S_NAMESPACE" \
                   -m "$TARGET" \
                   -i "$PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml"
-                
-                if [[ "$ENABLE_FORCE_UPGRADE" == "true" ]]; then
-                  echo "::notice::HELM_FORCE_UPGRADE_MICROSERVICES_CSV is ignored in KUBECTL_APPLY mode for $MICROSERVICE_FULLNAME."
-                fi
                 ;;                
               KUBECTL_APPLY)
                 echo "INFO - Deploying $MICROSERVICE_FULLNAME using kubectl apply"
+                if [[ "$FORCE_UPGRADE_MS" == "true" ]]; then
+                  echo "::notice::Force-upgrade settings are ignored in KUBECTL_APPLY mode for $MICROSERVICE_FULLNAME."
+                fi
                 $SCRIPTS_FOLDER/kubectlApply-svc-single-standalone.sh \
                   --debug \
                   --skip-dep \
@@ -365,7 +364,7 @@ jobs:
             case "$DEPLOY_MODE" in
               HELM_UPGRADE)
                 HELM_UPGRADE_OPTIONS="--debug --skip-dep --output console"
-                if [[ "$ENABLE_FORCE_UPGRADE" == "true" ]]; then
+                if [[ "$FORCE_UPGRADE_CJ" == "true" ]]; then
                   echo "INFO - Force upgrade requested for $CRONJOB_FULLNAME"
                   HELM_UPGRADE_OPTIONS=$HELM_UPGRADE_OPTIONS" --force"
                 fi
@@ -376,13 +375,12 @@ jobs:
                   --environment "$K8S_NAMESPACE" \
                   -j "$TARGET" \
                   -i "$PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml"
-              
-                if [[ "$ENABLE_FORCE_UPGRADE" == "true" ]]; then
-                  echo "::notice::HELM_FORCE_UPGRADE_CRONJOBS_CSV is ignored in KUBECTL_APPLY mode for $CRONJOB_FULLNAME."
-                fi
                 ;;
               KUBECTL_APPLY)
                 echo "INFO - Deploying $CRONJOB_FULLNAME by applying the rendered Helm manifest."
+                if [[ "$FORCE_UPGRADE_CJ" == "true" ]]; then
+                  echo "::notice::Force-upgrade settings are ignored in KUBECTL_APPLY mode for $CRONJOB_FULLNAME."
+                fi
                 $SCRIPTS_FOLDER/kubectlApply-cron-single-standalone.sh \
                   --debug \
                   --skip-dep \
