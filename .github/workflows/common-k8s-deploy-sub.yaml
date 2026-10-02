@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       timeout_seconds:
-        description: 'Kubectl apply wait timeout in seconds for Deployments, 0 means do not wait for Helm upgrade to finish'
+        description: 'Optional Deployment rollout timeout in seconds; 0 skips waiting and negative values use the dynamic timeout'
         required: false
         type: number
         default: -1
@@ -65,6 +65,7 @@ jobs:
         env:
           KIND: ${{ inputs.kind }}
           DEPLOY_MODE: ${{ inputs.deploy_mode }}
+          TIMEOUT_SECONDS: ${{ inputs.timeout_seconds }}
         run: |
           set -euo pipefail
 
@@ -73,6 +74,11 @@ jobs:
 
           if [[ "$KIND" != "microservice" && "$KIND" != "cronjob" ]]; then
             echo "::error::Invalid value for 'kind'. Allowed values are 'microservice' and 'cronjob'."
+            exit 1
+          fi
+
+          if [[ ! "$TIMEOUT_SECONDS" =~ ^-?[0-9]+$ ]]; then
+            echo "::error::'timeout_seconds' must be an integer number of seconds."
             exit 1
           fi
           
@@ -293,7 +299,6 @@ jobs:
                 ;;                
               KUBECTL_APPLY)
                 echo "INFO - Deploying $MICROSERVICE_FULLNAME using kubectl apply"
-                #TODO: Should we use Timeout for kubectl apply?
                 $SCRIPTS_FOLDER/kubectlApply-svc-single-standalone.sh \
                   --debug \
                   --skip-dep \
@@ -301,6 +306,30 @@ jobs:
                   -m "$TARGET" \
                   -i $PROJECT_DIR/commons/$K8S_NAMESPACE/images.yaml \
                   --output console
+
+                DESIRED_REPLICAS=$(kubectl get deployment "$MICROSERVICE_FULLNAME" \
+                  --namespace "$K8S_NAMESPACE" \
+                  -o jsonpath='{.spec.replicas}')
+                DESIRED_REPLICAS=${DESIRED_REPLICAS:-1}
+                
+                echo "INFO - Desired replicas: $DESIRED_REPLICAS"
+                if [[ "$DESIRED_REPLICAS" -eq 0 ]]; then
+                  echo "INFO - Desired replicas for $MICROSERVICE_FULLNAME are 0. Skipping rollout wait."
+                elif [[ "$TIMEOUT_SECONDS" -eq 0 ]]; then
+                  echo "INFO - Rollout wait disabled for $MICROSERVICE_FULLNAME."
+                else
+                  ROLLOUT_TIMEOUT="${TIMEOUT_SECONDS}s"
+                  echo "INFO - Waiting for rollout of $MICROSERVICE_FULLNAME (max $ROLLOUT_TIMEOUT)."
+                  if ! kubectl rollout status \
+                    --namespace "$K8S_NAMESPACE" \
+                    "deployment/$MICROSERVICE_FULLNAME" \
+                    --timeout="$ROLLOUT_TIMEOUT" \
+                    --watch; then
+                    echo "::error::Rollout for $MICROSERVICE_FULLNAME failed or exceeded $ROLLOUT_TIMEOUT."
+                    exit 1
+                  fi
+                  echo "INFO - Rollout for $MICROSERVICE_FULLNAME completed successfully."
+                fi
                 ;;
               *)
                 echo "::error::Unsupported deploy mode '$DEPLOY_MODE'."
@@ -354,7 +383,6 @@ jobs:
                 ;;
               KUBECTL_APPLY)
                 echo "INFO - Deploying $CRONJOB_FULLNAME by applying the rendered Helm manifest."
-                #TODO: Should we use Timeout for kubectl apply?
                 $SCRIPTS_FOLDER/kubectlApply-cron-single-standalone.sh \
                   --debug \
                   --skip-dep \
