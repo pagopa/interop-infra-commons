@@ -122,6 +122,8 @@ fi
 if [[ "$argocd_plugin" == "true" ]]; then
   OPTIONS="$OPTIONS --argocd-plugin "
 fi
+DIFF_FOUND=false
+DIFF_ERROR_CODE=0
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
@@ -148,7 +150,16 @@ if [[ $template_microservices == true ]]; then
   do
     CURRENT_SVC=$(basename "$dir");
     echo "Diff $CURRENT_SVC"
+    set +e
     "$SCRIPTS_FOLDER"/kubectlDiff-svc-single-fromdir.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    DIFF_RESULT=$?
+    set -e
+    if [[ "$DIFF_RESULT" -eq 1 ]]; then
+      DIFF_FOUND=true
+    elif [[ "$DIFF_RESULT" -gt 1 && "$DIFF_ERROR_CODE" -eq 0 ]]; then
+      DIFF_ERROR_CODE=$DIFF_RESULT
+      echo "Error: kubectl diff failed for $CURRENT_SVC (exit code $DIFF_RESULT)." >&2
+    fi
   done
 fi
 
@@ -158,7 +169,16 @@ if [[ $template_jobs == true ]]; then
   do
     CURRENT_JOB=$(basename "$dir");
     echo "Diff $CURRENT_JOB"
+    set +e
     "$SCRIPTS_FOLDER"/kubectlDiff-cron-single-fromdir.sh -e $ENV -j $CURRENT_JOB $OPTIONS
+    DIFF_RESULT=$?
+    set -e
+    if [[ "$DIFF_RESULT" -eq 1 ]]; then
+      DIFF_FOUND=true
+    elif [[ "$DIFF_RESULT" -gt 1 && "$DIFF_ERROR_CODE" -eq 0 ]]; then
+      DIFF_ERROR_CODE=$DIFF_RESULT
+      echo "Error: kubectl diff failed for $CURRENT_JOB (exit code $DIFF_RESULT)." >&2
+    fi
   done
 fi
 
@@ -168,4 +188,11 @@ fi
 
 if [[ "$argocd_plugin" == "true" ]]; then
   restoreOutput
+fi
+
+if [[ "$DIFF_ERROR_CODE" -ne 0 ]]; then
+  exit "$DIFF_ERROR_CODE"
+fi
+if [[ "$DIFF_FOUND" == "true" ]]; then
+  exit 1
 fi
