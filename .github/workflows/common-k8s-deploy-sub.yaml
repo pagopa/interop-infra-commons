@@ -149,6 +149,10 @@ jobs:
 
           export PROJECT_DIR=$(pwd)
           DIFF_EXIT_CODE=1
+          DIFF_FOUND_EXIT_CODE=2
+          if [[ "$USE_KUBECTL_DIFF" == "true" ]]; then
+            DIFF_FOUND_EXIT_CODE=1
+          fi
 
           if [[ "$KIND" == "microservice" ]]; then
             set +e
@@ -191,7 +195,7 @@ jobs:
 
           if [[ $DIFF_EXIT_CODE -eq 0 ]]; then
             echo "Diff Output: No diff has been found for $TARGET"
-          elif [[ $DIFF_EXIT_CODE -le 2 ]]; then
+          elif [[ $DIFF_EXIT_CODE -eq $DIFF_FOUND_EXIT_CODE ]]; then
             echo "Diff Output: Diff has been found for $TARGET"
           else
             echo "::error title=Diff Error::Error occurred during diff, exit code $DIFF_EXIT_CODE"
