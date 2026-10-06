@@ -189,12 +189,12 @@ LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\""
 LINT_CMD+=" $OUTPUT_TO"
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput --force
+fi
+
 eval $LINT_CMD
 
 if [[ $output_redirect != "console" ]] && [[ -z "$output_redirect" ]] && [[ $post_clean == true ]]; then
   rm -rf $OUT_DIR
-fi
-
-if [[ "$argocd_plugin" == "true" ]]; then
-  restoreOutput
 fi

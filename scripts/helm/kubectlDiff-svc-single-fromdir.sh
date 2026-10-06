@@ -129,11 +129,11 @@ DIFF_CMD="kubectl diff --show-managed-fields=false -f "
 
 DIFF_CMD=$DIFF_CMD" $OUT_DIR/$microservice.out.yaml"
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput --force
+fi
+
 eval $DIFF_CMD
 #if [[ $post_clean == true ]]; then
 #  rm -rf $OUT_DIR
 #fi
-
-if [[ "$argocd_plugin" == "true" ]]; then
-  restoreOutput
-fi

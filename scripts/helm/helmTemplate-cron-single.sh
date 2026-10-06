@@ -207,7 +207,16 @@ fi
 #TEMPLATE_CMD=$TEMPLATE_CMD" $job interop-eks-cronjob-chart/interop-eks-cronjob-chart -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
 TEMPLATE_CMD=$TEMPLATE_CMD" $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
 
+if [[ "$argocd_plugin" == "true" ]]; then
+  restoreOutput --force
+fi
+
 eval $TEMPLATE_CMD
+
+if [[ "$argocd_plugin" == "true" ]]; then
+  suppressOutput
+fi
+
 if [[ $verbose == true ]]; then
   echo "Successfully created Helm Template for cronjob $job at $OUTPUT_FILE"
 fi
