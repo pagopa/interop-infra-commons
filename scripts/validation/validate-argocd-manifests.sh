@@ -51,10 +51,12 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --repo-root)
+      [[ -n "${2:-}" ]] || { echo "Missing value for --repo-root" >&2; usage; exit 2; }
       REPO_ROOT="$2"
       shift 2
       ;;
     --target-env)
+      [[ -n "${2:-}" ]] || { echo "Missing value for --target-env" >&2; usage; exit 2; }
       TARGET_ENV="$2"
       shift 2
       ;;
@@ -63,10 +65,12 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
     --enable-argocd-schema-validation)
+      [[ -n "${2:-}" ]] || { echo "Missing value for --enable-argocd-schema-validation" >&2; usage; exit 2; }
       ENABLE_ARGOCD_SCHEMA_VALIDATION="$2"
       shift 2
       ;;
     --argocd-crd-schema-location)
+      [[ -n "${2:-}" ]] || { echo "Missing value for --argocd-crd-schema-location" >&2; usage; exit 2; }
       ARGOCD_CRD_SCHEMA_LOCATION="$2"
       shift 2
       ;;

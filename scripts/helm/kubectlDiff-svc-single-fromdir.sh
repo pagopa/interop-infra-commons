@@ -21,6 +21,7 @@ help()
 args=$#
 environment=""
 microservice=""
+skip_dep=false
 chart_path=""
 disable_plugins_install=false
 argocd_plugin=false
