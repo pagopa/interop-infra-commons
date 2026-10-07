@@ -32,7 +32,7 @@ disable_templating_lookup=false
 images_file=""
 chart_path=""
 disable_plugins_install=false
-
+argocd_plugin=false
 step=1
 for (( i=0; i<$args; i+=$step ))
 do
