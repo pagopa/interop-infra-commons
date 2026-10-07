@@ -171,8 +171,8 @@ fi
 OPTIONS=$OPTIONS" -sd"
 
 MICROSERVICE_OPTIONS=" "
-if [[ $disable_templating_lookup != true ]]; then
-  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
+if [[ $disable_templating_lookup == true ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --disable-templating-lookup"
 fi
 DIFF_FOUND=false
 DIFF_ERROR_CODE=0

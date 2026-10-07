@@ -165,8 +165,8 @@ fi
 if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
 fi
-if [[ $disable_templating_lookup != true ]]; then
-  OPTIONS=$OPTIONS" --enable-templating-lookup "
+if [[ $disable_templating_lookup == true ]]; then
+  OPTIONS=$OPTIONS" --disable-templating-lookup "
 fi
 if [[ "$argocd_plugin" == "true" ]]; then
   OPTIONS="$OPTIONS --argocd-plugin "
