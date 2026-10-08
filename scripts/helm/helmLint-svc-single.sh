@@ -57,6 +57,7 @@ do
           shift 2
           ;;
         -i | --image )
+          [[ -n "${2:-}" ]] || { echo "Image file cannot be null or empty."; help; }
           images_file=$2
           step=2
           shift 2

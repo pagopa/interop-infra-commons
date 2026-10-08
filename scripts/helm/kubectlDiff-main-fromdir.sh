@@ -13,7 +13,6 @@ help()
     echo "Usage:  [ -e | --environment ] Environment used to execute kubectl diff
         [ -m | --microservices ] Execute diff for all microservices
         [ -j | --jobs ] Execute diff for all cronjobs
-        [ -i | --image ] File with microservices and cronjobs images tag and digest
         [ -sd | --skip-dep ] Skip Helm dependencies setup
         [ -cp | --chart-path ] Path to Chart.yaml file (overrides environment selection; must be an existing file)
         [ -dpi | --disable-plugins-install ] Do not install helm plugins (default: false)
@@ -29,7 +28,6 @@ template_microservices=false
 template_jobs=false
 post_clean=false
 skip_dep=false
-images_file=""
 chart_path=""
 disable_plugins_install=false
 argocd_plugin=false
@@ -53,11 +51,6 @@ do
           template_jobs=true
           step=1
           shift 1
-          ;;
-        -i | --image )
-          images_file=$2
-          step=2
-          shift 2
           ;;
         -sd | --skip-dep)
           skip_dep=true
@@ -113,15 +106,14 @@ fi
 if [[ $post_clean == true ]]; then
   OPTIONS=$OPTIONS" -c"
 fi
-if [[ -n $images_file ]]; then
-  OPTIONS=$OPTIONS" -i $images_file"
-fi
 if [[ -n $chart_path ]]; then
   OPTIONS=$OPTIONS" -cp $chart_path"
 fi
 if [[ "$argocd_plugin" == "true" ]]; then
   OPTIONS="$OPTIONS --argocd-plugin "
 fi
+DIFF_FOUND=false
+DIFF_ERROR_CODE=0
 if [[ $skip_dep == false ]]; then
   HELMDEP_OPTIONS="--untar"
 
@@ -148,7 +140,16 @@ if [[ $template_microservices == true ]]; then
   do
     CURRENT_SVC=$(basename "$dir");
     echo "Diff $CURRENT_SVC"
+    set +e
     "$SCRIPTS_FOLDER"/kubectlDiff-svc-single-fromdir.sh -e $ENV -m $CURRENT_SVC $OPTIONS
+    DIFF_RESULT=$?
+    set -e
+    if [[ "$DIFF_RESULT" -eq 1 ]]; then
+      DIFF_FOUND=true
+    elif [[ "$DIFF_RESULT" -gt 1 && "$DIFF_ERROR_CODE" -eq 0 ]]; then
+      DIFF_ERROR_CODE=$DIFF_RESULT
+      echo "Error: kubectl diff failed for $CURRENT_SVC (exit code $DIFF_RESULT)." >&2
+    fi
   done
 fi
 
@@ -158,7 +159,16 @@ if [[ $template_jobs == true ]]; then
   do
     CURRENT_JOB=$(basename "$dir");
     echo "Diff $CURRENT_JOB"
+    set +e
     "$SCRIPTS_FOLDER"/kubectlDiff-cron-single-fromdir.sh -e $ENV -j $CURRENT_JOB $OPTIONS
+    DIFF_RESULT=$?
+    set -e
+    if [[ "$DIFF_RESULT" -eq 1 ]]; then
+      DIFF_FOUND=true
+    elif [[ "$DIFF_RESULT" -gt 1 && "$DIFF_ERROR_CODE" -eq 0 ]]; then
+      DIFF_ERROR_CODE=$DIFF_RESULT
+      echo "Error: kubectl diff failed for $CURRENT_JOB (exit code $DIFF_RESULT)." >&2
+    fi
   done
 fi
 
@@ -168,4 +178,11 @@ fi
 
 if [[ "$argocd_plugin" == "true" ]]; then
   restoreOutput
+fi
+
+if [[ "$DIFF_ERROR_CODE" -ne 0 ]]; then
+  exit "$DIFF_ERROR_CODE"
+fi
+if [[ "$DIFF_FOUND" == "true" ]]; then
+  exit 1
 fi
