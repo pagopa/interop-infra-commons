@@ -25,11 +25,6 @@ on:
         required: false
         type: string
         default: ''
-      use_kubectl_diff:
-        description: 'Use kubectl diff instead of helm diff'
-        required: false
-        type: boolean
-        default: false
       enable_force_upgrade:
         description: 'Enable force upgrade for Helm deployments'
         required: false
@@ -142,7 +137,7 @@ jobs:
         env:
           ENVIRONMENT: ${{ inputs.environment }}
           TARGET: ${{ inputs.target }}
-          USE_KUBECTL_DIFF: ${{ inputs.use_kubectl_diff }}
+          DEPLOY_MODE: ${{ inputs.deploy_mode }}
           KIND: ${{ inputs.kind }}
         run: |
           set -euo pipefail
@@ -150,13 +145,13 @@ jobs:
           export PROJECT_DIR=$(pwd)
           DIFF_EXIT_CODE=1
           DIFF_FOUND_EXIT_CODE=2
-          if [[ "$USE_KUBECTL_DIFF" == "true" ]]; then
+          if [[ "$DEPLOY_MODE" == "KUBECTL_APPLY" ]]; then
             DIFF_FOUND_EXIT_CODE=1
           fi
 
           if [[ "$KIND" == "microservice" ]]; then
             set +e
-            if [[ "$USE_KUBECTL_DIFF" == "true" ]]; then
+            if [[ "$DEPLOY_MODE" == "KUBECTL_APPLY" ]]; then
               $SCRIPTS_FOLDER/kubectlDiff-svc-single-standalone.sh \
                 --skip-dep \
                 --environment $ENVIRONMENT \
@@ -175,7 +170,7 @@ jobs:
 
           else
             set +e
-            if [[ "$USE_KUBECTL_DIFF" == "true" ]]; then
+            if [[ "$DEPLOY_MODE" == "KUBECTL_APPLY" ]]; then
               $SCRIPTS_FOLDER/kubectlDiff-cron-single-standalone.sh \
                 --skip-dep \
                 --environment $ENVIRONMENT \
