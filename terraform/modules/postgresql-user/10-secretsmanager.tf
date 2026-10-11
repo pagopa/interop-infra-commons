@@ -13,13 +13,11 @@ resource "aws_secretsmanager_secret" "this" {
 resource "aws_secretsmanager_secret_version" "this" {
   secret_id = aws_secretsmanager_secret.this.id
 
-  secret_string = jsonencode({
+  secret_string_wo = jsonencode({
     database = var.db_name
     username = var.username
     password = data.aws_secretsmanager_random_password.this.random_password
   })
 
-  lifecycle {
-    ignore_changes = [secret_string]
-  }
+  secret_string_wo_version = var.secret_string_wo_version
 }
