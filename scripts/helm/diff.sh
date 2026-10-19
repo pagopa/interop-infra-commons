@@ -51,11 +51,25 @@ sort_env_section() {
   fi
 }
 
-sort_env_section $1
-sort_env_section $2
+if [[ $# -ne 2 ]]; then
+  echo "Error: expected exactly two diff inputs." >&2
+  exit 2
+fi
+for input_path in "$@"; do
+  if [[ ! -e "$input_path" || ! -r "$input_path" ]]; then
+    echo "Error: diff input '$input_path' does not exist or is not readable." >&2
+    exit 2
+  fi
+done
+
+sort_env_section "$1"
+sort_env_section "$2"
 
 SKIP_LINE=0
-diff "${DIFF_ARGS[@]}" "$@" | awk -v skip=$SKIP_LINE '
+DIFF_OUTPUT=$(diff "${DIFF_ARGS[@]}" "$@")
+DIFF_EXIT_CODE=$?
+
+awk -v skip=$SKIP_LINE '
   BEGIN {
     exit_code = 0
   }
@@ -80,4 +94,16 @@ diff "${DIFF_ARGS[@]}" "$@" | awk -v skip=$SKIP_LINE '
       print $0
     }
   }
-  END {exit exit_code}'
+  END {exit exit_code}' <<< "$DIFF_OUTPUT"
+FILTER_EXIT_CODE=$?
+
+if (( FILTER_EXIT_CODE > 1 )); then
+  exit "$FILTER_EXIT_CODE"
+fi
+if (( DIFF_EXIT_CODE > 1 )); then
+  exit "$DIFF_EXIT_CODE"
+fi
+if (( FILTER_EXIT_CODE == 1 )); then
+  exit 1
+fi
+exit 0

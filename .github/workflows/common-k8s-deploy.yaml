@@ -8,7 +8,7 @@ on:
         required: true
         type: string
       timeout_seconds:
-        description: 'Kubectl apply wait timeout in seconds for Deployments'
+        description: 'Kubectl apply / Helm upgrade wait timeout in seconds for Deployments'
         required: false
         type: number
         default: -1
@@ -17,13 +17,8 @@ on:
         required: false
         type: string
         default: ''
-      use_kubectl_diff:
-        description: 'Use kubectl diff instead of helm diff'
-        required: false
-        type: boolean
-        default: false
-      use_kubectl_apply:
-        description: 'Use kubectl apply instead of helm upgrade'
+      enable_force_upgrade:
+        description: 'Force Helm upgrade for all deployed workloads'
         required: false
         type: boolean
         default: false
@@ -54,14 +49,48 @@ jobs:
     outputs:
       microservices: ${{ steps.set-outputs.outputs.microservices }}
       cronjobs: ${{ steps.set-outputs.outputs.cronjobs }}
+      microservice_deploy_mode: ${{ steps.set-outputs.outputs.microservice_deploy_mode }}
+      cronjob_deploy_mode: ${{ steps.set-outputs.outputs.cronjob_deploy_mode }}
     steps:
       - name: Checkout
         id: checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - id: set-outputs
         run: |
+          set -euo pipefail
+
           echo "microservices=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
           echo "cronjobs=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | jq -R -s -c 'split("\n")[:-1]')" >> "$GITHUB_OUTPUT"
+
+          MICROSERVICE_COMMON_VALUES_FILE="commons/$TARGET_ENVIRONMENT/values-microservice.yaml"
+          MICROSERVICE_DEPLOY_MODE=$(yq -r '.deployMode // "HELM_UPGRADE"' "$MICROSERVICE_COMMON_VALUES_FILE")
+
+          case "$MICROSERVICE_DEPLOY_MODE" in
+            HELM_UPGRADE|KUBECTL_APPLY)
+              ;;
+            *)
+              echo "::error file=$MICROSERVICE_COMMON_VALUES_FILE::Unsupported deployMode '$MICROSERVICE_DEPLOY_MODE'. Allowed values: HELM_UPGRADE, KUBECTL_APPLY."
+              exit 1
+              ;;
+          esac
+
+          echo "microservice_deploy_mode=$MICROSERVICE_DEPLOY_MODE" >> "$GITHUB_OUTPUT"
+          echo "INFO - Selected microservices deploy mode for '$TARGET_ENVIRONMENT': $MICROSERVICE_DEPLOY_MODE"
+
+          CRONJOB_COMMON_VALUES_FILE="commons/$TARGET_ENVIRONMENT/values-cronjob.yaml"
+          CRONJOB_DEPLOY_MODE=$(yq -r '.deployMode // "HELM_UPGRADE"' "$CRONJOB_COMMON_VALUES_FILE")
+
+          case "$CRONJOB_DEPLOY_MODE" in
+            HELM_UPGRADE|KUBECTL_APPLY)
+              ;;
+            *)
+              echo "::error file=$CRONJOB_COMMON_VALUES_FILE::Unsupported deployMode '$CRONJOB_DEPLOY_MODE'. Allowed values: HELM_UPGRADE, KUBECTL_APPLY."
+              exit 1
+              ;;
+          esac
+
+          echo "cronjob_deploy_mode=$CRONJOB_DEPLOY_MODE" >> "$GITHUB_OUTPUT"
+          echo "INFO - Selected cronjobs deploy mode for '$TARGET_ENVIRONMENT': $CRONJOB_DEPLOY_MODE"
 
   deploy_common_configmaps:
     name: Deploy Common Configmaps
@@ -109,8 +138,8 @@ jobs:
       kind: "microservice"
       target: ${{ matrix.target }}
       infra_commons_tag: ${{ inputs.infra_commons_tag }}
-      use_kubectl_diff: ${{ inputs.use_kubectl_diff }}
-      use_kubectl_apply: ${{ inputs.use_kubectl_apply }}
+      enable_force_upgrade: ${{ inputs.enable_force_upgrade }}
+      deploy_mode: ${{ needs.workflow_setup.outputs.microservice_deploy_mode }}
 
   deploy_cj:
     name: ${{ matrix.target }}
@@ -128,5 +157,5 @@ jobs:
       kind: "cronjob"
       target: ${{ matrix.target }}
       infra_commons_tag: ${{ inputs.infra_commons_tag }}
-      use_kubectl_diff: ${{ inputs.use_kubectl_diff }}
-      use_kubectl_apply: ${{ inputs.use_kubectl_apply }}
+      enable_force_upgrade: ${{ inputs.enable_force_upgrade }}
+      deploy_mode: ${{ needs.workflow_setup.outputs.cronjob_deploy_mode }}
