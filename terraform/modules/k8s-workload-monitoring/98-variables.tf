@@ -33,7 +33,7 @@ variable "k8s_workload_name" {
 }
 
 variable "use_container_name_for_app_errors_alarm" {
-  description = "If set to true, uses the container name for the PodApp dimension in the app-errors CloudWatch alarms"
+  description = "If set to true, uses the container name for the PodApp dimension in the app-errors CloudWatch alarm"
   type        = bool
   default     = false
 }
