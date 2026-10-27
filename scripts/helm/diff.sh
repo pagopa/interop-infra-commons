@@ -57,6 +57,7 @@ sort_env_section() {
     sort_env_if_present "$target" "$kind" '.spec.template.spec.containers' || return $?
   
   elif [[ $kind == "CronJob" ]]; then
+    sort_env_if_present "$target" "$kind" '.spec.jobTemplate.spec.template.spec.initContainers' || return $?
     sort_env_if_present "$target" "$kind" '.spec.jobTemplate.spec.template.spec.containers' || return $?
   fi
 }
