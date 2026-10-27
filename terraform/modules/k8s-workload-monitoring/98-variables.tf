@@ -32,8 +32,14 @@ variable "k8s_workload_name" {
   type        = string
 }
 
-variable "k8s_argocd_container_name" {
-  description = "Name of the container for ArgoCD workloads. Necessary for identifying the correct PodApp dimension in the app-errors CloudWatch alarms"
+variable "use_container_name_for_app_errors_alarm" {
+  description = "If set to true, uses the container name for the PodApp dimension in the app-errors CloudWatch alarms"
+  type        = bool
+  default     = false
+}
+
+variable "k8s_container_name" {
+  description = "Name of the container for the K8s workload"
   type        = string
   default     = null
 }

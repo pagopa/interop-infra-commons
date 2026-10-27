@@ -81,7 +81,7 @@ resource "aws_cloudwatch_metric_alarm" "app_errors" {
   namespace   = var.cloudwatch_app_logs_errors_metric_namespace
 
   dimensions = {
-    PodApp       = var.k8s_argocd_container_name != null ? var.k8s_argocd_container_name : var.k8s_workload_name
+    PodApp       = var.use_container_name_for_app_errors_alarm && var.k8s_container_name != null ? var.k8s_container_name : var.k8s_workload_name
     PodNamespace = var.k8s_namespace
   }
 
