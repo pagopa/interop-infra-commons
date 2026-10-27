@@ -32,6 +32,12 @@ variable "k8s_workload_name" {
   type        = string
 }
 
+variable "k8s_argocd_container_name" {
+  description = "Name of the container in the K8s workload"
+  type        = string
+  default     = null
+}
+
 ################################################################################
 # SNS
 ################################################################################
