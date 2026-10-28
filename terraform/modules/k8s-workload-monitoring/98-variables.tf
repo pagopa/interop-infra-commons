@@ -32,6 +32,12 @@ variable "k8s_workload_name" {
   type        = string
 }
 
+variable "k8s_container_name" {
+  description = "Name of the container for the K8s workload. If set, it will be used for the PodApp dimension in the app-errors CloudWatch alarm instead of the workload name"
+  type        = string
+  default     = null
+}
+
 ################################################################################
 # SNS
 ################################################################################
