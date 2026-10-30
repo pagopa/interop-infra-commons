@@ -61,6 +61,7 @@ do
           shift 1
           ;;
         -i | --image )
+          [[ -n "${2:-}" ]] || { echo "Image file cannot be null or empty."; help; }
           images_file=$2
           step=2
           shift 2
@@ -173,8 +174,8 @@ if [[ $skip_dep == false ]]; then
 fi
 
 MICROSERVICE_OPTIONS=" "
-if [[ $disable_templating_lookup != true ]]; then
-  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --enable-templating-lookup"
+if [[ "$disable_templating_lookup" == "true" ]]; then
+  MICROSERVICE_OPTIONS=$MICROSERVICE_OPTIONS" --disable-templating-lookup"
 fi
 # Skip further execution of helm deps build and update since we have already done it in the previous line
 OPTIONS=$OPTIONS" -sd"

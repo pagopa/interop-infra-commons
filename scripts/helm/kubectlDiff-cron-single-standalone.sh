@@ -61,6 +61,7 @@ do
           shift 2
           ;;
         -i | --image )
+          [[ -n "${2:-}" ]] || { echo "Image file cannot be null or empty."; help; }
           images_file=$2
           step=2
           shift 2
@@ -171,9 +172,27 @@ fi
 HELM_TEMPLATE_SCRIPT="$SCRIPTS_FOLDER/helmTemplate-cron-single.sh"
 DIFF_SCRIPT="$SCRIPTS_FOLDER/diff.sh"
 
-"$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS | \
- KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -
+set +e
+HELM_TEMPLATE_OUTPUT=$("$HELM_TEMPLATE_SCRIPT" -e "$ENV" -j "$job" $OPTIONS)
+HELM_TEMPLATE_EXIT_CODE=$?
+set -e
+
+if [[ "$HELM_TEMPLATE_EXIT_CODE" -ne 0 ]]; then
+  echo "Error: Helm template failed for CronJob '$job' (exit code $HELM_TEMPLATE_EXIT_CODE)." >&2
+  if [[ "$argocd_plugin" == "true" ]]; then
+    restoreOutput
+  fi
+  exit 2
+fi
+
+set +e
+printf '%s' "$HELM_TEMPLATE_OUTPUT" | \
+  KUBECTL_EXTERNAL_DIFF="$DIFF_SCRIPT" kubectl diff --show-managed-fields=false -f -
+KUBECTL_DIFF_EXIT_CODE=$?
+set -e
 
 if [[ "$argocd_plugin" == "true" ]]; then
   restoreOutput
 fi
+
+exit "$KUBECTL_DIFF_EXIT_CODE"

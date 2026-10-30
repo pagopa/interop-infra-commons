@@ -1,0 +1,618 @@
+name: 'Deployment repo validation'
+description: 'Validates repository structure, microservices, and cronjobs for a target environment.'
+
+inputs:
+  environment:
+    description: 'Environment to run tests against'
+    required: true
+  infra_commons_tag:
+    description: 'Tag or ref of the interop-infra-commons repository to use'
+    required: true
+  enable_kube_linter:
+    description: 'Enable Kube-linter validation (allowed: true or false)'
+    required: false
+    default: 'false'
+  strict_kube_linter_checks:
+    description: 'Enable strict kube-linter checks (allowed: true or false)'
+    required: false
+    default: 'false'
+  enable_argocd_validation:
+    description: 'Enable ArgoCD validation (allowed: true or false)'
+    required: false
+    default: 'false'
+  enable_argocd_schema_validation:
+    description: 'Enable ArgoCD schema validation (allowed: true or false)'
+    required: false
+    default: 'false'
+  repo_structure_validation_warning_only:
+    description: 'Enable warning only mode for repo structure validation (allowed: true or false)'
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Validate and print action inputs
+      id: validate_inputs
+      shell: bash
+      env:
+        environment: ${{ inputs.environment }}
+        infra_commons_tag: ${{ inputs.infra_commons_tag }}
+        enable_kube_linter: ${{ inputs.enable_kube_linter }}
+        strict_kube_linter_checks: ${{ inputs.strict_kube_linter_checks }}
+        enable_argocd_validation: ${{ inputs.enable_argocd_validation }}
+        enable_argocd_schema_validation: ${{ inputs.enable_argocd_schema_validation }}
+        repo_structure_validation_warning_only: ${{ inputs.repo_structure_validation_warning_only }}
+      run: |
+        set -euo pipefail
+        invalid_inputs=0
+        for input_name in \
+          enable_kube_linter \
+          strict_kube_linter_checks \
+          enable_argocd_validation \
+          enable_argocd_schema_validation \
+          repo_structure_validation_warning_only; do
+          case "${!input_name}" in
+            true|false) ;;
+            *)
+              echo "::error::Input '$input_name' must be exactly 'true' or 'false'."
+              invalid_inputs=1
+              ;;
+          esac
+        done
+        if [[ "$invalid_inputs" -ne 0 ]]; then
+          exit 1
+        fi
+
+        echo "Action inputs:"
+        echo "environment=${environment}"
+        echo "infra_commons_tag=${infra_commons_tag}"
+        echo "enable_kube_linter=${enable_kube_linter}"
+        echo "strict_kube_linter_checks=${strict_kube_linter_checks}"
+        echo "enable_argocd_validation=${enable_argocd_validation}"
+        echo "enable_argocd_schema_validation=${enable_argocd_schema_validation}"
+        echo "repo_structure_validation_warning_only=${repo_structure_validation_warning_only}"
+
+    - name: Checkout current repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    - name: Checkout scripts repository
+      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        repository: pagopa/interop-infra-commons
+        path: interop-infra-commons
+        fetch-depth: 0
+        sparse-checkout: |
+          scripts/validation
+          scripts/helm
+        ref: ${{ inputs.infra_commons_tag }}
+
+    - name: Install kubeconform
+      if: ${{ inputs.enable_argocd_schema_validation == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+
+        echo "Installing kubeconform"
+
+        mkdir -p .tools
+        curl -sSLo kubeconform.tar.gz https://github.com/yannh/kubeconform/releases/download/v0.8.0/kubeconform-linux-amd64.tar.gz
+        tar -xzf kubeconform.tar.gz -C .tools kubeconform
+        chmod +x .tools/kubeconform
+        rm kubeconform.tar.gz
+        echo "$PWD/.tools" >> "$GITHUB_PATH"
+
+    - name: Echo kubeconform version
+      if: ${{ inputs.enable_argocd_schema_validation == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        echo "kubeconform binary: $(command -v kubeconform)"
+        echo "kubeconform version:"
+        kubeconform -v
+
+    - name: Run repository structure checks
+      shell: bash
+      env:
+        REPO_STRUCTURE_VALIDATION_WARNING_ONLY: ${{ inputs.repo_structure_validation_warning_only }}
+        ENABLE_ARGOCD_VALIDATION: ${{ inputs.enable_argocd_validation }}
+        ENABLE_ARGOCD_SCHEMA_VALIDATION: ${{ inputs.enable_argocd_schema_validation }}
+        TARGET_ENV: ${{ inputs.environment }}
+        VALIDATION_SCRIPTS_FOLDER: ./interop-infra-commons/scripts/validation
+      run: |
+        set -euo pipefail
+        echo "GITHUB_WORKSPACE: ${GITHUB_WORKSPACE}"
+
+        ARGS=(
+          --repo-root "${GITHUB_WORKSPACE}"
+          --target-env "${TARGET_ENV}"
+          --legacy-exceptions-file docs/repo-structure-validation-exceptions.txt
+          --enable-argocd-validation "${ENABLE_ARGOCD_VALIDATION}"
+          --enable-argocd-schema-validation "${ENABLE_ARGOCD_SCHEMA_VALIDATION}"
+        )
+
+        if [[ "${REPO_STRUCTURE_VALIDATION_WARNING_ONLY}" == "true" ]]; then
+          ARGS+=(--warning-only)
+        fi
+
+        bash "${VALIDATION_SCRIPTS_FOLDER}/validate-repo-structure.sh" "${ARGS[@]}"
+
+    - name: Install kube-linter
+      if: ${{ inputs.enable_kube_linter == 'true' }}
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p .tools
+        curl -sSLO https://github.com/stackrox/kube-linter/releases/download/v0.7.1/kube-linter-linux.tar.gz
+        tar -xzf kube-linter-linux.tar.gz -C .tools kube-linter
+        chmod +x .tools/kube-linter
+        rm kube-linter-linux.tar.gz
+        ./.tools/kube-linter version
+
+        echo "$PWD/.tools" >> "$GITHUB_PATH"
+
+    - name: Microservices discovery
+      if: ${{ always() && steps.validate_inputs.outcome == 'success' }}
+      shell: bash
+      id: microservices_discovery
+      env:
+        TARGET_ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        echo "Discovering workloads for environment $TARGET_ENVIRONMENT"
+        MICROSERVICES=$(find microservices -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | tr '\n' ' ')
+        echo "microservices=$MICROSERVICES" >> "$GITHUB_OUTPUT"
+        echo "microservices discovered: $MICROSERVICES"
+
+    - name: Microservices template and lint
+      id: microservices_template_and_lint
+      shell: bash
+      if: ${{ always() && steps.microservices_discovery.outcome == 'success' }}
+      env:
+        ENVIRONMENT: ${{ inputs.environment }}
+        MICROSERVICES: ${{ steps.microservices_discovery.outputs.microservices }}
+        HELM_SCRIPTS_FOLDER: ./interop-infra-commons/scripts/helm
+        ENABLE_KUBE_LINTER: ${{ inputs.enable_kube_linter }}
+        STRICT_KUBE_LINTER_CHECKS: ${{ inputs.strict_kube_linter_checks }}
+      run: |
+        set -euo pipefail
+
+        export PROJECT_DIR=$(pwd)
+        REPO_NAME="$(basename "$PROJECT_DIR")"
+        FAILED_MICROSERVICES=""
+        HELM_LINT_ERROR_FLAG=0
+        HELM_TEMPLATE_ERROR_FLAG=0
+        KUBE_LINT_ERROR_FLAG=0
+        SKIP_DEP_OPT=""
+        HELM_LINT_REPORT_PATH="$(pwd)/microservices-helm-lint-report.txt"
+        HELM_TEMPLATE_REPORT_PATH="$(pwd)/microservices-helm-template-report.txt"
+        KUBE_LINT_REPORT_PATH="$(pwd)/microservices-kube-lint-report.txt"
+        : > "$HELM_LINT_REPORT_PATH"
+        : > "$HELM_TEMPLATE_REPORT_PATH"
+        : > "$KUBE_LINT_REPORT_PATH"
+
+        sanitize_log_paths() {
+          local log_path="$1"
+          local from_path="$2"
+          local to_path="$3"
+          local safe_to_path
+
+          safe_to_path="${to_path//&/\\&}"
+
+          # Rewrite only absolute runner/workspace file paths in log content.
+          sed "s|${from_path}|${safe_to_path}|g" "$log_path"
+        }
+
+        if [[ -n "$MICROSERVICES" ]]; then
+          set +e
+          for MICROSERVICE_NAME in $MICROSERVICES; do
+            echo "::group::Processing microservice: $MICROSERVICE_NAME"
+            WORKLOAD_PATH="${REPO_NAME}/microservices/${MICROSERVICE_NAME}"
+            WORKLOAD_VALIDATION_ERROR_FLAG=0
+
+            echo "Helm Linting microservice: $MICROSERVICE_NAME"
+            LINT_OUTPUT_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.yaml"
+            LINT_LOG_PATH="$(pwd)/helm-lint-${MICROSERVICE_NAME}.log"
+            "$HELM_SCRIPTS_FOLDER"/helmLint-svc-single.sh \
+              --debug $SKIP_DEP_OPT -e "$ENVIRONMENT" \
+              -m "$MICROSERVICE_NAME" \
+              -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
+              --output "$LINT_OUTPUT_PATH" >"$LINT_LOG_PATH" 2>&1
+
+            if [[ $? -ne 0 ]]; then
+              echo "Linting failed for microservice: $MICROSERVICE_NAME"
+              FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
+              WORKLOAD_VALIDATION_ERROR_FLAG=1
+              HELM_LINT_ERROR_FLAG=1
+              printf '::group::Helm lint: %s' "$MICROSERVICE_NAME" >> "$HELM_LINT_REPORT_PATH"
+              printf '%s\n' "" >> "$HELM_LINT_REPORT_PATH"
+              sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
+              printf '%s\n' "" >> "$HELM_LINT_REPORT_PATH"
+              printf '::endgroup::\n' >> "$HELM_LINT_REPORT_PATH"
+              echo "::endgroup::\n"
+              continue
+            fi
+
+            # After the first Helm lint, set SKIP_DEP_OPT to skip dependencies for subsequent Helm commands.
+            SKIP_DEP_OPT="-sd"
+
+            TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.yaml"
+            TEMPLATE_LOG_PATH="$(pwd)/helm-template-${MICROSERVICE_NAME}.log"
+            echo "Templating microservice: $MICROSERVICE_NAME"
+            "$HELM_SCRIPTS_FOLDER"/helmTemplate-svc-single.sh \
+              --debug $SKIP_DEP_OPT \
+              --disable-templating-lookup \
+              --environment "$ENVIRONMENT" \
+              --microservice "$MICROSERVICE_NAME" \
+              -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
+              --output "$TEMPLATE_OUTPUT_PATH" >"$TEMPLATE_LOG_PATH" 2>&1
+
+            if [[ $? -ne 0 ]]; then
+              echo "Template generation failed for microservice: $MICROSERVICE_NAME"
+              FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(template) "
+              WORKLOAD_VALIDATION_ERROR_FLAG=1
+              HELM_TEMPLATE_ERROR_FLAG=1
+              printf '::group::Helm template: %s' "$MICROSERVICE_NAME" >> "$HELM_TEMPLATE_REPORT_PATH"
+              printf '%s\n' "" >> "$HELM_TEMPLATE_REPORT_PATH"
+              sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
+              printf '%s\n' "" >> "$HELM_TEMPLATE_REPORT_PATH"
+              printf '::endgroup::\n' >> "$HELM_TEMPLATE_REPORT_PATH"
+              echo "::endgroup::\n"
+              continue
+            fi
+
+            if [[ "${ENABLE_KUBE_LINTER}" == "true" ]]; then
+              echo "Kube Linting microservice: $MICROSERVICE_NAME"
+              KUBE_LINTER_LOG_PATH="$(pwd)/kube-lint-${MICROSERVICE_NAME}.log"
+              kube-linter lint "$TEMPLATE_OUTPUT_PATH" >"$KUBE_LINTER_LOG_PATH" 2>&1
+              LINTER_EXIT_CODE=$?
+
+              if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
+                echo "Linting failed for microservice: $MICROSERVICE_NAME"
+                FAILED_MICROSERVICES="${FAILED_MICROSERVICES}${MICROSERVICE_NAME}(lint) "
+                WORKLOAD_VALIDATION_ERROR_FLAG=1
+                printf '::group::Kube-linter: %s' "$MICROSERVICE_NAME" >> "$KUBE_LINT_REPORT_PATH"
+                if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "false" ]]; then
+                  printf '\n%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR MICROSERVICE ${MICROSERVICE_NAME}" >> "$KUBE_LINT_REPORT_PATH"
+                  printf '%s\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
+                fi
+                printf '%s\n' "" >> "$KUBE_LINT_REPORT_PATH"
+                sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
+                printf '::endgroup::\n' >> "$KUBE_LINT_REPORT_PATH"
+                
+                if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
+                  KUBE_LINT_ERROR_FLAG=1
+                fi
+              fi
+            fi
+
+            if [[ $WORKLOAD_VALIDATION_ERROR_FLAG -eq 0 ]]; then
+              echo "Microservice $MICROSERVICE_NAME passed all checks"
+            fi
+
+            echo "=== Completed processing microservice: $MICROSERVICE_NAME ==="
+            echo "::endgroup::\n"
+          done
+
+          set -e
+        else
+          echo "No microservices found for environment ${ENVIRONMENT}"
+        fi
+
+        echo "MICROSERVICES_HELM_LINT_REPORT_PATH=$HELM_LINT_REPORT_PATH" >> "$GITHUB_ENV"
+        echo "MICROSERVICES_HELM_LINT_ERRORS=$HELM_LINT_ERROR_FLAG" >> "$GITHUB_ENV"
+        echo "MICROSERVICES_HELM_TEMPLATE_REPORT_PATH=$HELM_TEMPLATE_REPORT_PATH" >> "$GITHUB_ENV"
+        echo "MICROSERVICES_HELM_TEMPLATE_ERRORS=$HELM_TEMPLATE_ERROR_FLAG" >> "$GITHUB_ENV"
+        echo "MICROSERVICES_KUBE_LINT_REPORT_PATH=$KUBE_LINT_REPORT_PATH" >> "$GITHUB_ENV"
+        echo "MICROSERVICES_KUBE_LINT_ERRORS=$KUBE_LINT_ERROR_FLAG" >> "$GITHUB_ENV"
+
+        if [[ -n "$FAILED_MICROSERVICES" ]]; then
+          echo "Some microservices failed validation. Failed items: $FAILED_MICROSERVICES"
+        else
+          echo "All microservices passed validation successfully"
+        fi
+
+    - name: Microservices Helm lint summary
+      if: ${{ always() && steps.microservices_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ env.MICROSERVICES_HELM_LINT_REPORT_PATH }}
+        BLOCKING_ERRORS: ${{ env.MICROSERVICES_HELM_LINT_ERRORS }}
+      run: |
+        set -euo pipefail
+
+        echo "## Microservices Helm lint summary"
+        echo ""
+
+        if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
+          echo ""
+
+          cat "$REPORT_PATH"
+          echo ""
+        else
+          echo "- No workload-level failures recorded."
+        fi
+
+        if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
+          echo "::error::Helm lint errors detected for microservices."
+          exit 1
+        fi
+
+    - name: Microservices kube-linter summary
+      if: ${{ always() && steps.microservices_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ env.MICROSERVICES_KUBE_LINT_REPORT_PATH }}
+        BLOCKING_ERRORS: ${{ env.MICROSERVICES_KUBE_LINT_ERRORS }}
+      run: |
+        set -euo pipefail
+
+        echo "## Microservices kube-linter summary"
+        echo ""
+
+        if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
+          cat "$REPORT_PATH"
+          echo ""
+        else
+          echo "- No workload-level failures recorded."
+        fi
+
+        if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
+          echo "::error::Kube-linter errors detected for microservices."
+          exit 1
+        fi
+
+    - name: Microservices Helm template summary
+      if: ${{ always() && steps.microservices_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ env.MICROSERVICES_HELM_TEMPLATE_REPORT_PATH }}
+        BLOCKING_ERRORS: ${{ env.MICROSERVICES_HELM_TEMPLATE_ERRORS }}
+      run: |
+        set -euo pipefail
+
+        echo "## Microservices Helm template summary"
+        
+        if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
+          echo ""
+          cat "$REPORT_PATH"
+          echo ""
+        else
+          echo "- No workload-level failures recorded."
+        fi
+
+        if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
+          echo "::error::Helm template errors detected for microservices."
+          exit 1
+        fi
+
+    - name: Cronjobs discovery
+      shell: bash
+      id: cronjobs_discovery
+      if: ${{ always() && steps.validate_inputs.outcome == 'success' }}
+      env:
+        TARGET_ENVIRONMENT: ${{ inputs.environment }}
+      run: |
+        echo "Discovering cronjobs for environment $TARGET_ENVIRONMENT"
+        CRONJOBS=$(find jobs -type f -path "*/$TARGET_ENVIRONMENT/values.yaml" -exec dirname {} \; | awk -F'/' '{print $2}' | tr '\n' ' ')
+        echo "cronjobs=$CRONJOBS" >> "$GITHUB_OUTPUT"
+        echo "Cronjobs discovered: $CRONJOBS"
+
+    - name: Cronjobs template and lint
+      id: cronjobs_template_and_lint
+      shell: bash
+      if: ${{ always() && steps.cronjobs_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
+      env:
+        ENVIRONMENT: ${{ inputs.environment }}
+        CRONJOBS: ${{ steps.cronjobs_discovery.outputs.cronjobs }}
+        HELM_SCRIPTS_FOLDER: ./interop-infra-commons/scripts/helm
+        ENABLE_KUBE_LINTER: ${{ inputs.enable_kube_linter }}
+        STRICT_KUBE_LINTER_CHECKS: ${{ inputs.strict_kube_linter_checks }}
+      run: |
+        set -euo pipefail
+
+        export PROJECT_DIR=$(pwd)
+        REPO_NAME="$(basename "$PROJECT_DIR")"
+        FAILED_CRONJOBS=""
+        HELM_LINT_ERROR_FLAG=0
+        HELM_TEMPLATE_ERROR_FLAG=0
+        KUBE_LINT_ERROR_FLAG=0
+        SKIP_DEP_OPT=""
+        HELM_LINT_REPORT_PATH="$(pwd)/cronjobs-helm-lint-report.txt"
+        HELM_TEMPLATE_REPORT_PATH="$(pwd)/cronjobs-helm-template-report.txt"
+        KUBE_LINT_REPORT_PATH="$(pwd)/cronjobs-kube-lint-report.txt"
+        : > "$HELM_LINT_REPORT_PATH"
+        : > "$HELM_TEMPLATE_REPORT_PATH"
+        : > "$KUBE_LINT_REPORT_PATH"
+
+        sanitize_log_paths() {
+          local log_path="$1"
+          local from_path="$2"
+          local to_path="$3"
+          local safe_to_path
+
+          safe_to_path="${to_path//&/\\&}"
+
+          # Rewrite only absolute runner/workspace file paths in log content.
+          sed "s|${from_path}|${safe_to_path}|g" "$log_path"
+        }
+
+        if [[ -n "$CRONJOBS" ]]; then
+          set +e
+          for CRONJOB_NAME in $CRONJOBS; do
+            echo "::group::Processing cronjob: $CRONJOB_NAME"
+            WORKLOAD_PATH="${REPO_NAME}/jobs/${CRONJOB_NAME}"
+            WORKLOAD_VALIDATION_ERROR_FLAG=0
+
+            echo "Helm Linting cronjob: $CRONJOB_NAME"
+            LINT_OUTPUT_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.yaml"
+            LINT_LOG_PATH="$(pwd)/helm-lint-${CRONJOB_NAME}.log"
+            "$HELM_SCRIPTS_FOLDER"/helmLint-cron-single.sh \
+              --debug $SKIP_DEP_OPT -e "$ENVIRONMENT" \
+              -j "$CRONJOB_NAME" \
+              -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
+              --output "$LINT_OUTPUT_PATH" >"$LINT_LOG_PATH" 2>&1
+
+            if [[ $? -ne 0 ]]; then
+              echo "Linting failed for cronjob: $CRONJOB_NAME"
+              FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
+              WORKLOAD_VALIDATION_ERROR_FLAG=1
+              HELM_LINT_ERROR_FLAG=1
+              printf '::group::Helm lint: %s' "$CRONJOB_NAME" >> "$HELM_LINT_REPORT_PATH"
+              printf '%s\n' "" >> "$HELM_LINT_REPORT_PATH"
+              sanitize_log_paths "$LINT_LOG_PATH" "$LINT_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_LINT_REPORT_PATH"
+              printf '::endgroup::\n' >> "$HELM_LINT_REPORT_PATH"
+              echo "::endgroup::\n"
+              continue
+            fi
+
+            # After the first Helm lint, set SKIP_DEP_OPT to skip dependencies for subsequent Helm commands.
+            SKIP_DEP_OPT="-sd"
+
+            TEMPLATE_OUTPUT_PATH="$(pwd)/helm-template-${CRONJOB_NAME}.yaml"
+            TEMPLATE_LOG_PATH="$(pwd)/helm-template-${CRONJOB_NAME}.log"
+            echo "Templating cronjob: $CRONJOB_NAME"
+            "$HELM_SCRIPTS_FOLDER"/helmTemplate-cron-single.sh \
+              --debug $SKIP_DEP_OPT \
+              --disable-templating-lookup \
+              --environment "$ENVIRONMENT" \
+              --job "$CRONJOB_NAME" \
+              -i "$PROJECT_DIR/commons/$ENVIRONMENT/images.yaml" \
+              --output "$TEMPLATE_OUTPUT_PATH" >"$TEMPLATE_LOG_PATH" 2>&1
+
+            if [[ $? -ne 0 ]]; then
+              echo "Template generation failed for cronjob: $CRONJOB_NAME"
+              FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(template) "
+              WORKLOAD_VALIDATION_ERROR_FLAG=1
+              HELM_TEMPLATE_ERROR_FLAG=1
+              printf '::group::Helm template: %s' "$CRONJOB_NAME" >> "$HELM_TEMPLATE_REPORT_PATH"
+              printf '%s\n' "" >> "$HELM_TEMPLATE_REPORT_PATH"
+              sanitize_log_paths "$TEMPLATE_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$HELM_TEMPLATE_REPORT_PATH"
+              printf '::endgroup::\n' >> "$HELM_TEMPLATE_REPORT_PATH"
+              echo "::endgroup::\n"
+              continue
+            fi
+
+            if [[ "${ENABLE_KUBE_LINTER}" == "true" ]]; then
+              echo "Kube Linting cronjob: $CRONJOB_NAME"
+              KUBE_LINTER_LOG_PATH="$(pwd)/kube-lint-${CRONJOB_NAME}.log"
+              kube-linter lint "$TEMPLATE_OUTPUT_PATH" >"$KUBE_LINTER_LOG_PATH" 2>&1
+              LINTER_EXIT_CODE=$?
+
+              if [[ $LINTER_EXIT_CODE -ne 0 ]]; then
+                echo "Linting failed for cronjob: $CRONJOB_NAME"
+                FAILED_CRONJOBS="${FAILED_CRONJOBS}${CRONJOB_NAME}(lint) "
+                WORKLOAD_VALIDATION_ERROR_FLAG=1
+                printf '::group::Kube-linter: %s' "$CRONJOB_NAME" >> "$KUBE_LINT_REPORT_PATH"
+                if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "false" ]]; then
+                  printf '\n%s\n' "## WARNING: KUBE-LINTER LINTING FAILED FOR CRONJOB ${CRONJOB_NAME}" >> "$KUBE_LINT_REPORT_PATH"
+                  printf '%s\n' "## STRICT_KUBE_LINTER_CHECKS=FALSE: THE WORKFLOW CONTINUES AND DOES NOT FAIL" >> "$KUBE_LINT_REPORT_PATH"
+                  printf '%s\n' "" >> "$KUBE_LINT_REPORT_PATH"
+                fi
+                sanitize_log_paths "$KUBE_LINTER_LOG_PATH" "$TEMPLATE_OUTPUT_PATH" "$WORKLOAD_PATH" >> "$KUBE_LINT_REPORT_PATH"
+                printf '::endgroup::\n' >> "$KUBE_LINT_REPORT_PATH"
+                
+                if [[ "${STRICT_KUBE_LINTER_CHECKS}" == "true" ]]; then
+                  KUBE_LINT_ERROR_FLAG=1
+                fi
+              fi
+            fi
+
+            if [[ $WORKLOAD_VALIDATION_ERROR_FLAG -eq 0 ]]; then
+              echo "Cronjob $CRONJOB_NAME passed all checks"
+            fi
+
+            echo "=== Completed processing cronjob: $CRONJOB_NAME ==="
+            echo "::endgroup::\n"
+          done
+
+          set -e
+        else
+          echo "No cronjobs found for environment ${ENVIRONMENT}"
+        fi
+
+        echo "CRONJOBS_HELM_LINT_REPORT_PATH=$HELM_LINT_REPORT_PATH" >> "$GITHUB_ENV"
+        echo "CRONJOBS_HELM_LINT_ERRORS=$HELM_LINT_ERROR_FLAG" >> "$GITHUB_ENV"
+        echo "CRONJOBS_HELM_TEMPLATE_REPORT_PATH=$HELM_TEMPLATE_REPORT_PATH" >> "$GITHUB_ENV"
+        echo "CRONJOBS_HELM_TEMPLATE_ERRORS=$HELM_TEMPLATE_ERROR_FLAG" >> "$GITHUB_ENV"
+        echo "CRONJOBS_KUBE_LINT_REPORT_PATH=$KUBE_LINT_REPORT_PATH" >> "$GITHUB_ENV"
+        echo "CRONJOBS_KUBE_LINT_ERRORS=$KUBE_LINT_ERROR_FLAG" >> "$GITHUB_ENV"
+
+        if [[ -n "$FAILED_CRONJOBS" ]]; then
+          echo "Some cronjobs failed validation. Failed items: $FAILED_CRONJOBS"
+        else
+          echo "All cronjobs passed validation successfully"
+        fi
+
+    - name: Cronjobs Helm lint summary
+      if: ${{ always() && steps.cronjobs_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ env.CRONJOBS_HELM_LINT_REPORT_PATH }}
+        BLOCKING_ERRORS: ${{ env.CRONJOBS_HELM_LINT_ERRORS }}
+      run: |
+        set -euo pipefail
+
+        echo "## Cronjobs Helm lint summary"
+        echo ""
+
+        if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
+          echo ""
+          cat "$REPORT_PATH"
+          echo ""
+        else
+          echo "- No workload-level failures recorded."
+        fi
+
+        if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
+          echo "::error::Helm lint errors detected for cronjobs."
+          exit 1
+        fi
+
+    - name: Cronjobs kube-linter summary
+      if: ${{ always() && steps.cronjobs_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ env.CRONJOBS_KUBE_LINT_REPORT_PATH }}
+        BLOCKING_ERRORS: ${{ env.CRONJOBS_KUBE_LINT_ERRORS }}
+      run: |
+        set -euo pipefail
+
+        echo "## Cronjobs kube-linter summary"
+        echo ""
+        
+        if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
+          echo ""
+          cat "$REPORT_PATH"
+          echo ""
+        else
+          echo "- No workload-level failures recorded."
+        fi
+
+        if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
+          echo "::error::Kube-linter errors detected for cronjobs."
+          exit 1
+        fi
+
+    - name: Cronjobs Helm template summary
+      if: ${{ always() && steps.cronjobs_discovery.outcome == 'success' && steps.validate_inputs.outcome == 'success' }}
+      shell: bash
+      env:
+        REPORT_PATH: ${{ env.CRONJOBS_HELM_TEMPLATE_REPORT_PATH }}
+        BLOCKING_ERRORS: ${{ env.CRONJOBS_HELM_TEMPLATE_ERRORS }}
+      run: |
+        set -euo pipefail
+
+        echo "## Cronjobs Helm template summary"
+        
+        if [[ -n "${REPORT_PATH:-}" && -f "$REPORT_PATH" && -s "$REPORT_PATH" ]]; then
+          echo ""
+          cat "$REPORT_PATH"
+          echo ""
+        else
+          echo "- No workload-level failures recorded."
+        fi
+
+        if [[ "${BLOCKING_ERRORS:-0}" == "1" ]]; then
+          echo "::error::Helm template errors detected for cronjobs."
+          exit 1
+        fi

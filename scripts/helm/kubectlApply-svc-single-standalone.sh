@@ -32,7 +32,7 @@ disable_templating_lookup=false
 images_file=""
 chart_path=""
 disable_plugins_install=false
-
+argocd_plugin=false
 step=1
 for (( i=0; i<$args; i+=$step ))
 do
@@ -61,6 +61,7 @@ do
           shift 2
           ;;
         -i | --image )
+          [[ -n "${2:-}" ]] || { echo "Image file cannot be null or empty."; help; }
           images_file=$2
           step=2
           shift 2
@@ -165,8 +166,8 @@ fi
 if [[ $skip_dep == true ]]; then
   OPTIONS=$OPTIONS" -sd "
 fi
-if [[ $disable_templating_lookup != true ]]; then
-  OPTIONS=$OPTIONS" --enable-templating-lookup "
+if [[ $disable_templating_lookup == true ]]; then
+  OPTIONS=$OPTIONS" --disable-templating-lookup "
 fi
 if [[ "$argocd_plugin" == "true" ]]; then
   OPTIONS="$OPTIONS --argocd-plugin "

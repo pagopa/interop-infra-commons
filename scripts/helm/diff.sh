@@ -9,6 +9,21 @@ else
   DIFF_ARGS+=("--color=auto")
 fi
 
+sort_env_if_present() {
+  local target=$1
+  local kind=$2
+  local containers_path=$3
+  local env_path="${containers_path}[0].env"
+
+  # Select documents before updating so other YAML resources stay untouched.
+  KIND="$kind" yq -i "
+    (select(.kind == strenv(KIND)) |
+      select($containers_path | length > 0) |
+      select($env_path != null) |
+      $env_path) |= sort_by(.name)
+  " "$target" || return $?
+}
+
 sort_env_section() {
   target=$1
   kind=""
@@ -38,24 +53,34 @@ sort_env_section() {
   fi
   
   if [[ $kind == "Deployment" ]]; then
-    ORDERED_FLYWAY=$(KIND=$kind yq '(select(.kind == env(KIND)).spec.template.spec.initContainers[0].env | sort_by(.name))' "$target")
-    ORDERED=$(KIND=$kind yq '(select(.kind == env(KIND)).spec.template.spec.containers[0].env | sort_by(.name))' "$target")
-    
-    NEW_FLYWAY_ENVS=$ORDERED_FLYWAY yq -i '.spec.template.spec.initContainers[0].env = env(NEW_FLYWAY_ENVS)' $target
-    NEW_ENVS=$ORDERED yq -i '.spec.template.spec.containers[0].env = env(NEW_ENVS)' $target
+    sort_env_if_present "$target" "$kind" '.spec.template.spec.initContainers' || return $?
+    sort_env_if_present "$target" "$kind" '.spec.template.spec.containers' || return $?
   
   elif [[ $kind == "CronJob" ]]; then
-    ORDERED=$(KIND=$kind yq '(select(.kind == env(KIND)).spec.jobTemplate.spec.template.spec.containers[0].env | sort_by(.name))' "$target")
-    
-    NEW_ENVS=$ORDERED yq -i '.spec.jobTemplate.spec.template.spec.containers[0].env = env(NEW_ENVS)' $target
+    sort_env_if_present "$target" "$kind" '.spec.jobTemplate.spec.template.spec.initContainers' || return $?
+    sort_env_if_present "$target" "$kind" '.spec.jobTemplate.spec.template.spec.containers' || return $?
   fi
 }
 
-sort_env_section $1
-sort_env_section $2
+if [[ $# -ne 2 ]]; then
+  echo "Error: expected exactly two diff inputs." >&2
+  exit 2
+fi
+for input_path in "$@"; do
+  if [[ ! -e "$input_path" || ! -r "$input_path" ]]; then
+    echo "Error: diff input '$input_path' does not exist or is not readable." >&2
+    exit 2
+  fi
+done
+
+sort_env_section "$1" || exit 2
+sort_env_section "$2" || exit 2
 
 SKIP_LINE=0
-diff "${DIFF_ARGS[@]}" "$@" | awk -v skip=$SKIP_LINE '
+DIFF_OUTPUT=$(diff "${DIFF_ARGS[@]}" "$@")
+DIFF_EXIT_CODE=$?
+
+awk -v skip=$SKIP_LINE '
   BEGIN {
     exit_code = 0
   }
@@ -80,4 +105,16 @@ diff "${DIFF_ARGS[@]}" "$@" | awk -v skip=$SKIP_LINE '
       print $0
     }
   }
-  END {exit exit_code}'
+  END {exit exit_code}' <<< "$DIFF_OUTPUT"
+FILTER_EXIT_CODE=$?
+
+if (( FILTER_EXIT_CODE > 1 )); then
+  exit "$FILTER_EXIT_CODE"
+fi
+if (( DIFF_EXIT_CODE > 1 )); then
+  exit "$DIFF_EXIT_CODE"
+fi
+if (( FILTER_EXIT_CODE == 1 )); then
+  exit 1
+fi
+exit 0
