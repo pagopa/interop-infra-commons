@@ -193,6 +193,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
+MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
 OPTIONS=" "
 if [[ $enable_atomic == true ]]; then
   OPTIONS=$OPTIONS" --atomic"
@@ -240,6 +241,7 @@ UPGRADE_CMD=$UPGRADE_CMD"--namespace $ENV "
 UPGRADE_CMD=$UPGRADE_CMD"--install $microservice \"$ROOT_DIR/charts/interop-eks-microservice-chart\" "
 UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" "
 UPGRADE_CMD=$UPGRADE_CMD"-f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" "
+UPGRADE_CMD+="$MIGRATION_VALUES "
 UPGRADE_CMD=$UPGRADE_CMD"$ADDITIONAL_VALUES $OUTPUT_REDIRECT"
 
 echo "[SVC-UPGRADE] Executing $microservice upgrade command."

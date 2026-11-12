@@ -141,6 +141,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
+MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" -d"
@@ -174,6 +175,7 @@ helm diff upgrade --install  "$microservice"  "$ROOT_DIR/charts/interop-eks-micr
   --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
   -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" \
   -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" \
+  $MIGRATION_VALUES \
  $ADDITIONAL_VALUES
 diff_result=$?
 set -e

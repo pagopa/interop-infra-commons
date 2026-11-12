@@ -154,6 +154,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
+MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
 JOB_DIR=$( echo $job | sed  's/-/_/g' )
 OUT_DIR="$ROOT_DIR/out/lint/$ENV/job_$JOB_DIR"
 if [[ "$output_redirect" != "console" ]] && [[ -z "$output_redirect" ]]; then
@@ -188,6 +189,7 @@ LINT_CMD+=" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\""
 LINT_CMD+=" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\""
+LINT_CMD+="$MIGRATION_VALUES"
 LINT_CMD+=" $OUTPUT_TO"
 
 eval $LINT_CMD
