@@ -178,6 +178,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
+MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
 OPTIONS=" "
 if [[ $enable_atomic == true ]]; then
   OPTIONS=$OPTIONS" --atomic"
@@ -219,6 +220,7 @@ UPGRADE_CMD="$UPGRADE_CMD --namespace $ENV "
 UPGRADE_CMD="$UPGRADE_CMD --install $job \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" "
 UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" "
 UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" "
+UPGRADE_CMD+="$MIGRATION_VALUES "
 UPGRADE_CMD="$UPGRADE_CMD $OUTPUT_REDIRECT"
 
 echo "[CRONJOB-UPGRADE] Executing $job upgrade command."
