@@ -164,6 +164,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
+MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
 MICROSERVICE_DIR=$( echo $microservice | sed  's/-/_/g' )
 
 OUT_DIR="$ROOT_DIR/out/templates/$ENV/microservice_$MICROSERVICE_DIR"
@@ -202,7 +203,7 @@ elif [[ -n "$output_redirect" ]]; then
 fi
 
 #TEMPLATE_CMD=$TEMPLATE_CMD" $microservice interop-eks-microservice-chart/interop-eks-microservice-chart -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $OUTPUT_TO"
-TEMPLATE_CMD=$TEMPLATE_CMD" "$microservice" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $ADDITIONAL_VALUES $OUTPUT_TO"
+TEMPLATE_CMD=$TEMPLATE_CMD" "$microservice" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" $MIGRATION_VALUES $ADDITIONAL_VALUES $OUTPUT_TO"
 
 eval $TEMPLATE_CMD
 if [[ $verbose == true ]]; then

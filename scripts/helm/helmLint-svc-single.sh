@@ -151,6 +151,7 @@ if [[ -z $VALID_CONFIG || $VALID_CONFIG == "" ]]; then
 fi
 
 ENV=$environment
+MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
 MICROSERVICE_DIR=$( echo $microservice | sed  's/-/_/g' )
 OUT_DIR="$ROOT_DIR/out/lint/$ENV/microservice_$MICROSERVICE_DIR"
 if [[ "$output_redirect" != "console" ]] && [[ -z "$output_redirect" ]]; then
@@ -183,6 +184,7 @@ fi
 LINT_CMD+=" \"$ROOT_DIR/charts/interop-eks-microservice-chart\""
 LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\""
+LINT_CMD+="$MIGRATION_VALUES"
 LINT_CMD+=" --set enableLookup=false"
 LINT_CMD+=" $OUTPUT_TO"
 

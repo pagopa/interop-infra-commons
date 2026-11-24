@@ -4,6 +4,43 @@ set -euo pipefail
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR=$PROJECT_DIR
 
+function getMigrationValuesOptions()
+{
+    # Prints ' -f "<file>"' for each migration values file, ready to append to Helm commands.
+    local ENVIRONMENT=$1
+    local MIGRATIONS_DIR="$ROOT_DIR/commons/$ENVIRONMENT/migrations"
+    local MIGRATION_FILE
+    local MIGRATION_VALUES=""
+    local LC_ALL=C
+    # Migration values are optional: an absent directory adds no Helm options.
+    if [[ ! -e "$MIGRATIONS_DIR" ]]; then
+        return 0
+    fi
+    # An existing path must be a readable, traversable directory (-x).
+    if [[ ! -d "$MIGRATIONS_DIR" || ! -r "$MIGRATIONS_DIR" || ! -x "$MIGRATIONS_DIR" ]]; then
+        echo "Error: Cannot read migration values directory '$MIGRATIONS_DIR'." >&2
+        return 1
+    fi
+    for MIGRATION_FILE in "$MIGRATIONS_DIR"/*; do
+        [[ -f "$MIGRATION_FILE" ]] || continue
+        case "$MIGRATION_FILE" in
+            *.yaml|*.yml) ;;
+            *) continue ;;
+        esac
+        if [[ ! -r "$MIGRATION_FILE" ]]; then
+            echo "Error: Cannot read migration values file '$MIGRATION_FILE'." >&2
+            return 1
+        fi
+        # The string is also used without eval (helmDiff), so names must not need shell quoting.
+        if [[ ! "$(basename "$MIGRATION_FILE")" =~ ^[A-Za-z0-9._-]+$ ]]; then
+            echo "Error: Invalid migration values file name '$MIGRATION_FILE': use only letters, digits, '.', '_' and '-'." >&2
+            return 1
+        fi
+        MIGRATION_VALUES+=" -f \"$MIGRATION_FILE\""
+    done
+    printf '%s' "$MIGRATION_VALUES"
+}
+
 function isCronjobEnvConfigValid()
 {
     CRONJOB=$1
