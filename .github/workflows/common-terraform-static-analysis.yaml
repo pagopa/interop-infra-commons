@@ -15,6 +15,10 @@ on:
         required: false
         type: string
         default: "v1.105.0" # if not provided, the workflow will use the v1.105.0 version of the pre-commit image from Docker Hub. This allows callers to specify a custom image version if needed (e.g. to test against a specific pre-commit version or to use a custom image with additional tools/plugins pre-installed).
+      free_disk_space:
+        required: false
+        type: boolean
+        default: true
 
 
 env:
@@ -74,6 +78,7 @@ jobs:
           terraform version
 
       - name: Terraform - Free disk space
+        if: ${{ inputs.free_disk_space }}
         run: |
           set -euo pipefail
 
