@@ -19,6 +19,10 @@ on:
         required: false
         type: boolean
         default: true
+      precommit_config_path:
+        required: false
+        type: string
+        default: .pre-commit-config.yaml # relative to the repository root
 
 
 env:
@@ -220,6 +224,7 @@ jobs:
         env:
           ROOT: ${{ inputs.search_path }}
           PRECOMMIT_IMAGE_VERSION: ${{ inputs.precommit_image_version }}
+          PRECOMMIT_CONFIG_PATH: ${{ inputs.precommit_config_path }}
           TERRAFORM_PATH: ${{ steps.terraform-bin.outputs.terraform_path }}
           GITHUB_TOKEN: ${{ github.token }}
         run: |
@@ -243,4 +248,4 @@ jobs:
             -e GITHUB_TOKEN="$GITHUB_TOKEN" \
             -w /lint \
             "ghcr.io/antonbabenko/pre-commit-terraform:$PRECOMMIT_IMAGE_VERSION" \
-            run --files "${files[@]}" --show-diff-on-failure
+            run --config "$PRECOMMIT_CONFIG_PATH" --files "${files[@]}" --show-diff-on-failure
