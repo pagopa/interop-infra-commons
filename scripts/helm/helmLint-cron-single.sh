@@ -187,6 +187,10 @@ fi
 
 LINT_CMD+=" \"$ROOT_DIR/charts/interop-eks-cronjob-chart\""
 LINT_CMD+=" -f \"$ROOT_DIR/charts/interop-eks-cronjob-chart/values.yaml\""
+COMMON_VALUES_FILE="$ROOT_DIR/commons/$ENV/values-commons.yaml"
+if [[ -f "$COMMON_VALUES_FILE" ]]; then
+  LINT_CMD+=" -f \"$COMMON_VALUES_FILE\""
+fi
 LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\""
 LINT_CMD+="$MIGRATION_VALUES"
