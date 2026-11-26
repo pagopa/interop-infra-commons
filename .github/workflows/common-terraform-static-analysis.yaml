@@ -126,12 +126,20 @@ jobs:
           for dir in "${tf_dirs[@]}"; do
             echo "Initializing Terraform directory: $dir"
 
+            init_args=(-backend=false -input=false -no-color)
+            # Without this, init would add the runner's own platform hashes to a committed lock file,
+            # and the pre-commit checks that run next would never see a lock file missing them.
+            # A directory with no lock file still gets one, since read-only init would fail there.
+            if [ -f "$dir/.terraform.lock.hcl" ]; then
+              init_args+=(-lockfile=readonly)
+            fi
+
             docker run --rm \
               -v "$GITHUB_WORKSPACE:/workspace" \
               -v /tmp/.terraform-providers:/workspace/.terraform \
               -w "/workspace/$dir" \
               "hashicorp/terraform:$TF_VERSION" \
-              init -backend=false -input=false -no-color
+              init "${init_args[@]}"
           done
 
       - name: TFLint - Setup TFLint
