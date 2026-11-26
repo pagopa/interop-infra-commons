@@ -4,6 +4,15 @@ set -euo pipefail
 SCRIPTS_FOLDER="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR=$PROJECT_DIR
 
+function getCommonValuesOptions()
+{
+    local common_values_file="$ROOT_DIR/commons/$1/values-commons.yaml"
+    if [[ ! -f "$common_values_file" ]]; then
+        return 0
+    fi
+    printf ' -f %q' "$common_values_file"
+}
+
 function getMigrationValuesOptions()
 {
     # Prints ' -f "<file>"' for each migration values file, ready to append to Helm commands.

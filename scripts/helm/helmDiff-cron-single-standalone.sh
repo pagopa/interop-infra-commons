@@ -135,6 +135,7 @@ fi
 
 ENV=$environment
 MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
+CM_COMMON_VALUES=$(getCommonValuesOptions "$ENV")
 OPTIONS=" "
 if [[ $enable_debug == true ]]; then
   OPTIONS=$OPTIONS" -d"
@@ -161,6 +162,7 @@ fi
 set +e
 helm diff upgrade --install  "$job"  "$ROOT_DIR/charts/interop-eks-cronjob-chart" \
   --namespace "$ENV" --normalize-manifests --detailed-exitcode --dry-run=server --color=true \
+  $CM_COMMON_VALUES \
   -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" \
   -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" \
   $MIGRATION_VALUES

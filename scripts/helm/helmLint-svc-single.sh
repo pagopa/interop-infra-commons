@@ -182,10 +182,8 @@ elif [[ -n "$output_redirect" ]]; then
 fi
 #LINT_CMD=$LINT_CMD" \"$ROOT_DIR/charts/interop-eks-microservice-chart\" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\" --set enableLookup=false $OUTPUT_TO"
 LINT_CMD+=" \"$ROOT_DIR/charts/interop-eks-microservice-chart\""
-COMMON_VALUES_FILE="$ROOT_DIR/commons/$ENV/values-commons.yaml"
-if [[ -f "$COMMON_VALUES_FILE" ]]; then
-  LINT_CMD+=" -f \"$COMMON_VALUES_FILE\""
-fi
+CM_COMMON_VALUES=$(getCommonValuesOptions "$ENV")
+LINT_CMD+="$CM_COMMON_VALUES"
 LINT_CMD+=" -f \"$ROOT_DIR/commons/$ENV/values-microservice.compiled.yaml\""
 LINT_CMD+=" -f \"$ROOT_DIR/microservices/$microservice/$ENV/values.yaml\""
 LINT_CMD+="$MIGRATION_VALUES"

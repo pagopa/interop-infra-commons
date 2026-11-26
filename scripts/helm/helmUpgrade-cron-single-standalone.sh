@@ -179,6 +179,7 @@ fi
 
 ENV=$environment
 MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
+CM_COMMON_VALUES=$(getCommonValuesOptions "$ENV")
 OPTIONS=" "
 if [[ $enable_atomic == true ]]; then
   OPTIONS=$OPTIONS" --atomic"
@@ -218,6 +219,7 @@ UPGRADE_CMD="$UPGRADE_CMD --dependency-update --take-ownership --history-max $hi
 UPGRADE_CMD="$UPGRADE_CMD $OPTIONS "
 UPGRADE_CMD="$UPGRADE_CMD --namespace $ENV "
 UPGRADE_CMD="$UPGRADE_CMD --install $job \"$ROOT_DIR/charts/interop-eks-cronjob-chart\" "
+UPGRADE_CMD+="$CM_COMMON_VALUES"
 UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" "
 UPGRADE_CMD="$UPGRADE_CMD -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" "
 UPGRADE_CMD+="$MIGRATION_VALUES "
