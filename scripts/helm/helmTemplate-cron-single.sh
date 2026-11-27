@@ -169,6 +169,7 @@ fi
 
 JOB_DIR=$( echo $job | sed  's/-/_/g' )
 MIGRATION_VALUES=$(getMigrationValuesOptions "$ENV")
+CM_COMMON_VALUES=$(getCommonValuesOptions "$ENV")
 OUT_DIR="$ROOT_DIR/out/templates/$ENV/job_$JOB_DIR"
 if [[ "$output_redirect" != "console" ]] && [[ -z "$output_redirect" ]]; then
   rm -rf "$OUT_DIR"
@@ -207,7 +208,7 @@ elif [[ -n "$output_redirect" ]]; then
 fi
 
 #TEMPLATE_CMD=$TEMPLATE_CMD" $job interop-eks-cronjob-chart/interop-eks-cronjob-chart -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $OUTPUT_TO"
-TEMPLATE_CMD=$TEMPLATE_CMD" $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $MIGRATION_VALUES $OUTPUT_TO"
+TEMPLATE_CMD=$TEMPLATE_CMD" $job "$ROOT_DIR/charts/interop-eks-cronjob-chart" $CM_COMMON_VALUES -f \"$ROOT_DIR/commons/$ENV/values-cronjob.compiled.yaml\" -f \"$ROOT_DIR/jobs/$job/$ENV/values.yaml\" $MIGRATION_VALUES $OUTPUT_TO"
 
 eval $TEMPLATE_CMD
 if [[ $verbose == true ]]; then
